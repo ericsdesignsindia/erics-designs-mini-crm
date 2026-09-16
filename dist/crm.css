@@ -14,3 +14,26 @@ body[data-theme="dark"] .panel,body[data-theme="dark"] .stat,body[data-theme="da
 #mobileNav{display:none}
 @media(max-width:1000px){.document-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.report-grid{grid-template-columns:1fr}.shell main{padding:18px 22px 30px}}
 @media(max-width:720px){body{padding-bottom:86px}.shell,.shell.sidebar-collapsed{display:block}.shell aside{display:none}.shell main{padding:14px 14px 98px}.commandbar{margin-bottom:18px}.command-search{width:100%;min-width:0}.command-actions{gap:6px}.command-new span{display:none}.command-new{width:38px;height:38px;padding:0;font-size:21px}.command-icon{width:34px;height:34px}.profile-menu{width:34px;height:34px}.report-grid,.document-cards{grid-template-columns:1fr}.document-card{min-height:0}.bar-row{grid-template-columns:78px 1fr auto;font-size:11px;gap:7px}#mobileNav{position:fixed;display:flex;align-items:center;justify-content:space-around;gap:2px;bottom:0;left:0;right:0;height:72px;padding:7px 10px;background:#151a14;border-top:1px solid #30382b;z-index:100;box-shadow:0 -10px 26px #0004}#mobileNav button{border:0;background:transparent;color:#aeb6a4;padding:4px;min-width:45px;font-size:10px;display:grid;gap:2px;place-items:center}#mobileNav button span{font-size:18px;color:#d8b45d}#mobileNav button.active{color:white}.mobile-fab{position:relative;top:-22px;width:54px!important;height:54px;border-radius:50%!important;background:#d8b45d!important;color:#161811!important;font-size:32px!important;box-shadow:0 8px 18px #0007}.mobile-fab span{display:none}.toolbar{align-items:stretch}.toolbar input{min-width:100%}}
+/* Phone layout refinement: one control row at a time and safe clearance above app navigation. */
+@media(max-width:720px){
+  .shell main{padding:14px 14px calc(106px + env(safe-area-inset-bottom))}
+  .commandbar{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+  .command-search{width:100%;min-height:44px}
+  .command-actions{width:100%;justify-content:space-between}
+  .command-new{width:44px;height:38px}
+  header .actions{width:100%}
+  header .actions button{flex:1 1 auto;min-width:0;padding:10px 8px;font-size:12px}
+  .stats.four{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .stat{min-height:98px}
+  .stat strong{font-size:18px;overflow-wrap:anywhere}
+  .dashboard-columns{gap:12px;margin-bottom:12px}
+  .panel{border-radius:12px}
+  .tablewrap{margin:0 -14px;padding:0 14px;-webkit-overflow-scrolling:touch}
+  .tablewrap table{min-width:640px}
+  .document-cards{gap:12px}
+  .document-card{padding:15px}
+  .client-layout .stack{gap:12px}
+  .taskrow{align-items:flex-start}
+  #mobileNav{height:calc(72px + env(safe-area-inset-bottom));padding-bottom:calc(7px + env(safe-area-inset-bottom))}
+  .mobile-fab{top:-20px}
+}
