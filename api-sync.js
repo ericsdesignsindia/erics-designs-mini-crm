@@ -33,6 +33,10 @@ async function api(path, options = {}) {
 function showAuth() {
   const nav = document.getElementById('nav');
   const app = document.getElementById('app');
+  const commandBar = document.getElementById('commandBar');
+  const mobileNav = document.getElementById('mobileNav');
+  if (commandBar) commandBar.innerHTML = '';
+  if (mobileNav) mobileNav.innerHTML = '';
   if (nav) nav.innerHTML = '';
   if (app) app.innerHTML = '<section class="panel empty"><h2>Secure CRM access</h2><p>Please sign in with an administrator account to view client, quotation, and invoice records.</p></section>';
   if (document.getElementById('erp-auth')) return;
