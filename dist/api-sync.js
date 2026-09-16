@@ -7,7 +7,9 @@ const ERP_TOKEN_KEY = 'erics-designs-erp-token';
 let erpRevision = null;
 let erpSyncTimer;
 let erpOnline = false;
-let erpToken = localStorage.getItem(ERP_TOKEN_KEY) || '';
+// Keep the access token only in this open page. Opening or refreshing the CRM requires a new administrator sign-in.
+localStorage.removeItem(ERP_TOKEN_KEY);
+let erpToken = '';
 
 function setErpStatus(text, online) {
   erpOnline = online;
@@ -29,6 +31,10 @@ async function api(path, options = {}) {
 }
 
 function showAuth() {
+  const nav = document.getElementById('nav');
+  const app = document.getElementById('app');
+  if (nav) nav.innerHTML = '';
+  if (app) app.innerHTML = '<section class="panel empty"><h2>Secure CRM access</h2><p>Please sign in with an administrator account to view client, quotation, and invoice records.</p></section>';
   if (document.getElementById('erp-auth')) return;
   api('/auth/status').then(({ setupRequired }) => {
     const dialog = document.createElement('dialog');
@@ -44,7 +50,6 @@ function showAuth() {
       try {
         const result = await api(`/auth/${setupRequired ? 'setup' : 'login'}`, { method: 'POST', body: JSON.stringify({ username, password }) });
         erpToken = result.token;
-        localStorage.setItem(ERP_TOKEN_KEY, erpToken);
         dialog.close(); dialog.remove();
         loadWorkspace();
       } catch (requestError) { error.textContent = requestError.message; }
@@ -68,7 +73,7 @@ window.erpApi = {
   createAdmin: (username, password) => api('/admin/users', { method: 'POST', body: JSON.stringify({ username, password }) }),
   draftAI: payload => api('/ai/draft', { method: 'POST', body: JSON.stringify(payload) })
 };
-window.erpAuth = { logout: () => { localStorage.removeItem(ERP_TOKEN_KEY); erpToken = ''; location.reload(); } };
+window.erpAuth = { logout: () => { erpToken = ''; location.reload(); } };
 
 async function pushWorkspace() {
   try {
@@ -113,7 +118,6 @@ async function loadWorkspace() {
     setErpStatus('MongoDB sync active', true);
   } catch (error) {
     if (error.status === 401) {
-      localStorage.removeItem(ERP_TOKEN_KEY);
       erpToken = '';
       setErpStatus('Sign in to continue', false);
       showAuth();
