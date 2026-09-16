@@ -65,7 +65,8 @@ window.erpApi = {
   getSettings: () => api(`/workspaces/${ERP_WORKSPACE}/settings`),
   updateSettings: settings => api(`/workspaces/${ERP_WORKSPACE}/settings`, { method: 'PUT', body: JSON.stringify({ settings }) }),
   adminUsers: () => api('/admin/users'),
-  createAdmin: (username, password) => api('/admin/users', { method: 'POST', body: JSON.stringify({ username, password }) })
+  createAdmin: (username, password) => api('/admin/users', { method: 'POST', body: JSON.stringify({ username, password }) }),
+  draftAI: payload => api('/ai/draft', { method: 'POST', body: JSON.stringify(payload) })
 };
 window.erpAuth = { logout: () => { localStorage.removeItem(ERP_TOKEN_KEY); erpToken = ''; location.reload(); } };
 

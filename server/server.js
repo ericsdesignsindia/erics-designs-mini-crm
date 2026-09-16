@@ -157,6 +157,21 @@ app.post('/api/auth/login', async (req, res, next) => {
 
 app.get('/api/admin/users', requireAuth, async (_req, res, next) => { try { const users = await User.find({}, { username: 1, role: 1, createdAt: 1 }).sort({ createdAt: 1 }).lean(); return res.json({ users: users.map(user => ({ id: user._id.toString(), username: user.username, role: user.role, createdAt: user.createdAt })) }); } catch (error) { return next(error); } });
 app.post('/api/admin/users', requireAuth, async (req, res, next) => { try { const username = String(req.body.username || '').trim().toLowerCase(); const error = validCredentials(username, req.body.password); if (error) return res.status(400).json({ error }); if (await User.exists({ username })) return res.status(409).json({ error: 'That username is already in use.' }); const user = await User.create({ username, passwordHash: await bcrypt.hash(req.body.password, 12), role: 'admin' }); return res.status(201).json({ user: { id: user._id.toString(), username: user.username, role: user.role, createdAt: user.createdAt } }); } catch (error) { return next(error); } });
+app.post('/api/ai/draft', requireAuth, async (req, res, next) => {
+  try {
+    if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'AI drafting is not configured.' });
+    const mode = String(req.body.mode || 'Quotation draft').slice(0, 80);
+    const brief = String(req.body.brief || '').trim().slice(0, 12000);
+    const context = String(req.body.context || '').slice(0, 16000);
+    if (!brief) return res.status(400).json({ error: 'Add a brief before generating a draft.' });
+    const prompt = `You write professional drafts for Eric's Designs, a creative and digital agency. Task: ${mode}. Use only the reference context below. Do not invent prices, promises, credentials, payment details, or deadlines. Flag missing details as questions. Return clear client-ready text.\n\nBRIEF\n${brief}\n\nREFERENCE CONTEXT\n${context}`;
+    const response = await fetch('https://api.openai.com/v1/responses', { method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'gpt-4.1-mini', input: prompt }) });
+    const body = await response.json();
+    if (!response.ok) return res.status(response.status).json({ error: body?.error?.message || 'AI draft request failed.' });
+    const text = body.output_text || body.output?.flatMap(item => item.content || []).filter(item => item.type === 'output_text').map(item => item.text).join('') || '';
+    return res.json({ text });
+  } catch (error) { return next(error); }
+});
 app.use('/api/workspaces', requireAuth);
 
 app.get('/api/workspaces/:workspaceId', async (req, res, next) => {
