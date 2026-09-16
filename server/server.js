@@ -155,6 +155,8 @@ app.post('/api/auth/login', async (req, res, next) => {
   } catch (error) { return next(error); }
 });
 
+app.get('/api/admin/users', requireAuth, async (_req, res, next) => { try { const users = await User.find({}, { username: 1, role: 1, createdAt: 1 }).sort({ createdAt: 1 }).lean(); return res.json({ users: users.map(user => ({ id: user._id.toString(), username: user.username, role: user.role, createdAt: user.createdAt })) }); } catch (error) { return next(error); } });
+app.post('/api/admin/users', requireAuth, async (req, res, next) => { try { const username = String(req.body.username || '').trim().toLowerCase(); const error = validCredentials(username, req.body.password); if (error) return res.status(400).json({ error }); if (await User.exists({ username })) return res.status(409).json({ error: 'That username is already in use.' }); const user = await User.create({ username, passwordHash: await bcrypt.hash(req.body.password, 12), role: 'admin' }); return res.status(201).json({ user: { id: user._id.toString(), username: user.username, role: user.role, createdAt: user.createdAt } }); } catch (error) { return next(error); } });
 app.use('/api/workspaces', requireAuth);
 
 app.get('/api/workspaces/:workspaceId', async (req, res, next) => {
