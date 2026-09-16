@@ -10,6 +10,8 @@ A browser-based CRM for quotations, proforma invoices, final invoices, clients, 
 - Project budgets, delivery dates, and statuses.
 - Follow-up tasks with due/overdue indicators and completion tracking.
 - Partial/full payments, outstanding balances, and overdue final invoices.
+- INR and AED documents, with currency-specific totals and payment tracking.
+- Rate-card quotations with per-month, per-campaign, per-unit, and on-request prices without a misleading grand total.
 - A4 printing / Save as PDF, CSV exports, and JSON backup/restore.
 - Manual ChatGPT drafting prompts for quotations, scope, follow-ups, and payment reminders.
 
@@ -47,4 +49,4 @@ Only publish application source and this README. Do not commit JSON backups, cli
 5. Payment gateway links and receipt reconciliation.
 
 ## Verification
-Tested client creation, project/follow-up storage, pipeline updates, linked Q→P→final conversion, duplicate conversion prevention, discount/tax totals, payment balances, backup restoration, AI prompt contents, mobile layout, and PDF generation. This is an operational studio tool, not a certified accounting or tax-compliance system.
+Tested client creation, project/follow-up storage, pipeline updates, linked Q→P→final conversion, duplicate conversion prevention, INR/AED totals, rate-card quotations, payment balances, backup restoration, AI prompt contents, mobile layout, and PDF generation. This is an operational studio tool, not a certified accounting or tax-compliance system.
