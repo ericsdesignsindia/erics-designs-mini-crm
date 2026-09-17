@@ -157,6 +157,17 @@ app.post('/api/auth/login', async (req, res, next) => {
 
 app.get('/api/admin/users', requireAuth, async (_req, res, next) => { try { const users = await User.find({}, { username: 1, role: 1, createdAt: 1 }).sort({ createdAt: 1 }).lean(); return res.json({ users: users.map(user => ({ id: user._id.toString(), username: user.username, role: user.role, createdAt: user.createdAt })) }); } catch (error) { return next(error); } });
 app.post('/api/admin/users', requireAuth, async (req, res, next) => { try { const username = String(req.body.username || '').trim().toLowerCase(); const error = validCredentials(username, req.body.password); if (error) return res.status(400).json({ error }); if (await User.exists({ username })) return res.status(409).json({ error: 'That username is already in use.' }); const user = await User.create({ username, passwordHash: await bcrypt.hash(req.body.password, 12), role: 'admin' }); return res.status(201).json({ user: { id: user._id.toString(), username: user.username, role: user.role, createdAt: user.createdAt } }); } catch (error) { return next(error); } });
+app.put('/api/admin/users/:userId/password', requireAuth, async (req, res, next) => {
+  try {
+    const password = String(req.body.password || '');
+    if (password.length < 10) return res.status(400).json({ error: 'Use a password with at least 10 characters.' });
+    const user = await User.findById(req.params.userId);
+    if (!user) return res.status(404).json({ error: 'Administrator not found.' });
+    user.passwordHash = await bcrypt.hash(password, 12);
+    await user.save();
+    return res.json({ message: `Password reset for ${user.username}.` });
+  } catch (error) { return next(error); }
+});
 app.post('/api/ai/draft', requireAuth, async (req, res, next) => {
   try {
     if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'AI drafting is not configured.' });
