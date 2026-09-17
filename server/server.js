@@ -293,6 +293,23 @@ app.get('/api/integrations/meta-leads/status', requireAuth, requireOwner, (_req,
   return res.json({ ...metaLeadConfig(), webhookUrl: `${baseUrl}/api/integrations/meta-leads/webhook` });
 });
 
+app.post('/api/integrations/meta-leads/subscribe-page', requireAuth, requireOwner, async (_req, res, next) => {
+  try {
+    if (!metaLeadConfig().configured) return res.status(409).json({ error: 'Meta Lead Ads setup is incomplete on the server.' });
+    const response = await fetch('https://graph.facebook.com/v22.0/me/subscribed_apps', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ subscribed_fields: 'leadgen', access_token: process.env.META_PAGE_ACCESS_TOKEN })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.success) {
+      const error = new Error(payload?.error?.message || 'Meta could not connect this Page to the CRM app.');
+      error.status = response.status || 502; throw error;
+    }
+    return res.json({ connected: true, message: 'Meta Lead Ads is connected. New Page leads will be imported into the CRM.' });
+  } catch (error) { return next(error); }
+});
+
 app.get('/api/integrations/meta-leads/webhook', (req, res) => {
   const mode = String(req.query['hub.mode'] || '');
   const token = String(req.query['hub.verify_token'] || '');
