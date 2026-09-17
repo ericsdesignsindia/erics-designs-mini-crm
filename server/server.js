@@ -200,6 +200,31 @@ app.get('/api', (_req, res) => res.json({
   workspaceRoutes: '/api/workspaces/:workspaceId'
 }));
 
+const publicLeadRequests = new Map();
+function leadRequestAllowed(ip) { const now = Date.now(), windowStart = now - 10 * 60 * 1000; const list = (publicLeadRequests.get(ip) || []).filter(time => time > windowStart); if (list.length >= 12) return false; list.push(now); publicLeadRequests.set(ip, list); return true; }
+app.post('/api/public/leads', async (req, res, next) => {
+  try {
+    const ip = req.ip || 'unknown';
+    if (!leadRequestAllowed(ip)) return res.status(429).json({ error: 'Please wait a few minutes before submitting another enquiry.' });
+    const name = String(req.body.name || '').trim().slice(0, 120);
+    const contact = String(req.body.contact || '').trim().slice(0, 120);
+    const email = String(req.body.email || '').trim().toLowerCase().slice(0, 160);
+    const phone = String(req.body.phone || '').trim().slice(0, 40);
+    const service = String(req.body.service || '').trim().slice(0, 120);
+    const message = String(req.body.message || '').trim().slice(0, 3000);
+    const source = String(req.body.source || 'Website').trim().slice(0, 80);
+    if (!name || !message || (!email && !phone)) return res.status(400).json({ error: 'Add your name, enquiry, and either an email address or WhatsApp number.' });
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
+    const workspace = await getWorkspace('erics-designs-default');
+    const state = normaliseState(structuredClone(workspace.state));
+    const existing = state.clients.find(client => email && client.email === email) || state.clients.find(client => phone && client.phone === phone);
+    if (existing) { existing.notes = `${existing.notes ? existing.notes + '\n\n' : ''}New ${source} enquiry${service ? ` - ${service}` : ''}: ${message}`; existing.updated = new Date().toISOString(); await saveState(workspace, state); return res.status(200).json({ ok: true, duplicate: true }); }
+    const lead = { id: randomUUID(), name, contact, email, phone, source, stage: 'New lead', value: 0, notes: `${service ? `Interested service: ${service}\n\n` : ''}${message}`, created: new Date().toISOString(), updated: new Date().toISOString() };
+    state.clients.unshift(lead); state.activity.unshift({ id: randomUUID(), message: `New ${source} lead: ${name}`, date: new Date().toISOString() });
+    await saveState(workspace, state); return res.status(201).json({ ok: true });
+  } catch (error) { return next(error); }
+});
+
 app.get('/api/auth/status', async (_req, res, next) => {
   try { return res.json({ setupRequired: (await User.countDocuments()) === 0 }); }
   catch (error) { return next(error); }
