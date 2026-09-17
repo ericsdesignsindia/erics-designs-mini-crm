@@ -148,6 +148,15 @@ settings = function(){
 async function refreshOwnerControls(){const el=document.getElementById('ownerControlStatus');if(!el)return;try{const data=await erpApi.adminMe();el.textContent=data.role==='owner'?`You are signed in as the business owner (${data.username}).`: `Owner-only controls are managed by ${data.ownerUsername || 'the business owner'}.`; }catch(error){el.textContent='Sign in again to check owner access.'}}
 
 
+const settingsWithMetaLeads = settings;
+settings = function(){
+  const meta = `<section class="panel crm-banner"><div class="dialog-title"><div><div class="eyebrow">Lead automation</div><h2>Meta Lead Ads</h2></div><button class="smallbtn" onclick="refreshMetaLeadStatus()">Check status</button></div><p class="sub" id="metaLeadStatus">Checking Meta Lead Ads connection...</p><div class="actions"><button class="primary" onclick="connectMetaLeadPage()">Connect Page to CRM</button></div><p class="hint">After connecting, every new Instant Form lead from the Eric&#8217;s Designs Page is saved as a New lead in Clients.</p></section>`;
+  setTimeout(refreshMetaLeadStatus,0);
+  return settingsWithMetaLeads()+meta;
+};
+async function refreshMetaLeadStatus(){const el=document.getElementById('metaLeadStatus');if(!el)return;try{const data=await erpApi.metaLeadStatus();el.textContent=data.configured?'Ready to connect the Eric&#8217;s Designs Page.':'Server setup is incomplete. Add the Meta webhook, app secret, and Page token in Render.'}catch(error){el.textContent=error.message||'Sign in as the owner to check Meta Lead Ads.'}}
+async function connectMetaLeadPage(){try{const result=await erpApi.subscribeMetaLeadPage();toast(result.message||'Meta Lead Ads connected.');refreshMetaLeadStatus()}catch(error){toast(error.message)}}
+
 const migrateWithRecurring = migrate;
 migrate = function(data){data=migrateWithRecurring(data);data.recurringInvoices=Array.isArray(data.recurringInvoices)?data.recurringInvoices:[];return data;};
 const settingsWithRecurring = settings;
