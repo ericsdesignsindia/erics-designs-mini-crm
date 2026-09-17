@@ -137,3 +137,12 @@ async function uploadClientAttachment(clientId,file){
   reader.onload=async()=>{try{toast('Uploading '+file.name+' to Google Drive...');const result=await erpApi.uploadDriveAttachment({clientName:client.name,name:file.name,mimeType:file.type,base64:reader.result});client.attachments=Array.isArray(client.attachments)?client.attachments:[];client.attachments.unshift(result.attachment);persist();render();toast('File attached to '+client.name)}catch(error){toast(error.message)}};
   reader.readAsDataURL(file);
 }
+
+
+const settingsWithOwnerControls = settings;
+settings = function(){
+  const owner = `<section class="panel crm-banner"><div class="dialog-title"><div><div class="eyebrow">Business security</div><h2>Owner controls</h2></div></div><p class="sub" id="ownerControlStatus">Checking owner access...</p><p class="hint">Only the business owner can create administrators, reset administrator passwords, view backup history, or connect Google Drive.</p></section>`;
+  setTimeout(refreshOwnerControls, 0);
+  return settingsWithOwnerControls()+owner;
+};
+async function refreshOwnerControls(){const el=document.getElementById('ownerControlStatus');if(!el)return;try{const data=await erpApi.adminMe();el.textContent=data.role==='owner'?`You are signed in as the business owner (${data.username}).`: `Owner-only controls are managed by ${data.ownerUsername || 'the business owner'}.`; }catch(error){el.textContent='Sign in again to check owner access.'}}

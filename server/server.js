@@ -192,6 +192,22 @@ async function requireAuth(req, res, next) {
   } catch (_error) { return res.status(401).json({ error: 'Your session has expired. Sign in again.' }); }
 }
 
+async function ensureOwner() {
+  const owner = await User.findOne({ role: 'owner' }).lean();
+  if (owner) return owner;
+  const first = await User.findOne({}).sort({ createdAt: 1 });
+  if (!first) return null;
+  first.role = 'owner'; await first.save(); return first.toObject();
+}
+async function requireOwner(req, res, next) {
+  try {
+    await ensureOwner();
+    const user = await User.findById(req.user.sub).lean();
+    if (!user || user.role !== 'owner') return res.status(403).json({ error: 'Only the business owner can perform this action.' });
+    req.owner = user; return next();
+  } catch (error) { return next(error); }
+}
+
 app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'erics-designs-erp-api', database: mongoose.connection.readyState === 1 ? 'connected' : 'connecting' }));
 
 app.get('/api', (_req, res) => res.json({
@@ -236,7 +252,7 @@ app.post('/api/auth/setup', async (req, res, next) => {
     const username = String(req.body.username || '').trim().toLowerCase();
     const error = validCredentials(username, req.body.password);
     if (error) return res.status(400).json({ error });
-    const user = await User.create({ username, passwordHash: await bcrypt.hash(req.body.password, 12), role: 'admin' });
+    const user = await User.create({ username, passwordHash: await bcrypt.hash(req.body.password, 12), role: 'owner' });
     return res.status(201).json({ token: issueToken(user), user: { username: user.username, role: user.role } });
   } catch (error) { return next(error); }
 });
@@ -250,9 +266,10 @@ app.post('/api/auth/login', async (req, res, next) => {
   } catch (error) { return next(error); }
 });
 
-app.get('/api/admin/users', requireAuth, async (_req, res, next) => { try { const users = await User.find({}, { username: 1, role: 1, createdAt: 1 }).sort({ createdAt: 1 }).lean(); return res.json({ users: users.map(user => ({ id: user._id.toString(), username: user.username, role: user.role, createdAt: user.createdAt })) }); } catch (error) { return next(error); } });
-app.post('/api/admin/users', requireAuth, async (req, res, next) => { try { const username = String(req.body.username || '').trim().toLowerCase(); const error = validCredentials(username, req.body.password); if (error) return res.status(400).json({ error }); if (await User.exists({ username })) return res.status(409).json({ error: 'That username is already in use.' }); const user = await User.create({ username, passwordHash: await bcrypt.hash(req.body.password, 12), role: 'admin' }); return res.status(201).json({ user: { id: user._id.toString(), username: user.username, role: user.role, createdAt: user.createdAt } }); } catch (error) { return next(error); } });
-app.put('/api/admin/users/:userId/password', requireAuth, async (req, res, next) => {
+app.get('/api/admin/me', requireAuth, async (req, res, next) => { try { const owner = await ensureOwner(); const user = await User.findById(req.user.sub).lean(); return res.json({ username: user?.username || '', role: user?.role || 'admin', ownerUsername: owner?.username || '' }); } catch (error) { return next(error); } });
+app.get('/api/admin/users', requireAuth, requireOwner, async (_req, res, next) => { try { const users = await User.find({}, { username: 1, role: 1, createdAt: 1 }).sort({ createdAt: 1 }).lean(); return res.json({ users: users.map(user => ({ id: user._id.toString(), username: user.username, role: user.role, createdAt: user.createdAt })) }); } catch (error) { return next(error); } });
+app.post('/api/admin/users', requireAuth, requireOwner, async (req, res, next) => { try { const username = String(req.body.username || '').trim().toLowerCase(); const error = validCredentials(username, req.body.password); if (error) return res.status(400).json({ error }); if (await User.exists({ username })) return res.status(409).json({ error: 'That username is already in use.' }); const user = await User.create({ username, passwordHash: await bcrypt.hash(req.body.password, 12), role: 'owner' }); return res.status(201).json({ user: { id: user._id.toString(), username: user.username, role: user.role, createdAt: user.createdAt } }); } catch (error) { return next(error); } });
+app.put('/api/admin/users/:userId/password', requireAuth, requireOwner, async (req, res, next) => {
   try {
     const password = String(req.body.password || '');
     if (password.length < 10) return res.status(400).json({ error: 'Use a password with at least 10 characters.' });
@@ -263,7 +280,7 @@ app.put('/api/admin/users/:userId/password', requireAuth, async (req, res, next)
     return res.json({ message: `Password reset for ${user.username}.` });
   } catch (error) { return next(error); }
 });
-app.get('/api/integrations/google-drive/status', requireAuth, async (req, res, next) => {
+app.get('/api/integrations/google-drive/status', requireAuth, requireOwner, async (req, res, next) => {
   try {
     const config = googleDriveConfig();
     const integration = await DriveIntegration.findOne({ userId: req.user.sub }).lean();
@@ -271,7 +288,7 @@ app.get('/api/integrations/google-drive/status', requireAuth, async (req, res, n
   } catch (error) { return next(error); }
 });
 
-app.post('/api/integrations/google-drive/connect', requireAuth, async (req, res, next) => {
+app.post('/api/integrations/google-drive/connect', requireAuth, requireOwner, async (req, res, next) => {
   try {
     const config = googleDriveConfig();
     if (!config.configured) return res.status(503).json({ error: 'Google Drive is not configured yet. Add the Google OAuth and encryption settings on the server first.' });
@@ -309,12 +326,12 @@ app.get('/api/integrations/google-drive/callback', async (req, res) => {
   } catch (error) { return done('error', 'Google Drive could not be connected. Please try again.'); }
 });
 
-app.delete('/api/integrations/google-drive', requireAuth, async (req, res, next) => {
+app.delete('/api/integrations/google-drive', requireAuth, requireOwner, async (req, res, next) => {
   try { await DriveIntegration.deleteOne({ userId: req.user.sub }); return res.json({ ok: true }); }
   catch (error) { return next(error); }
 });
 
-app.post('/api/integrations/google-drive/attachments', requireAuth, async (req, res, next) => {
+app.post('/api/integrations/google-drive/attachments', requireAuth, requireOwner, async (req, res, next) => {
   try { const name = String(req.body.name || '').trim().replace(/[\\/:*?"<>|]+/g, '-').slice(0, 150); const clientName = String(req.body.clientName || 'Unassigned client').trim().slice(0, 120); const mimeType = String(req.body.mimeType || 'application/octet-stream').slice(0, 120); const content = String(req.body.base64 || '').replace(/^data:[^;]+;base64,/, ''); if (!name || !content) return res.status(400).json({ error: 'Choose a file to upload.' }); const bytes = Buffer.from(content, 'base64'); if (!bytes.length || bytes.length > 4 * 1024 * 1024) return res.status(400).json({ error: 'Files must be smaller than 4 MB.' }); const token = await driveAccessToken(req.user.sub); const rootId = await driveFolder(token, "Eric's Designs CRM"); const clientId = await driveFolder(token, clientName, rootId); const boundary = `crm-${randomUUID()}`; const metadata = Buffer.from(JSON.stringify({ name, mimeType, parents: [clientId] }), 'utf8'); const body = Buffer.concat([Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n`), metadata, Buffer.from(`\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`), bytes, Buffer.from(`\r\n--${boundary}--\r\n`)]); const file = await driveRequest(token, 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,webViewLink,createdTime,size', { method: 'POST', headers: { 'Content-Type': `multipart/related; boundary=${boundary}` }, body }); return res.status(201).json({ attachment: { id: file.id, name: file.name, mimeType: file.mimeType, url: file.webViewLink || `https://drive.google.com/open?id=${file.id}`, createdAt: file.createdTime, size: Number(file.size || bytes.length) } }); }
   catch (error) { return next(error); }
 });
@@ -336,7 +353,7 @@ app.post('/api/ai/draft', requireAuth, async (req, res, next) => {
 });
 app.use('/api/workspaces', requireAuth);
 
-app.get('/api/workspaces/:workspaceId/backups', async (req, res, next) => {
+app.get('/api/workspaces/:workspaceId/backups', requireOwner, async (req, res, next) => {
   try {
     const id = workspaceId(req.params.workspaceId);
     if (!id) return res.status(400).json({ error: 'Invalid workspace id.' });

@@ -73,6 +73,7 @@ window.erpApi = {
   remove: (resource, id) => api(`/workspaces/${ERP_WORKSPACE}/${resource}/${id}`, { method: 'DELETE' }),
   getSettings: () => api(`/workspaces/${ERP_WORKSPACE}/settings`),
   updateSettings: settings => api(`/workspaces/${ERP_WORKSPACE}/settings`, { method: 'PUT', body: JSON.stringify({ settings }) }),
+  adminMe: () => api('/admin/me'),
   adminUsers: () => api('/admin/users'),
   createAdmin: (username, password) => api('/admin/users', { method: 'POST', body: JSON.stringify({ username, password }) }),
   resetAdminPassword: (userId, password) => api(`/admin/users/${userId}/password`, { method: 'PUT', body: JSON.stringify({ password }) }),
