@@ -76,7 +76,10 @@ window.erpApi = {
   adminUsers: () => api('/admin/users'),
   createAdmin: (username, password) => api('/admin/users', { method: 'POST', body: JSON.stringify({ username, password }) }),
   resetAdminPassword: (userId, password) => api(`/admin/users/${userId}/password`, { method: 'PUT', body: JSON.stringify({ password }) }),
-  draftAI: payload => api('/ai/draft', { method: 'POST', body: JSON.stringify(payload) })
+  draftAI: payload => api('/ai/draft', { method: 'POST', body: JSON.stringify(payload) }),
+  googleDriveStatus: () => api('/integrations/google-drive/status'),
+  connectGoogleDrive: () => api('/integrations/google-drive/connect', { method: 'POST' }),
+  disconnectGoogleDrive: () => api('/integrations/google-drive', { method: 'DELETE' })
 };
 window.erpAuth = { logout: () => { erpToken = ''; location.reload(); } };
 

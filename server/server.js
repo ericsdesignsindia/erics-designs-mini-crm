@@ -6,7 +6,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
-const { randomUUID } = require('crypto');
+const { randomUUID, createCipheriv, createDecipheriv, createHash, randomBytes } = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -16,6 +16,8 @@ const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/erics_des
 const origins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5500,http://127.0.0.1:5500,http://localhost:4000,http://127.0.0.1:4000,https://ericsdesignsindia.github.io')
   .split(',').map(value => value.trim()).filter(Boolean);
 const secretFile = path.join(__dirname, '..', '.auth-secret');
+const frontendUrl = String(process.env.FRONTEND_URL || 'https://ericsdesignsindia.github.io/erics-designs-mini-crm/').replace(/\/?$/, '/');
+const googleRedirectUri = process.env.GOOGLE_REDIRECT_URI || `http://localhost:${port}/api/integrations/google-drive/callback`;
 const jwtSecret = process.env.JWT_SECRET || (fs.existsSync(secretFile)
   ? fs.readFileSync(secretFile, 'utf8').trim()
   : (() => { const secret = randomUUID() + randomUUID(); fs.writeFileSync(secretFile, secret, { mode: 0o600 }); return secret; })());
@@ -38,6 +40,14 @@ const userSchema = new mongoose.Schema({
   role: { type: String, default: 'admin' }
 }, { timestamps: true, versionKey: false });
 const User = mongoose.model('User', userSchema);
+const driveIntegrationSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, required: true, unique: true, index: true },
+  accountEmail: { type: String, trim: true },
+  tokenCiphertext: { type: String, required: true },
+  connectedAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+}, { versionKey: false });
+const DriveIntegration = mongoose.model('DriveIntegration', driveIntegrationSchema);
 
 function validateState(state) {
   if (!state || typeof state !== 'object' || Array.isArray(state)) return 'State must be an object.';
@@ -107,6 +117,30 @@ function issueToken(user) {
   return jwt.sign({ sub: user._id.toString(), username: user.username, role: user.role }, jwtSecret, { expiresIn: '7d' });
 }
 
+function googleDriveConfig() {
+  const configured = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_TOKEN_ENCRYPTION_KEY);
+  return { configured, redirectUri: googleRedirectUri };
+}
+
+function integrationKey() {
+  if (!process.env.GOOGLE_TOKEN_ENCRYPTION_KEY) throw new Error('Google Drive encryption is not configured.');
+  return createHash('sha256').update(process.env.GOOGLE_TOKEN_ENCRYPTION_KEY).digest();
+}
+
+function encryptIntegration(value) {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', integrationKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(JSON.stringify(value), 'utf8'), cipher.final()]);
+  return Buffer.concat([iv, cipher.getAuthTag(), encrypted]).toString('base64');
+}
+
+function decryptIntegration(value) {
+  const raw = Buffer.from(value, 'base64');
+  const decipher = createDecipheriv('aes-256-gcm', integrationKey(), raw.subarray(0, 12));
+  decipher.setAuthTag(raw.subarray(12, 28));
+  return JSON.parse(Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]).toString('utf8'));
+}
+
 function validCredentials(username, password) {
   if (!/^[a-z0-9._-]{3,60}$/i.test(String(username || ''))) return 'Use 3â€“60 letters, numbers, dots, underscores, or hyphens for the username.';
   if (typeof password !== 'string' || password.length < 10) return 'Use a password with at least 10 characters.';
@@ -168,6 +202,57 @@ app.put('/api/admin/users/:userId/password', requireAuth, async (req, res, next)
     return res.json({ message: `Password reset for ${user.username}.` });
   } catch (error) { return next(error); }
 });
+app.get('/api/integrations/google-drive/status', requireAuth, async (req, res, next) => {
+  try {
+    const config = googleDriveConfig();
+    const integration = await DriveIntegration.findOne({ userId: req.user.sub }).lean();
+    return res.json({ configured: config.configured, connected: Boolean(integration), accountEmail: integration?.accountEmail || null, redirectUri: config.redirectUri });
+  } catch (error) { return next(error); }
+});
+
+app.post('/api/integrations/google-drive/connect', requireAuth, async (req, res, next) => {
+  try {
+    const config = googleDriveConfig();
+    if (!config.configured) return res.status(503).json({ error: 'Google Drive is not configured yet. Add the Google OAuth and encryption settings on the server first.' });
+    const state = jwt.sign({ purpose: 'google-drive', sub: req.user.sub }, jwtSecret, { expiresIn: '10m' });
+    const params = new URLSearchParams({
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      redirect_uri: config.redirectUri,
+      response_type: 'code',
+      scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email',
+      access_type: 'offline', prompt: 'consent', state
+    });
+    return res.json({ authorizationUrl: `https://accounts.google.com/o/oauth2/v2/auth?${params}` });
+  } catch (error) { return next(error); }
+});
+
+app.get('/api/integrations/google-drive/callback', async (req, res) => {
+  const done = (status, message) => res.redirect(`${frontendUrl}?drive=${encodeURIComponent(status)}&message=${encodeURIComponent(message)}`);
+  try {
+    if (req.query.error) return done('denied', 'Google Drive access was not granted.');
+    const state = jwt.verify(String(req.query.state || ''), jwtSecret);
+    if (state.purpose !== 'google-drive' || !req.query.code) return done('error', 'The Google Drive connection link is invalid or expired.');
+    const config = googleDriveConfig();
+    if (!config.configured) return done('error', 'Google Drive is not configured on the server.');
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ code: String(req.query.code), client_id: process.env.GOOGLE_CLIENT_ID, client_secret: process.env.GOOGLE_CLIENT_SECRET, redirect_uri: config.redirectUri, grant_type: 'authorization_code' }) });
+    const tokens = await tokenResponse.json();
+    if (!tokenResponse.ok) return done('error', tokens?.error_description || 'Google could not complete the connection.');
+    let accountEmail = '';
+    if (tokens.access_token) {
+      const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', { headers: { Authorization: `Bearer ${tokens.access_token}` } });
+      const profile = await profileResponse.json().catch(() => ({}));
+      accountEmail = String(profile.email || '');
+    }
+    await DriveIntegration.findOneAndUpdate({ userId: state.sub }, { userId: state.sub, accountEmail, tokenCiphertext: encryptIntegration(tokens), connectedAt: new Date(), updatedAt: new Date() }, { upsert: true, new: true, runValidators: true });
+    return done('connected', 'Google Drive is connected to Eric’s Designs CRM.');
+  } catch (error) { return done('error', 'Google Drive could not be connected. Please try again.'); }
+});
+
+app.delete('/api/integrations/google-drive', requireAuth, async (req, res, next) => {
+  try { await DriveIntegration.deleteOne({ userId: req.user.sub }); return res.json({ ok: true }); }
+  catch (error) { return next(error); }
+});
+
 app.post('/api/ai/draft', requireAuth, async (req, res, next) => {
   try {
     if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'AI drafting is not configured.' });

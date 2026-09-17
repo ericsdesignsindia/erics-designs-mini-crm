@@ -10,3 +10,13 @@ services:
         generateValue: true
       - key: ALLOWED_ORIGINS
         value: https://ericsdesignsindia.github.io
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        value: https://erics-designs-mini-crm.onrender.com/api/integrations/google-drive/callback
+      - key: GOOGLE_TOKEN_ENCRYPTION_KEY
+        generateValue: true
+      - key: FRONTEND_URL
+        value: https://ericsdesignsindia.github.io/erics-designs-mini-crm/
