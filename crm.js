@@ -120,3 +120,20 @@ settings = function(){
   return settingsWithBackups()+backups;
 };
 async function refreshBackupStatus(){const statusEl=document.getElementById('backupStatus'),historyEl=document.getElementById('backupHistory');if(!statusEl)return;try{const data=await erpApi.backups();const list=data.backups||[];statusEl.textContent=list.length?`Automatic backups are active. ${list.length} protected restore point${list.length===1?'':'s'} retained.`:'Your first automatic restore point is created when CRM data next changes.';if(historyEl)historyEl.innerHTML=list.slice(0,3).map(item=>`<div class="totalrow"><span>${new Date(item.createdAt).toLocaleString()}</span><span>Automatic restore point</span></div>`).join('')||'<span>Backups are stored securely with your CRM database.</span>'}catch(error){statusEl.textContent='Backup history will appear after the next saved CRM change.'}}
+
+
+const clientDetailWithDriveAttachments = clientDetail;
+clientDetail = function(){
+  const client = db.clients.find(item => item.id === selectedClient);
+  const files = Array.isArray(client?.attachments) ? client.attachments : [];
+  const panel = `<section class="panel"><div class="dialog-title"><div><div class="eyebrow">Cloud files</div><h2>Attachments</h2></div><label class="smallbtn" for="clientAttachment">Upload file</label></div><input id="clientAttachment" type="file" style="display:none" onchange="uploadClientAttachment('${client?.id || ''}',this.files[0])"><p class="sub">Files are saved in the connected Google Drive folder for this client. Maximum size: 4 MB.</p>${files.length?files.map(file=>`<div class="taskrow"><div><strong>${esc(file.name)}</strong><p>${esc(file.mimeType||'File')} · ${new Date(file.createdAt||Date.now()).toLocaleString()}</p></div><a class="smallbtn" href="${esc(file.url)}" target="_blank" rel="noopener">Open</a></div>`).join(''):'<p class="sub">No files attached yet.</p>'}</section>`;
+  return clientDetailWithDriveAttachments()+panel;
+};
+async function uploadClientAttachment(clientId,file){
+  if(!file)return;
+  if(file.size>4*1024*1024){toast('Choose a file smaller than 4 MB.');return;}
+  const client=db.clients.find(item=>item.id===clientId);if(!client)return;
+  const reader=new FileReader();
+  reader.onload=async()=>{try{toast('Uploading '+file.name+' to Google Drive...');const result=await erpApi.uploadDriveAttachment({clientName:client.name,name:file.name,mimeType:file.type,base64:reader.result});client.attachments=Array.isArray(client.attachments)?client.attachments:[];client.attachments.unshift(result.attachment);persist();render();toast('File attached to '+client.name)}catch(error){toast(error.message)}};
+  reader.readAsDataURL(file);
+}

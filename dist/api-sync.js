@@ -79,6 +79,7 @@ window.erpApi = {
   draftAI: payload => api('/ai/draft', { method: 'POST', body: JSON.stringify(payload) }),
   googleDriveStatus: () => api('/integrations/google-drive/status'),
   backups: () => api(`/workspaces/${ERP_WORKSPACE}/backups`),
+  uploadDriveAttachment: payload => api('/integrations/google-drive/attachments', { method: 'POST', body: JSON.stringify(payload) }),
   connectGoogleDrive: () => api('/integrations/google-drive/connect', { method: 'POST' }),
   disconnectGoogleDrive: () => api('/integrations/google-drive', { method: 'DELETE' })
 };

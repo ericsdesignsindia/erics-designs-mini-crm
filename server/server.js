@@ -161,6 +161,22 @@ function decryptIntegration(value) {
   return JSON.parse(Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]).toString('utf8'));
 }
 
+async function driveAccessToken(userId) {
+  const integration = await DriveIntegration.findOne({ userId });
+  if (!integration) { const error = new Error('Connect Google Drive in Settings before uploading attachments.'); error.status = 409; throw error; }
+  const tokens = decryptIntegration(integration.tokenCiphertext);
+  if (tokens.access_token && (!tokens.expiry_date || Number(tokens.expiry_date) > Date.now() + 60000)) return tokens.access_token;
+  if (!tokens.refresh_token) { const error = new Error('Reconnect Google Drive to continue.'); error.status = 401; throw error; }
+  const response = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ client_id: process.env.GOOGLE_CLIENT_ID, client_secret: process.env.GOOGLE_CLIENT_SECRET, refresh_token: tokens.refresh_token, grant_type: 'refresh_token' }) });
+  const refreshed = await response.json();
+  if (!response.ok) { const error = new Error('Reconnect Google Drive to continue.'); error.status = 401; throw error; }
+  Object.assign(tokens, refreshed, { refresh_token: tokens.refresh_token, expiry_date: Date.now() + Number(refreshed.expires_in || 3600) * 1000 });
+  integration.tokenCiphertext = encryptIntegration(tokens); integration.updatedAt = new Date(); await integration.save();
+  return tokens.access_token;
+}
+async function driveRequest(token, url, options = {}) { const response = await fetch(url, { ...options, headers: { Authorization: `Bearer ${token}`, ...(options.headers || {}) } }); const body = await response.json().catch(() => ({})); if (!response.ok) { const error = new Error(body?.error?.message || 'Google Drive request failed.'); error.status = response.status; throw error; } return body; }
+async function driveFolder(token, name, parentId) { const safeName = String(name).replace(/'/g, "\\'"); const parent = parentId ? ` and '${parentId}' in parents` : ''; const query = `name='${safeName}' and mimeType='application/vnd.google-apps.folder' and trashed=false${parent}`; const found = await driveRequest(token, `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name)`); if (found.files?.[0]) return found.files[0].id; const created = await driveRequest(token, 'https://www.googleapis.com/drive/v3/files?fields=id,name', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', ...(parentId ? { parents: [parentId] } : {}) }) }); return created.id; }
+
 function validCredentials(username, password) {
   if (!/^[a-z0-9._-]{3,60}$/i.test(String(username || ''))) return 'Use 3–60 letters, numbers, dots, underscores, or hyphens for the username.';
   if (typeof password !== 'string' || password.length < 10) return 'Use a password with at least 10 characters.';
@@ -270,6 +286,11 @@ app.get('/api/integrations/google-drive/callback', async (req, res) => {
 
 app.delete('/api/integrations/google-drive', requireAuth, async (req, res, next) => {
   try { await DriveIntegration.deleteOne({ userId: req.user.sub }); return res.json({ ok: true }); }
+  catch (error) { return next(error); }
+});
+
+app.post('/api/integrations/google-drive/attachments', requireAuth, async (req, res, next) => {
+  try { const name = String(req.body.name || '').trim().replace(/[\\/:*?"<>|]+/g, '-').slice(0, 150); const clientName = String(req.body.clientName || 'Unassigned client').trim().slice(0, 120); const mimeType = String(req.body.mimeType || 'application/octet-stream').slice(0, 120); const content = String(req.body.base64 || '').replace(/^data:[^;]+;base64,/, ''); if (!name || !content) return res.status(400).json({ error: 'Choose a file to upload.' }); const bytes = Buffer.from(content, 'base64'); if (!bytes.length || bytes.length > 4 * 1024 * 1024) return res.status(400).json({ error: 'Files must be smaller than 4 MB.' }); const token = await driveAccessToken(req.user.sub); const rootId = await driveFolder(token, "Eric's Designs CRM"); const clientId = await driveFolder(token, clientName, rootId); const boundary = `crm-${randomUUID()}`; const metadata = Buffer.from(JSON.stringify({ name, mimeType, parents: [clientId] }), 'utf8'); const body = Buffer.concat([Buffer.from(`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n`), metadata, Buffer.from(`\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`), bytes, Buffer.from(`\r\n--${boundary}--\r\n`)]); const file = await driveRequest(token, 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,webViewLink,createdTime,size', { method: 'POST', headers: { 'Content-Type': `multipart/related; boundary=${boundary}` }, body }); return res.status(201).json({ attachment: { id: file.id, name: file.name, mimeType: file.mimeType, url: file.webViewLink || `https://drive.google.com/open?id=${file.id}`, createdAt: file.createdTime, size: Number(file.size || bytes.length) } }); }
   catch (error) { return next(error); }
 });
 
