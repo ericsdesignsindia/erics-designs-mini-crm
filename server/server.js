@@ -26,7 +26,7 @@ app.use(cors({ origin(origin, callback) {
   if (!origin || origins.includes(origin)) return callback(null, true);
   return callback(new Error('Origin is not allowed by this local ERP API.'));
 }}));
-app.use(express.json({ limit: '5mb' }));
+app.use(express.json({ limit: '5mb', verify(req, _res, buffer) { req.rawBody = buffer; } }));
 
 const workspaceSchema = new mongoose.Schema({
   workspaceId: { type: String, required: true, unique: true, trim: true, maxlength: 80 },
@@ -175,6 +175,53 @@ async function driveAccessToken(userId) {
   return tokens.access_token;
 }
 async function driveRequest(token, url, options = {}) { const response = await fetch(url, { ...options, headers: { Authorization: `Bearer ${token}`, ...(options.headers || {}) } }); const body = await response.json().catch(() => ({})); if (!response.ok) { const error = new Error(body?.error?.message || 'Google Drive request failed.'); error.status = response.status; throw error; } return body; }
+
+function metaLeadConfig() {
+  return { configured: Boolean(process.env.META_VERIFY_TOKEN && process.env.META_APP_SECRET && process.env.META_PAGE_ACCESS_TOKEN) };
+}
+
+function validMetaSignature(req) {
+  const signature = String(req.headers['x-hub-signature-256'] || '');
+  if (!signature.startsWith('sha256=') || !req.rawBody || !process.env.META_APP_SECRET) return false;
+  const hmac = require('crypto').createHmac('sha256', process.env.META_APP_SECRET).update(req.rawBody).digest('hex');
+  return signature === `sha256=${hmac}`;
+}
+
+function metaLeadFields(values) {
+  const fields = {};
+  for (const value of values || []) {
+    const key = String(value.name || '').toLowerCase();
+    const answer = Array.isArray(value.values) ? value.values.filter(Boolean).join(', ') : '';
+    if (answer) fields[key] = answer;
+  }
+  const name = fields.full_name || [fields.first_name, fields.last_name].filter(Boolean).join(' ') || fields.name || 'Meta Lead';
+  return {
+    name: String(name).trim().slice(0, 120),
+    email: String(fields.email || '').trim().toLowerCase().slice(0, 160),
+    phone: String(fields.phone_number || fields.phone || '').trim().slice(0, 40),
+    service: String(fields.service || fields.interested_service || '').trim().slice(0, 120),
+    details: Object.entries(fields).map(([key, value]) => `${key.replace(/_/g, ' ')}: ${value}`).join('\n')
+  };
+}
+
+async function importMetaLead(leadgenId) {
+  const response = await fetch(`https://graph.facebook.com/v22.0/${encodeURIComponent(leadgenId)}?fields=created_time,field_data,form_id&access_token=${encodeURIComponent(process.env.META_PAGE_ACCESS_TOKEN)}`);
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) { const error = new Error(payload?.error?.message || 'Meta lead lookup failed.'); error.status = response.status; throw error; }
+  const lead = metaLeadFields(payload.field_data);
+  const workspace = await getWorkspace('erics-designs-default');
+  const state = normaliseState(structuredClone(workspace.state));
+  const note = `Meta Lead Ads enquiry${lead.service ? ` - ${lead.service}` : ''}\nForm: ${payload.form_id || 'Unknown'}\nLead ID: ${leadgenId}\n\n${lead.details || 'No additional details supplied.'}`;
+  const existing = state.clients.find(client => lead.email && client.email === lead.email) || state.clients.find(client => lead.phone && client.phone === lead.phone);
+  if (existing) {
+    if (existing.notes?.includes(`Lead ID: ${leadgenId}`)) return { duplicate: true, client: existing };
+    existing.notes = `${existing.notes ? existing.notes + '\n\n' : ''}${note}`; existing.updated = new Date().toISOString();
+    await saveState(workspace, state); return { duplicate: true, client: existing };
+  }
+  const client = { id: randomUUID(), name: lead.name, contact: lead.name, email: lead.email, phone: lead.phone, source: 'Meta Lead Ads', stage: 'New lead', value: 0, notes: note, created: new Date().toISOString(), updated: new Date().toISOString() };
+  state.clients.unshift(client); state.activity.unshift({ id: randomUUID(), message: `New Meta Lead Ads lead: ${client.name}`, date: new Date().toISOString() });
+  await saveState(workspace, state); return { duplicate: false, client };
+}
 async function driveFolder(token, name, parentId) { const safeName = String(name).replace(/'/g, "\\'"); const parent = parentId ? ` and '${parentId}' in parents` : ''; const query = `name='${safeName}' and mimeType='application/vnd.google-apps.folder' and trashed=false${parent}`; const found = await driveRequest(token, `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name)`); if (found.files?.[0]) return found.files[0].id; const created = await driveRequest(token, 'https://www.googleapis.com/drive/v3/files?fields=id,name', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', ...(parentId ? { parents: [parentId] } : {}) }) }); return created.id; }
 
 function validCredentials(username, password) {
@@ -238,6 +285,32 @@ app.post('/api/public/leads', async (req, res, next) => {
     const lead = { id: randomUUID(), name, contact, email, phone, source, stage: 'New lead', value: 0, notes: `${service ? `Interested service: ${service}\n\n` : ''}${message}`, created: new Date().toISOString(), updated: new Date().toISOString() };
     state.clients.unshift(lead); state.activity.unshift({ id: randomUUID(), message: `New ${source} lead: ${name}`, date: new Date().toISOString() });
     await saveState(workspace, state); return res.status(201).json({ ok: true });
+  } catch (error) { return next(error); }
+});
+
+app.get('/api/integrations/meta-leads/status', requireAuth, requireOwner, (_req, res) => {
+  const baseUrl = String(process.env.PUBLIC_API_URL || `http://localhost:${port}`).replace(/\/$/, '');
+  return res.json({ ...metaLeadConfig(), webhookUrl: `${baseUrl}/api/integrations/meta-leads/webhook` });
+});
+
+app.get('/api/integrations/meta-leads/webhook', (req, res) => {
+  const mode = String(req.query['hub.mode'] || '');
+  const token = String(req.query['hub.verify_token'] || '');
+  const challenge = String(req.query['hub.challenge'] || '');
+  if (mode === 'subscribe' && process.env.META_VERIFY_TOKEN && token === process.env.META_VERIFY_TOKEN) return res.status(200).send(challenge);
+  return res.sendStatus(403);
+});
+
+app.post('/api/integrations/meta-leads/webhook', async (req, res, next) => {
+  try {
+    if (!validMetaSignature(req)) return res.sendStatus(403);
+    if (req.body?.object !== 'page') return res.sendStatus(404);
+    for (const entry of req.body.entry || []) for (const change of entry.changes || []) {
+      if (change.field === 'leadgen' && change.value?.leadgen_id) {
+        try { await importMetaLead(String(change.value.leadgen_id)); } catch (error) { console.error('Meta lead import failed:', error.message); }
+      }
+    }
+    return res.status(200).send('EVENT_RECEIVED');
   } catch (error) { return next(error); }
 });
 
