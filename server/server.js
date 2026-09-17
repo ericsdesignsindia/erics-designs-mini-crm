@@ -180,6 +180,18 @@ function metaLeadConfig() {
   return { configured: Boolean(process.env.META_VERIFY_TOKEN && process.env.META_APP_SECRET && process.env.META_PAGE_ACCESS_TOKEN) };
 }
 
+async function metaPageSubscription() {
+  if (!process.env.META_PAGE_ACCESS_TOKEN) return false;
+  const appId = String(process.env.META_APP_ID || '1428706729188935');
+  const response = await fetch(`https://graph.facebook.com/v22.0/me/subscribed_apps?fields=id,subscribed_fields&access_token=${encodeURIComponent(process.env.META_PAGE_ACCESS_TOKEN)}`);
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) return false;
+  const app = (payload.data || []).find(item => String(item.id) === appId);
+  if (!app) return false;
+  const fields = Array.isArray(app.subscribed_fields) ? app.subscribed_fields : [];
+  return fields.length === 0 || fields.includes('leadgen');
+}
+
 function validMetaSignature(req) {
   const signature = String(req.headers['x-hub-signature-256'] || '');
   if (!signature.startsWith('sha256=') || !req.rawBody || !process.env.META_APP_SECRET) return false;
@@ -288,9 +300,12 @@ app.post('/api/public/leads', async (req, res, next) => {
   } catch (error) { return next(error); }
 });
 
-app.get('/api/integrations/meta-leads/status', requireAuth, requireOwner, (_req, res) => {
-  const baseUrl = String(process.env.PUBLIC_API_URL || `http://localhost:${port}`).replace(/\/$/, '');
-  return res.json({ ...metaLeadConfig(), webhookUrl: `${baseUrl}/api/integrations/meta-leads/webhook` });
+app.get('/api/integrations/meta-leads/status', requireAuth, requireOwner, async (_req, res, next) => {
+  try {
+    const baseUrl = String(process.env.PUBLIC_API_URL || `http://localhost:${port}`).replace(/\/$/, '');
+    const configured = metaLeadConfig().configured;
+    return res.json({ configured, pageConnected: configured ? await metaPageSubscription() : false, webhookUrl: `${baseUrl}/api/integrations/meta-leads/webhook` });
+  } catch (error) { return next(error); }
 });
 
 app.post('/api/integrations/meta-leads/subscribe-page', requireAuth, requireOwner, async (_req, res, next) => {

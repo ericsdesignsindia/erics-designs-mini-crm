@@ -154,7 +154,7 @@ settings = function(){
   setTimeout(refreshMetaLeadStatus,0);
   return settingsWithMetaLeads()+meta;
 };
-async function refreshMetaLeadStatus(){const el=document.getElementById('metaLeadStatus');if(!el)return;try{const data=await erpApi.metaLeadStatus();el.textContent=data.configured?'Ready to connect the Eric&#8217;s Designs Page.':'Server setup is incomplete. Add the Meta webhook, app secret, and Page token in Render.'}catch(error){el.textContent=error.message||'Sign in as the owner to check Meta Lead Ads.'}}
+async function refreshMetaLeadStatus(){const el=document.getElementById('metaLeadStatus');if(!el)return;try{const data=await erpApi.metaLeadStatus();el.textContent=data.pageConnected?'Connected. New Eric&#8217;s Designs Instant Form leads will be added to Clients automatically.':data.configured?'Ready to connect the Eric&#8217;s Designs Page.':'Server setup is incomplete. Add the Meta webhook, app secret, and Page token in Render.'}catch(error){el.textContent=error.message||'Sign in as the owner to check Meta Lead Ads.'}}
 async function connectMetaLeadPage(){try{const result=await erpApi.subscribeMetaLeadPage();toast(result.message||'Meta Lead Ads connected.');refreshMetaLeadStatus()}catch(error){toast(error.message)}}
 
 const migrateWithRecurring = migrate;
