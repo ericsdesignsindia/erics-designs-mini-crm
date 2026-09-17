@@ -111,3 +111,12 @@ settings = function(){
 async function refreshGoogleDriveStatus(){const el=document.getElementById('googleDriveStatus');if(!el)return;try{const r=await erpApi.googleDriveStatus();el.textContent=r.connected?`Connected${r.accountEmail?' as '+r.accountEmail:''}. Client attachments will be stored in this connected Drive.`:r.configured?'Ready to connect. Choose Connect Google Drive and sign in.':'Server setup is pending. Google OAuth settings are required before connecting.'}catch(e){el.textContent=e.message}}
 async function connectGoogleDrive(){try{const r=await erpApi.connectGoogleDrive();location.assign(r.authorizationUrl)}catch(e){toast(e.message)}}
 async function disconnectGoogleDrive(){try{await erpApi.disconnectGoogleDrive();toast('Google Drive disconnected.');refreshGoogleDriveStatus()}catch(e){toast(e.message)}}
+
+
+const settingsWithBackups = settings;
+settings = function(){
+  const backups = `<section class="panel crm-banner"><div class="dialog-title"><div><div class="eyebrow">Data protection</div><h2>Automatic backups</h2></div><button class="smallbtn" onclick="refreshBackupStatus()">Refresh</button></div><p class="sub" id="backupStatus">Checking backup history...</p><div id="backupHistory" class="hint"></div></section>`;
+  setTimeout(refreshBackupStatus, 0);
+  return settingsWithBackups()+backups;
+};
+async function refreshBackupStatus(){const statusEl=document.getElementById('backupStatus'),historyEl=document.getElementById('backupHistory');if(!statusEl)return;try{const data=await erpApi.backups();const list=data.backups||[];statusEl.textContent=list.length?`Automatic backups are active. ${list.length} protected restore point${list.length===1?'':'s'} retained.`:'Your first automatic restore point is created when CRM data next changes.';if(historyEl)historyEl.innerHTML=list.slice(0,3).map(item=>`<div class="totalrow"><span>${new Date(item.createdAt).toLocaleString()}</span><span>Automatic restore point</span></div>`).join('')||'<span>Backups are stored securely with your CRM database.</span>'}catch(error){statusEl.textContent='Backup history will appear after the next saved CRM change.'}}

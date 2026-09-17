@@ -48,6 +48,12 @@ const driveIntegrationSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 }, { versionKey: false });
 const DriveIntegration = mongoose.model('DriveIntegration', driveIntegrationSchema);
+const backupSchema = new mongoose.Schema({
+  workspaceId: { type: String, required: true, index: true },
+  reason: { type: String, default: 'automatic daily restore point' },
+  stateCiphertext: { type: String, required: true }
+}, { timestamps: true, versionKey: false });
+const Backup = mongoose.model('Backup', backupSchema);
 
 function validateState(state) {
   if (!state || typeof state !== 'object' || Array.isArray(state)) return 'State must be an object.';
@@ -111,6 +117,20 @@ async function saveState(workspace, state) {
     throw error;
   }
   return updated;
+}
+
+function backupKey() { return createHash('sha256').update(process.env.BACKUP_ENCRYPTION_KEY || jwtSecret).digest(); }
+function encryptBackup(value) {
+  const iv = randomBytes(12), cipher = createCipheriv('aes-256-gcm', backupKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(JSON.stringify(value), 'utf8'), cipher.final()]);
+  return Buffer.concat([iv, cipher.getAuthTag(), encrypted]).toString('base64');
+}
+async function createAutomaticBackup(workspace) {
+  const latest = await Backup.findOne({ workspaceId: workspace.workspaceId }).sort({ createdAt: -1 }).lean();
+  if (latest && Date.now() - new Date(latest.createdAt).getTime() < 24 * 60 * 60 * 1000) return;
+  await Backup.create({ workspaceId: workspace.workspaceId, stateCiphertext: encryptBackup(workspace.state) });
+  const expired = await Backup.find({ workspaceId: workspace.workspaceId }).sort({ createdAt: -1 }).skip(30).select('_id').lean();
+  if (expired.length) await Backup.deleteMany({ _id: { $in: expired.map(item => item._id) } });
 }
 
 function issueToken(user) {
@@ -269,6 +289,15 @@ app.post('/api/ai/draft', requireAuth, async (req, res, next) => {
   } catch (error) { return next(error); }
 });
 app.use('/api/workspaces', requireAuth);
+
+app.get('/api/workspaces/:workspaceId/backups', async (req, res, next) => {
+  try {
+    const id = workspaceId(req.params.workspaceId);
+    if (!id) return res.status(400).json({ error: 'Invalid workspace id.' });
+    const backups = await Backup.find({ workspaceId: id }).sort({ createdAt: -1 }).limit(30).lean();
+    return res.json({ backups: backups.map(backup => ({ id: backup._id.toString(), createdAt: backup.createdAt, reason: backup.reason })), retention: 30 });
+  } catch (error) { return next(error); }
+});
 
 app.get('/api/workspaces/:workspaceId', async (req, res, next) => {
   try {
