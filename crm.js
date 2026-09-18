@@ -186,3 +186,38 @@ const documentCardWithPaymentReminder=documentCard;
 documentCard=function(document){let html=documentCardWithPaymentReminder(document);if(document.type==='Invoice'&&status(document)!=='Paid'&&totals(document).balance>0)html=html.replace('</div></article>','<button class="smallbtn" onclick="sendPaymentReminder(\''+document.id+'\')">Remind</button></div></article>');return html;};
 const showPreviewWithPaymentReminder=showPreview;
 showPreview=function(id){showPreviewWithPaymentReminder(id);const invoice=db.documents.find(document=>document.id===id);if(invoice?.type==='Invoice'&&status(invoice)!=='Paid'&&totals(invoice).balance>0){const actions=document.querySelector('#preview .modalbar .actions');if(actions)actions.insertAdjacentHTML('beforeend',`<button onclick="sendPaymentReminder('${invoice.id}')">Send reminder</button>`);}}
+
+const LOCAL_BROWSER_BACKUP_KEY = 'erics-designs-browser-backup-v1';
+function localBackupDetails(){
+  try { const saved = JSON.parse(localStorage.getItem(LOCAL_BROWSER_BACKUP_KEY) || 'null'); return saved?.data && saved?.createdAt ? saved : null; } catch { return null; }
+}
+function saveLocalBrowserBackup(){
+  try {
+    const saved = { version: 1, createdAt: new Date().toISOString(), data: JSON.parse(JSON.stringify(db)) };
+    localStorage.setItem(LOCAL_BROWSER_BACKUP_KEY, JSON.stringify(saved));
+    toast('Backup saved in this browser.');
+    render();
+  } catch (error) {
+    toast('This browser could not save the backup. Download a copy instead.');
+  }
+}
+function restoreLocalBrowserBackup(){
+  const saved = localBackupDetails();
+  if (!saved) { toast('No local backup is saved in this browser yet.'); return; }
+  if (!confirm(`Restore the backup saved on ${new Date(saved.createdAt).toLocaleString()}? This replaces the current CRM records.`)) return;
+  try {
+    db = validateBackup(saved.data);
+    if (!persist()) return;
+    render();
+    toast('Local backup restored.');
+  } catch (error) {
+    toast('The saved local backup could not be restored.');
+  }
+}
+const settingsWithLocalBrowserBackup = settings;
+settings = function(){
+  const saved = localBackupDetails();
+  const status = saved ? `Saved on this device: ${new Date(saved.createdAt).toLocaleString()}` : 'No backup saved in this browser yet.';
+  const localBackup = `<section class="panel crm-banner local-backup"><div class="dialog-title"><div><div class="eyebrow">Your device</div><h2>Local backup</h2></div><button class="primary" onclick="saveLocalBrowserBackup()">Save backup here</button></div><p class="sub">Keeps one recovery copy in this browser’s local storage. It remains on this device unless browser data is cleared.</p><p class="hint"><b>${esc(status)}</b></p><div class="actions"><button class="smallbtn" onclick="restoreLocalBrowserBackup()" ${saved ? '' : 'disabled'}>Restore saved backup</button><button class="smallbtn" onclick="backup()">Download another copy</button></div></section>`;
+  return localBackup + settingsWithLocalBrowserBackup();
+};
