@@ -251,3 +251,23 @@ settings = function(){
   const filePicker = `<section class="panel local-backup"><div class="dialog-title"><div><div class="eyebrow">Choose exact location</div><h2>Save backup file</h2></div><button class="primary" onclick="saveBackupWithFilePicker()">Choose file location</button></div><p class="sub">Select the exact folder and file name in the Windows save window. This is the most reliable way to save a backup where you want it.</p></section>`;
   return filePicker + settingsWithBackupFilePicker();
 };
+
+function downloadBackupNow(){
+  const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+  const blob=new Blob([JSON.stringify(db,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+  link.href=url;
+  link.download=`Erics-Designs-Backup-${stamp}.json`;
+  link.style.display='none';
+  document.body.appendChild(link);
+  link.click();
+  setTimeout(()=>{link.remove();URL.revokeObjectURL(url)},1500);
+  localStorage.setItem('erics-designs-last-backup',new Date().toISOString());
+  toast('Backup download started. Check your Downloads folder.');
+}
+const saveBackupWithFilePickerFallback = saveBackupWithFilePicker;
+saveBackupWithFilePicker = async function(){
+  if(!window.showSaveFilePicker){downloadBackupNow();return}
+  try{await saveBackupWithFilePickerFallback()}catch(error){downloadBackupNow()}
+};
