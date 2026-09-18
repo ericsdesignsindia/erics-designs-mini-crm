@@ -26,7 +26,8 @@ app.use(cors({ origin(origin, callback) {
   if (!origin || origins.includes(origin)) return callback(null, true);
   return callback(new Error('Origin is not allowed by this local ERP API.'));
 }}));
-app.use(express.json({ limit: '5mb', verify(req, _res, buffer) { req.rawBody = buffer; } }));
+// A 4 MB file becomes roughly 5.4 MB after browser base64 encoding, so accept a little headroom.
+app.use(express.json({ limit: '6mb', verify(req, _res, buffer) { req.rawBody = buffer; } }));
 
 const workspaceSchema = new mongoose.Schema({
   workspaceId: { type: String, required: true, unique: true, trim: true, maxlength: 80 },
