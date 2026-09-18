@@ -10,7 +10,7 @@ const oldRender=render,oldEditor=editor,oldNewDoc=newDoc,oldStatus=status,oldDoc
 const currencySymbol=c=>c==='AED'?'AED ':'₹';
 const fmt=(d,n)=>currencySymbol(d.currency||'INR')+Number(n).toLocaleString(d.currency==='AED'?'en-AE':'en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
 const displayedRate=(d,i)=>i.rateText||fmt(d,i.rate);
-const currencySummary=values=>Object.entries(values).filter(([,v])=>v).map(([c,v])=>currencySymbol(c)+Number(v).toLocaleString(c==='AED'?'en-AE':'en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})).join(' · ')||'₹0.00';
+const currencySummary=values=>Object.entries(values).filter(([,v])=>v).map(([c,v])=>currencySymbol(c)+Number(v).toLocaleString(c==='AED'?'en-AE':'en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})).join('<br>')||currencySymbol('INR')+'0.00';
 function logEvent(message){db.activity.unshift({id:uid(),message,date:new Date().toISOString()});db.activity=db.activity.slice(0,250)}
 function commitChange(work,message){const before=structuredClone(db);work();if(message)logEvent(message);if(!persist()){db=before;return false}render();if(message)toast(message);return true}
 persist=function(){migrate(db);return oldPersist()};
