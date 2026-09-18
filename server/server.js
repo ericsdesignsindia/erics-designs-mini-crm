@@ -116,6 +116,12 @@ async function saveState(workspace, state) {
     error.status = 409;
     throw error;
   }
+  try {
+    await createAutomaticBackup(updated);
+  } catch (backupError) {
+    // A backup failure must never block a CRM save. The server log keeps the issue visible.
+    console.error('Automatic backup failed:', backupError.message);
+  }
   return updated;
 }
 
