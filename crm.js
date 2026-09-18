@@ -271,3 +271,19 @@ saveBackupWithFilePicker = async function(){
   if(!window.showSaveFilePicker){downloadBackupNow();return}
   try{await saveBackupWithFilePickerFallback()}catch(error){downloadBackupNow()}
 };
+
+saveBackupWithFilePicker = async function(){
+  if(!window.showSaveFilePicker){downloadBackupNow();return}
+  const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+  try{
+    const file=await window.showSaveFilePicker({suggestedName:`Erics-Designs-Backup-${stamp}.json`,types:[{description:'CRM backup',accept:{'application/json':['.json']}}]});
+    const writer=await file.createWritable();
+    await writer.write(JSON.stringify(db,null,2));
+    await writer.close();
+    localStorage.setItem('erics-designs-last-backup',new Date().toISOString());
+    toast('Backup saved to the selected location.');
+  }catch(error){
+    if(error?.name==='AbortError')return;
+    downloadBackupNow();
+  }
+};
