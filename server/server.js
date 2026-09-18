@@ -248,18 +248,18 @@ async function importMetaLead(leadgenId) {
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) { const error = new Error(payload?.error?.message || 'Meta lead lookup failed.'); error.status = response.status; throw error; }
   const lead = metaLeadFields(payload.field_data);
-  const workspace = await getWorkspace('erics-designs-default');
-  const state = normaliseState(structuredClone(workspace.state));
   const note = `Meta Lead Ads enquiry${lead.service ? ` - ${lead.service}` : ''}\nForm: ${payload.form_id || 'Unknown'}\nLead ID: ${leadgenId}\n\n${lead.details || 'No additional details supplied.'}`;
-  const existing = state.clients.find(client => lead.email && client.email === lead.email) || state.clients.find(client => lead.phone && client.phone === lead.phone);
-  if (existing) {
-    if (existing.notes?.includes(`Lead ID: ${leadgenId}`)) return { duplicate: true, client: existing };
-    existing.notes = `${existing.notes ? existing.notes + '\n\n' : ''}${note}`; existing.updated = new Date().toISOString();
-    await saveState(workspace, state); return { duplicate: true, client: existing };
-  }
-  const client = { id: randomUUID(), name: lead.name, contact: lead.name, email: lead.email, phone: lead.phone, source: 'Meta Lead Ads', stage: 'New lead', value: 0, notes: note, created: new Date().toISOString(), updated: new Date().toISOString() };
-  state.clients.unshift(client); state.activity.unshift({ id: randomUUID(), message: `New Meta Lead Ads lead: ${client.name}`, date: new Date().toISOString() });
-  await saveState(workspace, state); return { duplicate: false, client };
+  return updateWorkspaceState('erics-designs-default', state => {
+    const existing = state.clients.find(client => lead.email && client.email === lead.email) || state.clients.find(client => lead.phone && client.phone === lead.phone);
+    if (existing) {
+      if (existing.notes?.includes(`Lead ID: ${leadgenId}`)) return { duplicate: true, client: existing };
+      existing.notes = `${existing.notes ? existing.notes + '\n\n' : ''}${note}`; existing.updated = new Date().toISOString();
+      return { duplicate: true, client: existing };
+    }
+    const client = { id: randomUUID(), name: lead.name, contact: lead.name, email: lead.email, phone: lead.phone, source: 'Meta Lead Ads', stage: 'New lead', value: 0, notes: note, created: new Date().toISOString(), updated: new Date().toISOString() };
+    state.clients.unshift(client); state.activity.unshift({ id: randomUUID(), message: `New Meta Lead Ads lead: ${client.name}`, date: new Date().toISOString() });
+    return { duplicate: false, client };
+  });
 }
 async function driveFolder(token, name, parentId) { const safeName = String(name).replace(/'/g, "\\'"); const parent = parentId ? ` and '${parentId}' in parents` : ''; const query = `name='${safeName}' and mimeType='application/vnd.google-apps.folder' and trashed=false${parent}`; const found = await driveRequest(token, `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name)`); if (found.files?.[0]) return found.files[0].id; const created = await driveRequest(token, 'https://www.googleapis.com/drive/v3/files?fields=id,name', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', ...(parentId ? { parents: [parentId] } : {}) }) }); return created.id; }
 
@@ -322,13 +322,18 @@ app.post('/api/public/leads', async (req, res, next) => {
     const source = String(req.body.source || 'Website').trim().slice(0, 80);
     if (!name || !message || (!email && !phone)) return res.status(400).json({ error: 'Add your name, enquiry, and either an email address or WhatsApp number.' });
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Enter a valid email address.' });
-    const workspace = await getWorkspace('erics-designs-default');
-    const state = normaliseState(structuredClone(workspace.state));
-    const existing = state.clients.find(client => email && client.email === email) || state.clients.find(client => phone && client.phone === phone);
-    if (existing) { existing.notes = `${existing.notes ? existing.notes + '\n\n' : ''}New ${source} enquiry${service ? ` - ${service}` : ''}: ${message}`; existing.updated = new Date().toISOString(); await saveState(workspace, state); return res.status(200).json({ ok: true, duplicate: true }); }
-    const lead = { id: randomUUID(), name, contact, email, phone, source, stage: 'New lead', value: 0, notes: `${service ? `Interested service: ${service}\n\n` : ''}${message}`, created: new Date().toISOString(), updated: new Date().toISOString() };
-    state.clients.unshift(lead); state.activity.unshift({ id: randomUUID(), message: `New ${source} lead: ${name}`, date: new Date().toISOString() });
-    await saveState(workspace, state); return res.status(201).json({ ok: true });
+    const result = await updateWorkspaceState('erics-designs-default', state => {
+      const existing = state.clients.find(client => email && client.email === email) || state.clients.find(client => phone && client.phone === phone);
+      if (existing) {
+        existing.notes = `${existing.notes ? existing.notes + '\n\n' : ''}New ${source} enquiry${service ? ` - ${service}` : ''}: ${message}`;
+        existing.updated = new Date().toISOString();
+        return { duplicate: true };
+      }
+      const lead = { id: randomUUID(), name, contact, email, phone, source, stage: 'New lead', value: 0, notes: `${service ? `Interested service: ${service}\n\n` : ''}${message}`, created: new Date().toISOString(), updated: new Date().toISOString() };
+      state.clients.unshift(lead); state.activity.unshift({ id: randomUUID(), message: `New ${source} lead: ${name}`, date: new Date().toISOString() });
+      return { duplicate: false };
+    });
+    return res.status(result.duplicate ? 200 : 201).json({ ok: true, duplicate: result.duplicate });
   } catch (error) { return next(error); }
 });
 
