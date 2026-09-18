@@ -231,3 +231,23 @@ async function chooseBackupFolder(){if(!window.showDirectoryPicker){toast('Choos
 async function saveBackupToSelectedFolder(){const folder=await savedBackupFolder();if(!folder){toast('Choose a backup folder first.');return}try{const permission=await folder.requestPermission({mode:'readwrite'});if(permission!=='granted'){toast('Allow folder access to save the backup.');return}const stamp=new Date().toISOString().replace(/[:.]/g,'-');const file=await folder.getFileHandle(`Erics-Designs-Backup-${stamp}.json`,{create:true});const writer=await file.createWritable();await writer.write(JSON.stringify(db,null,2));await writer.close();localStorage.setItem('erics-designs-last-folder-backup',new Date().toISOString());render();toast(`Backup saved in ${folder.name}.`)}catch(error){toast('The backup could not be saved in the selected folder.')}}
 const settingsWithFolderBackups = settings;
 settings = function(){const folderName=localStorage.getItem('erics-designs-backup-folder-name');const folderBackup=`<section class="panel local-backup"><div class="dialog-title"><div><div class="eyebrow">Backup destination</div><h2>Save to a folder</h2></div><button class="primary" onclick="chooseBackupFolder()">Choose folder</button></div><p class="sub">${folderName?`Selected folder: <b>${esc(folderName)}</b>`:'Choose a folder on this computer for your downloadable CRM backup files.'}</p><div class="actions"><button class="smallbtn" onclick="saveBackupToSelectedFolder()" ${folderName?'':'disabled'}>Save backup to folder</button></div><p class="hint">Your browser will ask you to choose and approve the folder. For privacy, it does not reveal the full computer path to the CRM.</p></section>`;return folderBackup+settingsWithFolderBackups()};
+
+async function saveBackupWithFilePicker(){
+  const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+  try{
+    if(window.showSaveFilePicker){
+      const file=await window.showSaveFilePicker({suggestedName:`Erics-Designs-Backup-${stamp}.json`,types:[{description:'CRM backup',accept:{'application/json':['.json']}}]});
+      const writer=await file.createWritable();
+      await writer.write(JSON.stringify(db,null,2));
+      await writer.close();
+      toast('Backup saved to the selected location.');
+      return;
+    }
+    backup();
+  }catch(error){if(error?.name!=='AbortError')toast('The backup could not be saved to that location.');}
+}
+const settingsWithBackupFilePicker = settings;
+settings = function(){
+  const filePicker = `<section class="panel local-backup"><div class="dialog-title"><div><div class="eyebrow">Choose exact location</div><h2>Save backup file</h2></div><button class="primary" onclick="saveBackupWithFilePicker()">Choose file location</button></div><p class="sub">Select the exact folder and file name in the Windows save window. This is the most reliable way to save a backup where you want it.</p></section>`;
+  return filePicker + settingsWithBackupFilePicker();
+};
