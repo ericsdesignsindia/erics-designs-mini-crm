@@ -56,3 +56,5 @@ body[data-theme="dark"]{--bg:#10130f;--paper:#181d17;--line:#303b2c;--ink:#f1f3e
 .stats .stat strong{line-height:1.3;overflow-wrap:anywhere}
 
 .stats .stat strong{line-height:1.3;overflow-wrap:normal;word-break:normal}.currency-amount{display:block;white-space:nowrap}
+
+.stats .stat strong{font-family:"Segoe UI",Arial,sans-serif;font-size:27px;font-weight:700;letter-spacing:0}.currency-amount{font-family:inherit}
