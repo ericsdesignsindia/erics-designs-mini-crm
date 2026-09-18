@@ -6,7 +6,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs');
-const { randomUUID, createCipheriv, createDecipheriv, createHash, randomBytes } = require('crypto');
+const { randomUUID, createCipheriv, createDecipheriv, createHash, randomBytes, timingSafeEqual } = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
@@ -277,6 +277,11 @@ app.get('/api', (_req, res) => res.json({
 
 const publicLeadRequests = new Map();
 function leadRequestAllowed(ip) { const now = Date.now(), windowStart = now - 10 * 60 * 1000; const list = (publicLeadRequests.get(ip) || []).filter(time => time > windowStart); if (list.length >= 12) return false; list.push(now); publicLeadRequests.set(ip, list); return true; }
+function secureTokenMatches(actual, expected) {
+  if (!expected || !actual) return false;
+  const actualBuffer = Buffer.from(actual), expectedBuffer = Buffer.from(expected);
+  return actualBuffer.length === expectedBuffer.length && timingSafeEqual(actualBuffer, expectedBuffer);
+}
 app.post('/api/public/leads', async (req, res, next) => {
   try {
     const ip = req.ip || 'unknown';
@@ -300,6 +305,37 @@ app.post('/api/public/leads', async (req, res, next) => {
   } catch (error) { return next(error); }
 });
 
+// Make sends Meta Lead Ads data here. The token keeps this integration endpoint private.
+app.post('/api/integrations/make/leads', async (req, res, next) => {
+  try {
+    if (!secureTokenMatches(String(req.get('x-make-webhook-token') || ''), String(process.env.MAKE_WEBHOOK_TOKEN || ''))) return res.status(401).json({ error: 'Invalid Make webhook token.' });
+    const name = String(req.body.name || req.body.full_name || 'Meta lead').trim().slice(0, 120);
+    const contact = String(req.body.contact || req.body.full_name || name).trim().slice(0, 120);
+    const email = String(req.body.email || '').trim().toLowerCase().slice(0, 160);
+    const phone = String(req.body.phone || req.body.phone_number || '').trim().slice(0, 40);
+    const service = String(req.body.service || req.body.service_interest || '').trim().slice(0, 120);
+    const message = String(req.body.message || req.body.details || 'Meta Instant Form enquiry').trim().slice(0, 3000);
+    const source = String(req.body.source || 'Meta Lead Ads (Make)').trim().slice(0, 80);
+    if (!email && !phone) return res.status(400).json({ error: 'A Meta lead needs an email address or phone number.' });
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Make supplied an invalid email address.' });
+    const workspace = await getWorkspace('erics-designs-default');
+    const state = normaliseState(structuredClone(workspace.state));
+    const existing = state.clients.find(client => email && client.email === email) || state.clients.find(client => phone && client.phone === phone);
+    if (existing) {
+      existing.notes = `${existing.notes ? existing.notes + '\n\n' : ''}New ${source} enquiry${service ? ` - ${service}` : ''}: ${message}`;
+      existing.updated = new Date().toISOString(); await saveState(workspace, state);
+      return res.status(200).json({ ok: true, duplicate: true, clientId: existing.id });
+    }
+    const lead = { id: randomUUID(), name, contact, email, phone, source, stage: 'New lead', value: 0, notes: `${service ? `Interested service: ${service}\n\n` : ''}${message}`, created: new Date().toISOString(), updated: new Date().toISOString() };
+    state.clients.unshift(lead); state.activity.unshift({ id: randomUUID(), message: `New ${source} lead: ${name}`, date: new Date().toISOString() });
+    await saveState(workspace, state); return res.status(201).json({ ok: true, clientId: lead.id });
+  } catch (error) { return next(error); }
+});
+
+app.get('/api/integrations/make-leads/status', requireAuth, requireOwner, (_req, res) => {
+  const baseUrl = String(process.env.PUBLIC_API_URL || `http://localhost:${port}`).replace(/\/$/, '');
+  return res.json({ configured: Boolean(process.env.MAKE_WEBHOOK_TOKEN), webhookUrl: `${baseUrl}/api/integrations/make/leads` });
+});
 app.get('/api/integrations/meta-leads/status', requireAuth, requireOwner, async (_req, res, next) => {
   try {
     const baseUrl = String(process.env.PUBLIC_API_URL || `http://localhost:${port}`).replace(/\/$/, '');
