@@ -119,6 +119,26 @@ async function saveState(workspace, state) {
   return updated;
 }
 
+// Public integrations can arrive while an administrator is saving CRM changes in
+// the browser. Reload the workspace and apply the integration change again when
+// that normal optimistic-lock race occurs, rather than rejecting a lead.
+async function updateWorkspaceState(workspaceId, mutate, retries = 3) {
+  let conflict;
+  for (let attempt = 0; attempt < retries; attempt += 1) {
+    const workspace = await getWorkspace(workspaceId);
+    const state = normaliseState(structuredClone(workspace.state));
+    const result = await mutate(state);
+    try {
+      await saveState(workspace, state);
+      return result;
+    } catch (error) {
+      if (error.status !== 409 || attempt === retries - 1) throw error;
+      conflict = error;
+    }
+  }
+  throw conflict;
+}
+
 function backupKey() { return createHash('sha256').update(process.env.BACKUP_ENCRYPTION_KEY || jwtSecret).digest(); }
 function encryptBackup(value) {
   const iv = randomBytes(12), cipher = createCipheriv('aes-256-gcm', backupKey(), iv);
@@ -318,17 +338,18 @@ app.post('/api/integrations/make/leads', async (req, res, next) => {
     const source = String(req.body.source || 'Meta Lead Ads (Make)').trim().slice(0, 80);
     if (!email && !phone) return res.status(400).json({ error: 'A Meta lead needs an email address or phone number.' });
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'Make supplied an invalid email address.' });
-    const workspace = await getWorkspace('erics-designs-default');
-    const state = normaliseState(structuredClone(workspace.state));
-    const existing = state.clients.find(client => email && client.email === email) || state.clients.find(client => phone && client.phone === phone);
-    if (existing) {
-      existing.notes = `${existing.notes ? existing.notes + '\n\n' : ''}New ${source} enquiry${service ? ` - ${service}` : ''}: ${message}`;
-      existing.updated = new Date().toISOString(); await saveState(workspace, state);
-      return res.status(200).json({ ok: true, duplicate: true, clientId: existing.id });
-    }
-    const lead = { id: randomUUID(), name, contact, email, phone, source, stage: 'New lead', value: 0, notes: `${service ? `Interested service: ${service}\n\n` : ''}${message}`, created: new Date().toISOString(), updated: new Date().toISOString() };
-    state.clients.unshift(lead); state.activity.unshift({ id: randomUUID(), message: `New ${source} lead: ${name}`, date: new Date().toISOString() });
-    await saveState(workspace, state); return res.status(201).json({ ok: true, clientId: lead.id });
+    const result = await updateWorkspaceState('erics-designs-default', state => {
+      const existing = state.clients.find(client => email && client.email === email) || state.clients.find(client => phone && client.phone === phone);
+      if (existing) {
+        existing.notes = `${existing.notes ? existing.notes + '\n\n' : ''}New ${source} enquiry${service ? ` - ${service}` : ''}: ${message}`;
+        existing.updated = new Date().toISOString();
+        return { duplicate: true, clientId: existing.id };
+      }
+      const lead = { id: randomUUID(), name, contact, email, phone, source, stage: 'New lead', value: 0, notes: `${service ? `Interested service: ${service}\n\n` : ''}${message}`, created: new Date().toISOString(), updated: new Date().toISOString() };
+      state.clients.unshift(lead); state.activity.unshift({ id: randomUUID(), message: `New ${source} lead: ${name}`, date: new Date().toISOString() });
+      return { duplicate: false, clientId: lead.id };
+    });
+    return res.status(result.duplicate ? 200 : 201).json({ ok: true, ...result });
   } catch (error) { return next(error); }
 });
 
