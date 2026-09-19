@@ -78,6 +78,7 @@ window.erpApi = {
   createAdmin: (username, password) => api('/admin/users', { method: 'POST', body: JSON.stringify({ username, password }) }),
   resetAdminPassword: (userId, password) => api(`/admin/users/${userId}/password`, { method: 'PUT', body: JSON.stringify({ password }) }),
   draftAI: payload => api('/ai/draft', { method: 'POST', body: JSON.stringify(payload) }),
+  aiStatus: () => api('/integrations/ai/status'),
   metaLeadStatus: () => api('/integrations/meta-leads/status'),
   whatsappStatus: () => api('/integrations/whatsapp/status'),
   sendInvoiceWhatsApp: payload => api('/integrations/whatsapp/send-invoice', { method: 'POST', body: JSON.stringify(payload) }),
