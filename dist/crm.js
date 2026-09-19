@@ -769,3 +769,13 @@ function openMailboxFromHash(){
   if(mailboxMessages.some(message => message.id === id)) openMailboxMessage(id);
 }
 window.addEventListener('hashchange', openMailboxFromHash);
+
+const mailboxSectionWithQuickOpen = mailboxSection;
+mailboxSection = function(){
+  const html = mailboxSectionWithQuickOpen();
+  return html.replace('<button class="primary" onclick="loadMailbox()">Refresh inbox</button>', '<button class="smallbtn" onclick="openNewestMailboxMessage()">Open newest email</button><button class="primary" onclick="loadMailbox()">Refresh inbox</button>');
+};
+function openNewestMailboxMessage(){
+  if(!mailboxMessages.length){toast('Refresh inbox first, then open the newest email.');return;}
+  openMailboxMessage(mailboxMessages[0].id);
+}
