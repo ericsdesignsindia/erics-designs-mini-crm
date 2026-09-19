@@ -636,3 +636,41 @@ async function loadMailbox(){
     listEl.innerHTML = '<div class="empty"><h2>Mailbox unavailable.</h2><p>Reconnect Gmail in Settings, then try again.</p><button class="primary" onclick="nav(\'Settings\')">Open Gmail settings</button></div>';
   }
 }
+
+function decodeMailboxText(value){
+  const text = String(value || '');
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = text;
+  return textarea.value.replace(/\s+/g, ' ').trim();
+}
+function mailboxSender(value){
+  const sender = decodeMailboxText(value);
+  const match = sender.match(/^\s*([^<]+?)\s*<[^>]+>\s*$/);
+  return match ? match[1].trim() : sender;
+}
+function mailboxDate(value){
+  const parsed = new Date(value);
+  if(Number.isNaN(parsed.getTime())) return decodeMailboxText(value);
+  return parsed.toLocaleString(undefined,{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'});
+}
+const loadMailboxWithFormatting = loadMailbox;
+loadMailbox = async function(){
+  const statusEl = document.getElementById('mailboxStatus'), listEl = document.getElementById('mailboxList');
+  if(!statusEl || !listEl) return;
+  try{
+    const status = await erpApi.gmailStatus();
+    if(!status.connected){
+      statusEl.textContent = 'Gmail is not connected yet.';
+      listEl.innerHTML = `<div class="empty"><h2>Connect Gmail to open your inbox.</h2><p>Open Settings, connect ericsdesignsindia@gmail.com, then return here.</p><button class="primary" onclick="nav('Settings')">Open Gmail settings</button></div>`;
+      return;
+    }
+    statusEl.textContent = `Connected as ${status.accountEmail || 'your Gmail account'}. Showing recent inbox messages.`;
+    listEl.innerHTML = '<p class="sub" style="padding:16px">Refreshing recent messages…</p>';
+    const data = await erpApi.gmailMessages();
+    const messages = data.messages || [];
+    listEl.innerHTML = messages.length ? messages.map(message => `<article class="mail-row ${message.unread?'unread':''}"><div class="mail-row-top"><b>${esc(mailboxSender(message.from) || 'Unknown sender')}</b><small>${esc(mailboxDate(message.date))}</small></div><h3>${esc(decodeMailboxText(message.subject) || '(No subject)')}</h3><p>${esc(decodeMailboxText(message.snippet))}</p></article>`).join('') : '<div class="empty"><h2>Your inbox is clear.</h2><p>No recent messages were returned by Gmail.</p></div>';
+  }catch(error){
+    statusEl.textContent = error.message || 'Your Gmail inbox could not be loaded.';
+    listEl.innerHTML = '<div class="empty"><h2>Mailbox unavailable.</h2><p>Reconnect Gmail in Settings, then try again.</p><button class="primary" onclick="nav(\'Settings\')">Open Gmail settings</button></div>';
+  }
+};
