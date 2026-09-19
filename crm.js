@@ -365,3 +365,100 @@ documentCard=function(document){
   }
   return html;
 };
+
+function loadInvoicePdfLibrary(){
+  if(window.jspdf?.jsPDF)return Promise.resolve(window.jspdf.jsPDF);
+  if(window.invoicePdfLibraryPromise)return window.invoicePdfLibraryPromise;
+  window.invoicePdfLibraryPromise=new Promise((resolve,reject)=>{
+    const script=document.createElement('script');
+    script.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    script.onload=()=>window.jspdf?.jsPDF?resolve(window.jspdf.jsPDF):reject(new Error('PDF library unavailable'));
+    script.onerror=()=>reject(new Error('PDF library could not load'));
+    document.head.appendChild(script);
+  });
+  return window.invoicePdfLibraryPromise;
+}
+
+async function invoiceQrData(){
+  const response=await fetch('./assets/eric-rodgers-google-pay-qr.jpeg');
+  if(!response.ok)throw new Error('QR image unavailable');
+  const blob=await response.blob();
+  return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});
+}
+
+async function createInvoicePdf(invoice){
+  const jsPDF=await loadInvoicePdfLibrary();
+  const pdf=new jsPDF({unit:'mm',format:'a4',compress:true});
+  const business=invoice.business||db.settings;
+  const summary=totals(invoice);
+  const margin=16, pageWidth=210, contentWidth=178;
+  let y=18;
+  const text=(value,x,yPos,size=10,style='normal',align='left')=>{pdf.setFont('helvetica',style);pdf.setFontSize(size);pdf.text(String(value||''),x,yPos,{align});};
+  const rule=(yPos)=>{pdf.setDrawColor(190,157,78);pdf.setLineWidth(.65);pdf.line(margin,yPos,pageWidth-margin,yPos)};
+  const space=(required)=>{if(y+required<=280)return;pdf.addPage();y=18;};
+  text(String(business.name||"Eric's Designs").toUpperCase(),margin,y,20,'bold');
+  text(business.tagline||'',margin,y+6,8);
+  text(business.address||'',margin,y+11,8);
+  text('FINAL INVOICE',pageWidth-margin,y,16,'bold','right');
+  text(invoice.number,pageWidth-margin,y+7,9,'normal','right');
+  y+=22;rule(y);y+=11;
+  text('BILL TO',margin,y,9,'bold');
+  text('DETAILS',110,y,9,'bold');
+  const clientLines=[invoice.client.name,invoice.client.address,invoice.client.phone,invoice.client.email].filter(Boolean);
+  clientLines.forEach((line,index)=>text(line,margin,y+8+(index*5),9,index===0?'bold':'normal'));
+  [['Issue date',invoice.date],['Due date',invoice.due],['Project',invoice.project||'—'],['Currency',invoice.currency||'INR']].forEach(([label,value],index)=>text(`${label}: ${value}`,110,y+8+(index*5),9));
+  y+=Math.max(clientLines.length,4)*5+16;
+  text('SERVICES PROVIDED',margin,y,9,'bold');y+=7;
+  const columns=[margin,28,117,136,158,194];
+  pdf.setFillColor(245,247,242);pdf.rect(margin,y,contentWidth,8,'F');
+  ['#','SERVICE / DESCRIPTION','QTY','RATE','AMOUNT'].forEach((label,index)=>text(label,[columns[0]+3,columns[1]+2,columns[3]-3,columns[4]-3,columns[5]-1][index],y+5.2,7,'bold',index<2?'left':'right'));
+  y+=12;
+  invoice.items.forEach((item,index)=>{
+    const description=[item.name,item.description].filter(Boolean).join('\n');
+    const lines=pdf.splitTextToSize(description,84);
+    const height=Math.max(12,lines.length*4.2+4);
+    space(height+4);
+    text(index+1,columns[0]+3,y+4,8);
+    pdf.setFont('helvetica','bold');pdf.setFontSize(8);pdf.text(lines[0]||'',columns[1]+2,y+4);
+    if(lines.length>1){pdf.setFont('helvetica','normal');pdf.setFontSize(7);pdf.text(lines.slice(1),columns[1]+2,y+8,{lineHeightFactor:1.15});}
+    text(item.qty,columns[3]-3,y+4,8,'normal','right');
+    text(fmt(invoice,item.rate),columns[4]-3,y+4,8,'normal','right');
+    text(fmt(invoice,num(item.qty)*num(item.rate)),columns[5]-1,y+4,8,'normal','right');
+    pdf.setDrawColor(225,228,220);pdf.setLineWidth(.2);pdf.line(margin,y+height,194,y+height);y+=height+4;
+  });
+  space(48);
+  const totalX=119;
+  [['Subtotal',fmt(invoice,summary.subtotal)],['Discount',`−${fmt(invoice,summary.discount)}`],[`GST / tax (${num(invoice.tax)}%)`,fmt(invoice,summary.tax)],['TOTAL',fmt(invoice,summary.total)],['Paid',fmt(invoice,summary.paid)],['BALANCE DUE',fmt(invoice,summary.balance)]].forEach(([label,value],index)=>{const bold=index===3||index===5;text(label,totalX,y, bold?11:8,bold?'bold':'normal');text(value,194,y,bold?11:8,bold?'bold':'normal','right');y+=bold?8:6;});
+  if(invoice.currency==='INR'){
+    space(55);y+=4;
+    try{const qr=await invoiceQrData();pdf.addImage(qr,'JPEG',margin,y,35,42);text('PAY WITH GOOGLE PAY',58,y+7,9,'bold');text(summary.balance>0?`Scan to pay ${fmt(invoice,summary.balance)}`:'Scan to pay with any UPI app',58,y+15,11,'bold');text('UPI ID: ericrodgers555@oksbi',58,y+23,8);text(`Reference: ${invoice.number}`,58,y+29,8);y+=50;}catch{}
+  }
+  if(invoice.terms){space(28);text('NOTES',margin,y,9,'bold');y+=6;pdf.setFont('helvetica','normal');pdf.setFontSize(8);const notes=pdf.splitTextToSize(invoice.terms,contentWidth);pdf.text(notes,margin,y,{lineHeightFactor:1.35});y+=notes.length*4;}
+  pdf.setDrawColor(220,220,220);pdf.setLineWidth(.2);pdf.line(margin,286,pageWidth-margin,286);text(`Thank you for choosing ${business.name||"Eric's Designs"}.`,pageWidth/2,291,8,'normal','center');
+  return new File([pdf.output('blob')],`${invoice.number}.pdf`,{type:'application/pdf'});
+}
+
+async function shareInvoiceOnWhatsApp(id){
+  const invoice=db.documents.find(document=>document.id===id);
+  if(!invoice||invoice.type!=='Invoice'){toast('Choose a final invoice first.');return}
+  let phone=String(invoice.client?.phone||'').replace(/\D/g,'');
+  if(!phone){const client=db.clients.find(item=>item.id===invoice.client?.id||item.name===invoice.client?.name);phone=String(client?.phone||'').replace(/\D/g,'')}
+  if(!phone){toast('Add the client WhatsApp number, including country code, then save the invoice.');return}
+  if(phone.length===10)phone='91'+phone;
+  const invoiceTotal=totals(invoice);
+  const message=`Hello ${invoice.client.contact||invoice.client.name},\n\nPlease find your invoice ${invoice.number} from Eric's Designs attached.\nTotal: ${fmt(invoice,invoiceTotal.total)}${invoiceTotal.balance>0?`\nBalance due: ${fmt(invoice,invoiceTotal.balance)}`:''}\n\nThank you.`;
+  try{
+    toast('Preparing the invoice PDF…');
+    const file=await createInvoicePdf(invoice);
+    if(navigator.canShare?.({files:[file]})){
+      await navigator.share({title:`Invoice ${invoice.number}`,text:message,files:[file]});
+      return;
+    }
+    const url=URL.createObjectURL(file),link=document.createElement('a');
+    link.href=url;link.download=file.name;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message+'\n\nThe invoice PDF has been downloaded. Please attach it from your Downloads folder.')}`,'_blank','noopener');
+    toast('PDF downloaded. Attach it in the WhatsApp chat that opened.');
+  }catch(error){
+    toast('Could not prepare the PDF. Check your connection and try again.');
+  }
+}
