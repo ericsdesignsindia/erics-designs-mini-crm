@@ -755,3 +755,17 @@ document.addEventListener('click', event => {
   event.preventDefault();
   openMailboxMessage(row.dataset.mailId);
 }, true);
+
+// Use ordinary in-page links for mailbox selection so embedded browser views handle them consistently.
+renderMailboxList = function(){
+  const listEl = document.getElementById('mailboxList');
+  if(!listEl) return;
+  listEl.innerHTML = mailboxMessages.length ? mailboxMessages.map(message => `<a href="#mail=${encodeURIComponent(message.id)}" class="mail-row ${message.unread?'unread':''} ${message.id===mailboxOpenedId?'active':''}" aria-label="Open ${esc(decodeMailboxText(message.subject) || 'email')}"><div class="mail-row-top"><b>${esc(mailboxSender(message.from) || 'Unknown sender')}</b><small>${esc(mailboxDate(message.date))}</small></div><h3>${esc(decodeMailboxText(message.subject) || '(No subject)')}</h3><p>${esc(decodeMailboxText(message.snippet))}</p></a>`).join('') : '<div class="empty"><h2>Your inbox is clear.</h2><p>No recent messages were returned by Gmail.</p></div>';
+};
+function openMailboxFromHash(){
+  const match = location.hash.match(/^#mail=([^&]+)/);
+  if(!match) return;
+  const id = decodeURIComponent(match[1]);
+  if(mailboxMessages.some(message => message.id === id)) openMailboxMessage(id);
+}
+window.addEventListener('hashchange', openMailboxFromHash);
