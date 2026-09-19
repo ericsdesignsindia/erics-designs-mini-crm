@@ -113,3 +113,4 @@ body[data-theme="light"] table th{background:#f7f9fc;color:#64748b;border-bottom
 
 .command-hero h1{color:#fff!important;text-shadow:0 1px 0 rgba(0,0,0,.08)}
 .command-hero p{color:#e6efff!important}
+body[data-theme="light"] .command-hero h1,body[data-theme="dark"] .command-hero h1{color:#fff!important}
