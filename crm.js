@@ -564,3 +564,20 @@ openClientPortal=function(id){
   }
   openLink();
 };
+
+function clientPortalSection(){
+  const documents=db.documents.filter(document=>['Invoice','Quotation'].includes(document.type)&&document.status!=='Cancelled').sort((a,b)=>String(b.updated||'').localeCompare(String(a.updated||'')));
+  return pageHeader('Client portal','', 'Create and manage private document links for your clients.')+`<section class="panel"><div class="dialog-title"><div><div class="eyebrow">Shared documents</div><h2>Client access</h2></div><span class="counts">${documents.filter(document=>document.portalToken).length} active links</span></div><p class="sub">A private link lets a client view the document. Sent quotations can be approved online.</p>${documents.length?`<div class="tablewrap"><table><thead><tr><th>Document</th><th>Client</th><th>Status</th><th>Portal access</th><th>Actions</th></tr></thead><tbody>${documents.map(document=>`<tr><td><b>${esc(document.number)}</b><small>${esc(docLabel(document.type))} · ${esc(document.project||'No project')}</small></td><td>${esc(document.client.name)}</td><td><span class="badge ${status(document)}">${esc(status(document))}</span></td><td>${document.portalToken?'<span class="badge Accepted">Link active</span>':'Not shared yet'}</td><td><div class="actions">${document.portalToken?`<button class="smallbtn" onclick="openClientPortal('${document.id}')">Open</button><button class="smallbtn" onclick="copyClientPortalLink('${document.id}')">Copy link</button>`:`<button class="smallbtn" onclick="copyClientPortalLink('${document.id}')">Create link</button>`}<button class="smallbtn" onclick="openDoc('${document.id}')">Edit</button></div></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty"><h2>No invoices or quotations yet.</h2><p>Create and save a document first, then share it through the client portal.</p></div>'}</section>`;
+}
+const renderWithDedicatedClientPortal=render;
+render=function(){
+  const result=renderWithDedicatedClientPortal();
+  const navEl=document.getElementById('nav');
+  if(navEl&&!navEl.querySelector('[data-client-portal-nav]')){
+    const settingsButton=[...navEl.querySelectorAll('button')].find(button=>button.textContent.trim()==='Settings');
+    const portalButton=`<button data-client-portal-nav title="Client portal" class="${view==='Client portal'?'active':''}" onclick="nav('Client portal')"><span class="nav-icon">◈</span><span class="nav-label">Client portal</span></button>`;
+    if(settingsButton)settingsButton.insertAdjacentHTML('beforebegin',portalButton);else navEl.insertAdjacentHTML('beforeend',portalButton);
+  }
+  if(!draft&&view==='Client portal')document.getElementById('app').innerHTML=clientPortalSection();
+  return result;
+};
