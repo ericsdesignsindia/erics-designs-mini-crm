@@ -547,3 +547,20 @@ openClientPortal=function(id){
   }
   window.open(clientPortalUrl(document),'_blank','noopener');
 };
+
+openClientPortal=function(id){
+  const document=db.documents.find(item=>item.id===id);
+  if(!document){toast('Document not found.');return}
+  const linkWindow=window.open('about:blank','_blank','noopener');
+  const openLink=()=>{if(linkWindow)linkWindow.location.href=clientPortalUrl(document);else window.open(clientPortalUrl(document),'_blank','noopener')};
+  if(!document.portalToken){
+    document.portalToken=crypto.randomUUID().replace(/-/g,'')+crypto.randomUUID().replace(/-/g,'');
+    document.updated=new Date().toISOString();
+    if(!persist()){if(linkWindow)linkWindow.close();toast('Could not create the client portal link.');return}
+    if(linkWindow)linkWindow.document.write('<title>Preparing client portal…</title><p style="font:16px Arial;padding:30px">Preparing your secure client portal…</p>');
+    toast('Preparing the client portal…');
+    setTimeout(openLink,1200);
+    return;
+  }
+  openLink();
+};
