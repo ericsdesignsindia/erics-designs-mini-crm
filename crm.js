@@ -312,6 +312,10 @@ documentHTML = function(document){
 };
 const printDocumentWithGuidance = printDoc;
 printDoc = function(){
-  toast('For a clean PDF, open More settings in the print window and turn off Headers and footers.');
+  if(!sessionStorage.getItem('erics-designs-clean-print-confirmed')){
+    const proceed=confirm('For a clean PDF, open More settings in the print window and turn off Headers and footers. Then save as PDF.');
+    if(!proceed)return;
+    sessionStorage.setItem('erics-designs-clean-print-confirmed','1');
+  }
   printDocumentWithGuidance();
 };
