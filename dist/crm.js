@@ -301,3 +301,17 @@ documentHTML = function(document){
 };
 const settingsWithGooglePayLabel = settings;
 settings = function(){return settingsWithGooglePayLabel().replace('UPI ID','Google Pay / UPI ID')};
+
+const documentHTMLWithStaticGooglePayQr = documentHTMLWithGooglePayQr;
+documentHTML = function(document){
+  let html = documentHTMLWithStaticGooglePayQr(document);
+  if(document.type !== 'Invoice' || document.currency !== 'INR') return html;
+  const balance = Math.max(0, totals(document).balance);
+  const paymentQr = `<section class="payment-qr payment-qr-static"><div class="payment-qr-image"><img src="./assets/eric-rodgers-google-pay-qr.jpeg" alt="Eric Rodgers Google Pay QR code"></div><div><h3>PAY WITH GOOGLE PAY</h3><b>${balance ? `Scan to pay ${fmt(document,balance)}` : 'Scan to pay with any UPI app'}</b><p>Use the attached Eric Rodgers Google Pay QR code.</p><small>UPI ID: ericrodgers555@oksbi · Ref: ${esc(document.number)}</small></div></section>`;
+  return html.replace('<div class="docnotes"><h3>NOTES</h3>', paymentQr+'<div class="docnotes"><h3>NOTES</h3>');
+};
+const printDocumentWithGuidance = printDoc;
+printDoc = function(){
+  toast('For a clean PDF, open More settings in the print window and turn off Headers and footers.');
+  printDocumentWithGuidance();
+};
