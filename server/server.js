@@ -49,6 +49,11 @@ const driveIntegrationSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 }, { versionKey: false });
 const DriveIntegration = mongoose.model('DriveIntegration', driveIntegrationSchema);
+const gmailIntegrationSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, required: true, unique: true, index: true },
+  accountEmail: { type: String, trim: true }, tokenCiphertext: { type: String, required: true }, connectedAt: { type: Date, default: Date.now }, updatedAt: { type: Date, default: Date.now }
+}, { versionKey: false });
+const GmailIntegration = mongoose.model('GmailIntegration', gmailIntegrationSchema);
 const backupSchema = new mongoose.Schema({
   workspaceId: { type: String, required: true, index: true },
   reason: { type: String, default: 'automatic daily restore point' },
@@ -169,6 +174,10 @@ function googleDriveConfig() {
   return { configured, redirectUri: googleRedirectUri };
 }
 
+function gmailConfig() {
+  const configured = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_TOKEN_ENCRYPTION_KEY);
+  return { configured, redirectUri: gmailRedirectUri };
+}
 function integrationKey() {
   if (!process.env.GOOGLE_TOKEN_ENCRYPTION_KEY) throw new Error('Google Drive encryption is not configured.');
   return createHash('sha256').update(process.env.GOOGLE_TOKEN_ENCRYPTION_KEY).digest();
@@ -537,6 +546,17 @@ app.put('/api/admin/users/:userId/password', requireAuth, requireOwner, async (r
     return res.json({ message: `Password reset for ${user.username}.` });
   } catch (error) { return next(error); }
 });
+app.get('/api/integrations/gmail/status', requireAuth, requireOwner, async (req, res, next) => {
+  try { const config = gmailConfig(); const integration = await GmailIntegration.findOne({ userId: req.user.sub }).lean(); return res.json({ configured: config.configured, connected: Boolean(integration), accountEmail: integration?.accountEmail || null, redirectUri: config.redirectUri }); } catch (error) { return next(error); }
+});
+app.post('/api/integrations/gmail/connect', requireAuth, requireOwner, async (req, res, next) => {
+  try { const config = gmailConfig(); if (!config.configured) return res.status(503).json({ error: 'Gmail setup is pending. Add the Google OAuth settings on Render first.' }); const state = jwt.sign({ purpose: 'gmail', sub: req.user.sub }, jwtSecret, { expiresIn: '10m' }); const params = new URLSearchParams({ client_id: process.env.GOOGLE_CLIENT_ID, redirect_uri: config.redirectUri, response_type: 'code', scope: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email', access_type: 'offline', prompt: 'consent', state }); return res.json({ authorizationUrl: `https://accounts.google.com/o/oauth2/v2/auth?${params}` }); } catch (error) { return next(error); }
+});
+app.get('/api/integrations/gmail/callback', async (req, res) => {
+  const done = (status, message) => res.redirect(`${frontendUrl}?gmail=${encodeURIComponent(status)}&message=${encodeURIComponent(message)}`);
+  try { if (req.query.error) return done('denied', 'Gmail access was not granted.'); const state = jwt.verify(String(req.query.state || ''), jwtSecret); if (state.purpose !== 'gmail' || !req.query.code) return done('error', 'The Gmail connection link is invalid or expired.'); const config = gmailConfig(); if (!config.configured) return done('error', 'Gmail is not configured on the server.'); const response = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ code: String(req.query.code), client_id: process.env.GOOGLE_CLIENT_ID, client_secret: process.env.GOOGLE_CLIENT_SECRET, redirect_uri: config.redirectUri, grant_type: 'authorization_code' }) }); const tokens = await response.json(); if (!response.ok) return done('error', tokens?.error_description || 'Google could not complete the Gmail connection.'); const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', { headers: { Authorization: `Bearer ${tokens.access_token}` } }); const profile = await profileResponse.json().catch(() => ({})); await GmailIntegration.findOneAndUpdate({ userId: state.sub }, { userId: state.sub, accountEmail: String(profile.email || ''), tokenCiphertext: encryptIntegration(tokens), connectedAt: new Date(), updatedAt: new Date() }, { upsert: true, new: true, runValidators: true }); return done('connected', 'Gmail is connected to Eric’s Designs CRM.'); } catch (_error) { return done('error', 'Gmail could not be connected. Please try again.'); }
+});
+app.delete('/api/integrations/gmail', requireAuth, requireOwner, async (req, res, next) => { try { await GmailIntegration.deleteOne({ userId: req.user.sub }); return res.json({ ok: true }); } catch (error) { return next(error); } });
 app.get('/api/integrations/google-drive/status', requireAuth, requireOwner, async (req, res, next) => {
   try {
     const config = googleDriveConfig();

@@ -581,3 +581,12 @@ render=function(){
   if(!draft&&view==='Client portal')document.getElementById('app').innerHTML=clientPortalSection();
   return result;
 };
+
+const settingsWithGmail= settings;
+settings=function(){
+  const gmail=`<section class="panel crm-banner"><div class="dialog-title"><div><div class="eyebrow">Mailbox</div><h2>Gmail</h2></div><button class="smallbtn" onclick="refreshGmailStatus()">Check status</button></div><p class="sub" id="gmailStatus">Checking Gmail connection…</p><div class="actions"><button class="primary" onclick="connectGmail()">Connect Gmail</button><button onclick="disconnectGmail()">Disconnect</button></div><p class="hint">Connect ericsdesignsindia@gmail.com to prepare mailbox features in the CRM.</p></section>`;
+  setTimeout(refreshGmailStatus,0);return settingsWithGmail()+gmail;
+};
+async function refreshGmailStatus(){const el=document.getElementById('gmailStatus');if(!el)return;try{const r=await erpApi.gmailStatus();el.textContent=r.connected?`Connected as ${r.accountEmail||'Gmail account'}.`:r.configured?'Ready to connect. Choose Connect Gmail and sign in as ericsdesignsindia@gmail.com.':'Server setup is pending. Add the Google OAuth settings on Render first.'}catch(e){el.textContent=e.message}}
+async function connectGmail(){try{const r=await erpApi.connectGmail();location.assign(r.authorizationUrl)}catch(e){toast(e.message)}}
+async function disconnectGmail(){try{await erpApi.disconnectGmail();toast('Gmail disconnected.');refreshGmailStatus()}catch(e){toast(e.message)}}
