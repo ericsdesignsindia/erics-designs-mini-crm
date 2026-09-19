@@ -135,3 +135,14 @@ body[data-theme="light"] .brand.brand-logo,body[data-theme="dark"] .brand.brand-
 .brand.brand-logo img{width:172px;max-width:100%;height:auto;max-height:none;object-fit:contain;object-position:left center}
 .sidehead:has(.brand-logo) .sidebar-toggle{margin-top:0}
 @media(max-width:720px){.sidehead:has(.brand-logo){min-height:48px}.brand.brand-logo img{width:132px;height:auto}}
+
+/* Scrollbars match the active CRM theme instead of showing a bright browser track. */
+html{scrollbar-width:thin;scrollbar-color:#56624c #10150f}
+*::-webkit-scrollbar{width:10px;height:10px}
+*::-webkit-scrollbar-track{background:#10150f}
+*::-webkit-scrollbar-thumb{background:#56624c;border:2px solid #10150f;border-radius:12px}
+*::-webkit-scrollbar-thumb:hover{background:#778768}
+body[data-theme="light"]{scrollbar-color:#9daac0 #edf2f8}
+body[data-theme="light"] *::-webkit-scrollbar-track{background:#edf2f8}
+body[data-theme="light"] *::-webkit-scrollbar-thumb{background:#9daac0;border-color:#edf2f8}
+body[data-theme="light"] *::-webkit-scrollbar-thumb:hover{background:#7789a4}
