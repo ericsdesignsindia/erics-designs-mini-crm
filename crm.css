@@ -150,3 +150,50 @@ body[data-theme="light"] *::-webkit-scrollbar-thumb:hover{background:#7789a4}
 /* Action Center and Client 360 */
 .command-ai{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:#182968;color:#fff;border-color:#2f61e9;box-shadow:0 5px 14px rgba(36,83,192,.18)}
 .command-ai:hover{background:#2446a8;color:#fff;border-color:#5279eb}.attention-panel,.client360-panel{margin-top:20px;padding:23px;border:1px solid #e2e9f5;border-radius:18px;background:#fff;box-shadow:0 5px 16px rgba(27,57,103,.04)}.attention-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;margin-bottom:18px}.attention-head h2{margin:2px 0 5px;color:#1a2942;font-size:19px}.attention-head p{margin:0;color:#74839b;font-size:13px}.attention-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.attention-card{display:flex;gap:12px;min-width:0;padding:16px;border:1px solid #e6ebf3;border-radius:14px;background:#f8faff}.attention-card h3{margin:1px 0 6px;color:#1c2b44;font-size:14px}.attention-card p{margin:0 0 12px;color:#70819b;font-size:12px;line-height:1.45}.attention-icon{display:grid;place-items:center;width:32px;height:32px;flex:0 0 32px;border-radius:10px;background:#e8efff;color:#2d66e8;font-weight:800}.attention-card.urgent .attention-icon{background:#fff0ef;color:#d64f4f}.attention-card.warning .attention-icon{background:#fff6df;color:#b87b13}.attention-card.success .attention-icon{background:#e9f8f1;color:#28a76f}.client360-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.client360-grid article{padding:16px;border-radius:13px;background:#f5f8fd}.client360-grid span,.client360-grid small{display:block;color:#71819b;font-size:12px}.client360-grid b{display:block;margin:7px 0;color:#1c2a43;font-size:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}@media(max-width:1050px){.attention-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:650px){.command-ai span{display:none}.attention-panel,.client360-panel{padding:18px}.attention-head{flex-direction:column}.attention-grid,.client360-grid{grid-template-columns:1fr}.command-actions .command-ai{width:38px;padding:0}}
+
+/* Cohesive premium dark theme: dashboard surfaces follow the CRM palette. */
+body[data-theme="dark"] .command-kpi,
+body[data-theme="dark"] .command-card,
+body[data-theme="dark"] .attention-panel,
+body[data-theme="dark"] .client360-panel,
+body[data-theme="dark"] .outlook-inbox,
+body[data-theme="dark"] .mailbox-shell{background:linear-gradient(145deg,#1d241d,#171c16);border-color:#34402f;box-shadow:0 14px 32px rgba(0,0,0,.22)}
+body[data-theme="dark"] .command-kpi span,
+body[data-theme="dark"] .command-kpi small,
+body[data-theme="dark"] .command-card-head p,
+body[data-theme="dark"] .attention-head p,
+body[data-theme="dark"] .attention-card p,
+body[data-theme="dark"] .client360-grid span,
+body[data-theme="dark"] .client360-grid small{color:#acb6a4}
+body[data-theme="dark"] .command-kpi b,
+body[data-theme="dark"] .command-card-head h2,
+body[data-theme="dark"] .attention-head h2,
+body[data-theme="dark"] .attention-card h3,
+body[data-theme="dark"] .client360-grid b{color:#f2f4eb}
+body[data-theme="dark"] .pipeline-step,
+body[data-theme="dark"] .client360-grid article{background:#222b20;border:1px solid #34402f}
+body[data-theme="dark"] .pipeline-step b{color:#f2f4eb}
+body[data-theme="dark"] .pipeline-step span{color:#b0baaa}
+body[data-theme="dark"] .focus-item{border-bottom-color:#303a2c}
+body[data-theme="dark"] .focus-item b{color:#f0f3eb}
+body[data-theme="dark"] .focus-item span{color:#acb6a4}
+body[data-theme="dark"] .smart-insight{background:#1b2a30;border-color:#2f4b51}
+body[data-theme="dark"] .smart-insight h3{color:#edf5f1}
+body[data-theme="dark"] .smart-insight p{color:#b4c8c0}
+body[data-theme="dark"] .attention-card{background:#222b20;border-color:#34402f}
+body[data-theme="dark"] .command-actions button:not(.primary){background:#232c20;color:#f3f5ef;border:1px solid #485545}
+body[data-theme="dark"] .command-actions .primary{background:#dfba56;color:#1c2018}
+body[data-theme="dark"] .outlook-toolbar{background:#222b20;border-color:#34402f;color:#bdc6b6}
+body[data-theme="dark"] .outlook-message,
+body[data-theme="dark"] .outlook-message[open],
+body[data-theme="dark"] .mailbox-list,
+body[data-theme="dark"] .mail-reader{background:#1a2018;border-color:#34402f}
+body[data-theme="dark"] .outlook-summary:hover,
+body[data-theme="dark"] .outlook-message.unread .outlook-summary{background:#253126}
+body[data-theme="dark"] .outlook-sender,
+body[data-theme="dark"] .outlook-subject,
+body[data-theme="dark"] .outlook-reader-meta b,
+body[data-theme="dark"] .outlook-body{color:#eef2ea}
+body[data-theme="dark"] .outlook-date,
+body[data-theme="dark"] .outlook-snippet,
+body[data-theme="dark"] .outlook-reader-meta{color:#adb8a7}
