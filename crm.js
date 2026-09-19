@@ -515,3 +515,24 @@ showPreview=function(id){
     if(actions&&!actions.querySelector('[data-client-portal]'))actions.insertAdjacentHTML('beforeend',`<button data-client-portal onclick="copyClientPortalLink('${document.id}')">Client portal link</button>`);
   }
 };
+
+function openClientPortal(id){
+  const document=db.documents.find(item=>item.id===id);
+  if(!document){toast('Document not found.');return}
+  if(!document.portalToken){copyClientPortalLink(id);return}
+  window.open(clientPortalUrl(document),'_blank','noopener');
+}
+const editorWithClientPortalPanel=editor;
+editor=function(){
+  let html=editorWithClientPortalPanel();
+  if(draft&&draft.type!=='Proforma'&&db.documents.some(document=>document.id===draft.id)){
+    const marker='</section></div></div>';
+    const index=html.lastIndexOf(marker);
+    if(index>=0){
+      const approval=draft.type==='Quotation'?(draft.status==='Sent'?'Clients can approve this quotation from their private link.':'Set the quotation status to Sent before sharing it for approval.'):'Clients can view this invoice from their private link.';
+      const panel=`<section class="panel client-portal-panel"><div class="eyebrow">Client portal</div><h3>Share a private client link</h3><p class="sub">${approval}</p><div class="actions"><button type="button" onclick="copyClientPortalLink('${draft.id}')">Copy client portal link</button>${draft.portalToken?`<button type="button" onclick="openClientPortal('${draft.id}')">Open client portal</button>`:''}</div></section>`;
+      html=html.slice(0,index)+panel+html.slice(index);
+    }
+  }
+  return html;
+};
