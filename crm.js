@@ -779,3 +779,19 @@ function openNewestMailboxMessage(){
   if(!mailboxMessages.length){toast('Refresh inbox first, then open the newest email.');return;}
   openMailboxMessage(mailboxMessages[0].id);
 }
+
+openNewestMailboxMessage = async function(){
+  const summary = mailboxMessages[0];
+  const reader = document.getElementById('mailboxReader');
+  const shell = document.getElementById('mailboxShell');
+  if(!summary || !reader){toast('Refresh inbox first, then open the newest email.');return;}
+  if(shell) shell.classList.add('has-open');
+  reader.innerHTML = `<header class="mail-reader-head"><h2>${esc(decodeMailboxText(summary.subject) || '(No subject)')}</h2><div class="mail-reader-meta"><div><b>${esc(mailboxSender(summary.from) || 'Unknown sender')}</b><span>Preview loaded</span></div><small>${esc(mailboxDate(summary.date))}</small></div></header><div class="mail-reader-body">${esc(decodeMailboxText(summary.snippet || 'No preview is available.'))}</div><p class="mail-reader-loading">Loading full email…</p>`;
+  try{
+    const message = await erpApi.gmailMessage(summary.id);
+    reader.innerHTML = `<header class="mail-reader-head"><h2>${esc(decodeMailboxText(message.subject) || '(No subject)')}</h2><div class="mail-reader-meta"><div><b>${esc(mailboxSender(message.from) || 'Unknown sender')}</b><span>To: ${esc(decodeMailboxText(message.to) || 'you')}</span></div><small>${esc(mailboxDate(message.date))}</small></div></header><div class="mail-reader-body">${mailboxBodyHtml(message.body)}</div>`;
+  }catch(error){
+    const hint=reader.querySelector('.mail-reader-loading');
+    if(hint)hint.textContent='The full email could not be loaded yet. The preview above is available.';
+  }
+};
