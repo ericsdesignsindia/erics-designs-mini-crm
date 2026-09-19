@@ -747,3 +747,11 @@ renderMailboxList = function(){
   listEl.innerHTML = mailboxMessages.length ? mailboxMessages.map(message => `<button type="button" data-mail-id="${esc(message.id)}" class="mail-row ${message.unread?'unread':''} ${message.id===mailboxOpenedId?'active':''}" aria-label="Open ${esc(decodeMailboxText(message.subject) || 'email')}"><div class="mail-row-top"><b>${esc(mailboxSender(message.from) || 'Unknown sender')}</b><small>${esc(mailboxDate(message.date))}</small></div><h3>${esc(decodeMailboxText(message.subject) || '(No subject)')}</h3><p>${esc(decodeMailboxText(message.snippet))}</p></button>`).join('') : '<div class="empty"><h2>Your inbox is clear.</h2><p>No recent messages were returned by Gmail.</p></div>';
   listEl.querySelectorAll('[data-mail-id]').forEach(button => button.addEventListener('click', () => openMailboxMessage(button.dataset.mailId)));
 };
+
+// Capture mailbox selections at document level as a reliable fallback for PWA and browser rendering.
+document.addEventListener('click', event => {
+  const row = event.target.closest ? event.target.closest('[data-mail-id]') : null;
+  if(!row) return;
+  event.preventDefault();
+  openMailboxMessage(row.dataset.mailId);
+}, true);
