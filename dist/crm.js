@@ -347,3 +347,21 @@ showPreview=function(id){
     }
   }
 };
+
+const editorWithInvoiceWhatsAppShare=editor;
+editor=function(){
+  let html=editorWithInvoiceWhatsAppShare();
+  if(draft?.type==='Invoice'&&db.documents.some(document=>document.id===draft.id)){
+    html=html.replace('<p class="hint">Changes are saved when you click Save. Email delivery is manual.</p>','<p class="hint">Save changes first, then share the prepared invoice directly to this client on WhatsApp.</p><button type="button" onclick="shareInvoiceOnWhatsApp(\''+draft.id+'\')">Share invoice on WhatsApp</button>');
+  }
+  return html;
+};
+
+const documentCardWithInvoiceWhatsAppShare=documentCard;
+documentCard=function(document){
+  let html=documentCardWithInvoiceWhatsAppShare(document);
+  if(document.type==='Invoice'){
+    html=html.replace(`<button class="smallbtn" onclick="showPreview('${document.id}')">View</button>`,`<button class="smallbtn" onclick="showPreview('${document.id}')">View</button><button class="smallbtn" onclick="shareInvoiceOnWhatsApp('${document.id}')">WhatsApp</button>`);
+  }
+  return html;
+};
