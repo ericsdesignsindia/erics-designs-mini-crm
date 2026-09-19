@@ -494,3 +494,24 @@ async function shareInvoiceOnWhatsApp(id){
     toast('PDF downloaded. Attach it in the WhatsApp chat that opened.');
   }catch(error){toast(error?.message||'Could not prepare the PDF. Check your connection and try again.');}
 }
+
+function clientPortalUrl(document){return `${location.origin}${location.pathname.replace(/[^/]*$/, '')}portal.html?token=${encodeURIComponent(document.portalToken)}`}
+function copyClientPortalLink(id){
+  const document=db.documents.find(item=>item.id===id);
+  if(!document){toast('Document not found.');return}
+  if(!document.portalToken)document.portalToken=crypto.randomUUID().replace(/-/g,'')+crypto.randomUUID().replace(/-/g,'');
+  document.updated=new Date().toISOString();
+  if(!persist()){toast('Could not save the client portal link.');return}
+  const link=clientPortalUrl(document);
+  if(navigator.clipboard?.writeText)navigator.clipboard.writeText(link).then(()=>toast('Client portal link copied.')).catch(()=>window.prompt('Copy this client portal link:',link));
+  else window.prompt('Copy this client portal link:',link);
+}
+const showPreviewWithClientPortal=showPreview;
+showPreview=function(id){
+  showPreviewWithClientPortal(id);
+  const document=db.documents.find(item=>item.id===id);
+  if(document&&document.type!=='Proforma'){
+    const actions=document.querySelector('#preview .modalbar .actions');
+    if(actions&&!actions.querySelector('[data-client-portal]'))actions.insertAdjacentHTML('beforeend',`<button data-client-portal onclick="copyClientPortalLink('${document.id}')">Client portal link</button>`);
+  }
+};

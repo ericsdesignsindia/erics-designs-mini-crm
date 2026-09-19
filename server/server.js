@@ -326,6 +326,40 @@ async function requireOwner(req, res, next) {
   } catch (error) { return next(error); }
 }
 
+function portalDocument(token) {
+  if (!/^[a-zA-Z0-9_-]{24,160}$/.test(String(token || ''))) return null;
+  return Workspace.findOne({ workspaceId: 'erics-designs-default', 'state.documents.portalToken': token }).lean();
+}
+function publicDocument(document) {
+  const copy = structuredClone(document);
+  delete copy.portalToken;
+  delete copy.client?.id;
+  return copy;
+}
+app.get('/api/public/portal/:token', async (req, res, next) => {
+  try {
+    const workspace = await portalDocument(req.params.token);
+    const document = workspace?.state?.documents?.find(item => item.portalToken === req.params.token);
+    if (!document || document.status === 'Cancelled') return res.status(404).json({ error: 'This client link is unavailable.' });
+    return res.json({ document: publicDocument(document) });
+  } catch (error) { return next(error); }
+});
+app.post('/api/public/portal/:token/approve', async (req, res, next) => {
+  try {
+    const token = String(req.params.token || '');
+    const workspace = await portalDocument(token);
+    const document = workspace?.state?.documents?.find(item => item.portalToken === token);
+    if (!document || document.type !== 'Quotation' || document.status !== 'Sent') return res.status(409).json({ error: 'This quotation cannot be approved from this link.' });
+    if (document.due && document.due < new Date().toISOString().slice(0, 10)) return res.status(409).json({ error: 'This quotation has expired. Please contact Eric’s Designs.' });
+    await updateWorkspaceState('erics-designs-default', state => {
+      const target = state.documents.find(item => item.portalToken === token);
+      if (!target || target.type !== 'Quotation' || target.status !== 'Sent') { const error = new Error('This quotation is no longer available for approval.'); error.status = 409; throw error; }
+      target.status = 'Accepted'; target.acceptedAt = new Date().toISOString(); target.updated = new Date().toISOString();
+      state.activity.unshift({ id: randomUUID(), message: `Client approved quotation ${target.number}`, date: target.acceptedAt });
+    });
+    return res.json({ ok: true, message: 'Quotation approved.' });
+  } catch (error) { return next(error); }
+});
 app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'erics-designs-erp-api', database: mongoose.connection.readyState === 1 ? 'connected' : 'connecting' }));
 
 app.get('/api', (_req, res) => res.json({
