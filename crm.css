@@ -121,3 +121,10 @@ body[data-theme="light"] .command-hero h1,body[data-theme="dark"] .command-hero 
 body[data-theme="light"] .brand.brand-logo,body[data-theme="dark"] .brand.brand-logo{color:inherit;font-size:inherit;letter-spacing:0}
 .shell.sidebar-collapsed .brand.brand-logo{display:none}
 @media(max-width:720px){.shell aside .brand.brand-logo{display:flex}.brand.brand-logo img{width:150px;height:34px}}
+
+/* Keep the entire supplied landscape logo visible in the expanded sidebar. */
+.sidehead:has(.brand-logo){align-items:flex-start;min-height:104px}
+.brand.brand-logo{flex:1 1 auto;padding-top:2px}
+.brand.brand-logo img{width:172px;max-width:100%;height:auto;max-height:none;object-fit:contain;object-position:left top}
+.sidehead:has(.brand-logo) .sidebar-toggle{flex:0 0 36px;margin-top:2px}
+@media(max-width:720px){.sidehead:has(.brand-logo){min-height:54px}.brand.brand-logo img{width:126px;height:auto}}

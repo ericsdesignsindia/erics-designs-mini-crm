@@ -1,5 +1,5 @@
-const CACHE='erics-crm-v20260919-60';
-const ASSETS=['./','./index.html','./style.css?v=20260919-60','./crm.css?v=20260919-60','./billing.js?v=20260919-60','./crm.js?v=20260919-60','./api-sync.js?v=20260919-60','./site.webmanifest','./ed-icon-192.png','./ed-icon-512.png','./assets/erics-designs-landscape-logo.png'];
+const CACHE='erics-crm-v20260919-61';
+const ASSETS=['./','./index.html','./style.css?v=20260919-61','./crm.css?v=20260919-61','./billing.js?v=20260919-61','./crm.js?v=20260919-61','./api-sync.js?v=20260919-61','./site.webmanifest','./ed-icon-192.png','./ed-icon-512.png','./assets/erics-designs-landscape-logo.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
