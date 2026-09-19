@@ -221,6 +221,20 @@ function whatsappConfig() {
   };
 }
 
+async function gmailAccessToken(userId) {
+  const integration = await GmailIntegration.findOne({ userId });
+  if (!integration) { const error = new Error('Connect Gmail in Settings before opening the mailbox.'); error.status = 409; throw error; }
+  const tokens = decryptIntegration(integration.tokenCiphertext);
+  if (tokens.access_token && (!tokens.expiry_date || Number(tokens.expiry_date) > Date.now() + 60000)) return tokens.access_token;
+  if (!tokens.refresh_token) { const error = new Error('Reconnect Gmail to continue.'); error.status = 401; throw error; }
+  const response = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ client_id: process.env.GOOGLE_CLIENT_ID, client_secret: process.env.GOOGLE_CLIENT_SECRET, refresh_token: tokens.refresh_token, grant_type: 'refresh_token' }) });
+  const refreshed = await response.json();
+  if (!response.ok) { const error = new Error('Reconnect Gmail to continue.'); error.status = 401; throw error; }
+  Object.assign(tokens, refreshed, { refresh_token: tokens.refresh_token, expiry_date: Date.now() + Number(refreshed.expires_in || 3600) * 1000 });
+  integration.tokenCiphertext = encryptIntegration(tokens); integration.updatedAt = new Date(); await integration.save();
+  return tokens.access_token;
+}
+
 function validWhatsAppRecipient(value) {
   const phone = String(value || '').replace(/\D/g, '');
   return phone.length >= 8 && phone.length <= 15 ? phone : null;
@@ -549,6 +563,24 @@ app.put('/api/admin/users/:userId/password', requireAuth, requireOwner, async (r
 });
 app.get('/api/integrations/gmail/status', requireAuth, requireOwner, async (req, res, next) => {
   try { const config = gmailConfig(); const integration = await GmailIntegration.findOne({ userId: req.user.sub }).lean(); return res.json({ configured: config.configured, connected: Boolean(integration), accountEmail: integration?.accountEmail || null, redirectUri: config.redirectUri }); } catch (error) { return next(error); }
+});
+app.get('/api/integrations/gmail/messages', requireAuth, requireOwner, async (req, res, next) => {
+  try {
+    const token = await gmailAccessToken(req.user.sub);
+    const limit = Math.max(1, Math.min(25, Number(req.query.limit) || 15));
+    const listResponse = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?labelIds=INBOX&maxResults=${limit}`, { headers: { Authorization: `Bearer ${token}` } });
+    const list = await listResponse.json().catch(() => ({}));
+    if (!listResponse.ok) return res.status(listResponse.status).json({ error: list?.error?.message || 'Gmail inbox could not be loaded.' });
+    const messages = [];
+    for (const item of list.messages || []) {
+      const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(item.id)}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`, { headers: { Authorization: `Bearer ${token}` } });
+      const message = await response.json().catch(() => ({}));
+      if (!response.ok) continue;
+      const headers = Object.fromEntries((message.payload?.headers || []).map(header => [String(header.name || '').toLowerCase(), header.value || '']));
+      messages.push({ id: message.id, threadId: message.threadId, from: headers.from || 'Unknown sender', subject: headers.subject || '(No subject)', date: headers.date || '', snippet: message.snippet || '', unread: (message.labelIds || []).includes('UNREAD') });
+    }
+    return res.json({ messages, nextPageToken: list.nextPageToken || null });
+  } catch (error) { return next(error); }
 });
 app.post('/api/integrations/gmail/connect', requireAuth, requireOwner, async (req, res, next) => {
   try { const config = gmailConfig(); if (!config.configured) return res.status(503).json({ error: 'Gmail setup is pending. Add the Google OAuth settings on Render first.' }); const state = jwt.sign({ purpose: 'gmail', sub: req.user.sub }, jwtSecret, { expiresIn: '10m' }); const params = new URLSearchParams({ client_id: process.env.GOOGLE_CLIENT_ID, redirect_uri: config.redirectUri, response_type: 'code', scope: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email', access_type: 'offline', prompt: 'consent', state }); return res.json({ authorizationUrl: `https://accounts.google.com/o/oauth2/v2/auth?${params}` }); } catch (error) { return next(error); }

@@ -590,3 +590,49 @@ settings=function(){
 async function refreshGmailStatus(){const el=document.getElementById('gmailStatus');if(!el)return;try{const r=await erpApi.gmailStatus();el.textContent=r.connected?`Connected as ${r.accountEmail||'Gmail account'}.`:r.configured?'Ready to connect. Choose Connect Gmail and sign in as ericsdesignsindia@gmail.com.':'Server setup is pending. Add the Google OAuth settings on Render first.'}catch(e){el.textContent=e.message}}
 async function connectGmail(){try{const r=await erpApi.connectGmail();location.assign(r.authorizationUrl)}catch(e){toast(e.message)}}
 async function disconnectGmail(){try{await erpApi.disconnectGmail();toast('Gmail disconnected.');refreshGmailStatus()}catch(e){toast(e.message)}}
+
+// Dedicated Gmail mailbox screen
+NAV_ICONS.Mailbox = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg>';
+const renderWithMailbox = render;
+render = function(){
+  const result = renderWithMailbox();
+  const navEl = document.getElementById('nav');
+  if(navEl && !navEl.querySelector('[data-mailbox-nav]')){
+    const portalButton = navEl.querySelector('[data-client-portal-nav]');
+    const mailboxButton = `<button data-mailbox-nav title="Mailbox" class="${view==='Mailbox'?'active':''}" onclick="nav('Mailbox')"><span class="nav-icon">${navIcon('Mailbox')}</span><span class="nav-label">Mailbox</span></button>`;
+    if(portalButton) portalButton.insertAdjacentHTML('beforebegin', mailboxButton); else navEl.insertAdjacentHTML('beforeend', mailboxButton);
+  }
+  if(!draft && view === 'Mailbox'){
+    document.getElementById('app').innerHTML = mailboxSection();
+    setTimeout(loadMailbox, 0);
+  }
+  return result;
+};
+const showMobileSectionsWithMailbox = showMobileSections;
+showMobileSections = function(){
+  showMobileSectionsWithMailbox();
+  const list = document.querySelector('#mobileSections .mobile-section-list');
+  if(list && !list.querySelector('[data-mobile-mailbox]')) list.insertAdjacentHTML('afterbegin', `<button data-mobile-mailbox onclick="document.getElementById('mobileSections').close();nav('Mailbox')"><span>${navIcon('Mailbox')}</span>Mailbox</button>`);
+};
+function mailboxSection(){
+  return pageHeader('Mailbox','', 'Read recent client emails without leaving your CRM.') + `<section class="panel mailbox-panel"><div class="dialog-title"><div><div class="eyebrow">Gmail</div><h2>Inbox</h2></div><div class="actions"><button class="smallbtn" onclick="nav('Settings')">Connection settings</button><button class="primary" onclick="loadMailbox()">Refresh inbox</button></div></div><p class="sub" id="mailboxStatus">Checking your Gmail connection…</p><div id="mailboxList" class="mailbox-list"><p class="sub">Loading recent inbox messages…</p></div></section>`;
+}
+async function loadMailbox(){
+  const statusEl = document.getElementById('mailboxStatus'), listEl = document.getElementById('mailboxList');
+  if(!statusEl || !listEl) return;
+  try{
+    const status = await erpApi.gmailStatus();
+    if(!status.connected){
+      statusEl.textContent = 'Gmail is not connected yet.';
+      listEl.innerHTML = `<div class="empty"><h2>Connect Gmail to open your inbox.</h2><p>Open Settings, connect ericsdesignsindia@gmail.com, then return here.</p><button class="primary" onclick="nav('Settings')">Open Gmail settings</button></div>`;
+      return;
+    }
+    statusEl.textContent = `Connected as ${status.accountEmail || 'your Gmail account'}. Showing recent inbox messages.`;
+    const data = await erpApi.gmailMessages();
+    const messages = data.messages || [];
+    listEl.innerHTML = messages.length ? messages.map(message => `<article class="mail-row ${message.unread?'unread':''}"><div class="mail-row-top"><b>${esc(message.from)}</b><small>${esc(message.date || '')}</small></div><h3>${esc(message.subject)}</h3><p>${esc(message.snippet || '')}</p></article>`).join('') : '<div class="empty"><h2>Your inbox is clear.</h2><p>No recent messages were returned by Gmail.</p></div>';
+  }catch(error){
+    statusEl.textContent = error.message || 'Your Gmail inbox could not be loaded.';
+    listEl.innerHTML = '<div class="empty"><h2>Mailbox unavailable.</h2><p>Reconnect Gmail in Settings, then try again.</p><button class="primary" onclick="nav(\'Settings\')">Open Gmail settings</button></div>';
+  }
+}

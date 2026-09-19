@@ -83,6 +83,7 @@ window.erpApi = {
   sendInvoiceWhatsApp: payload => api('/integrations/whatsapp/send-invoice', { method: 'POST', body: JSON.stringify(payload) }),
   subscribeMetaLeadPage: () => api('/integrations/meta-leads/subscribe-page', { method: 'POST' }),
   gmailStatus: () => api('/integrations/gmail/status'),
+  gmailMessages: () => api('/integrations/gmail/messages'),
   connectGmail: () => api('/integrations/gmail/connect', { method: 'POST' }),
   disconnectGmail: () => api('/integrations/gmail', { method: 'DELETE' }),
   googleDriveStatus: () => api('/integrations/google-drive/status'),
