@@ -319,3 +319,31 @@ printDoc = function(){
   }
   printDocumentWithGuidance();
 };
+
+function shareInvoiceOnWhatsApp(id){
+  const invoice=db.documents.find(document=>document.id===id);
+  if(!invoice||invoice.type!=='Invoice'){toast('Choose a final invoice first.');return}
+  let phone=String(invoice.client?.phone||'').replace(/\D/g,'');
+  if(!phone){
+    const client=db.clients.find(item=>item.id===invoice.client?.id||item.name===invoice.client?.name);
+    phone=String(client?.phone||'').replace(/\D/g,'');
+  }
+  if(!phone){toast('Add the client WhatsApp number, including country code, then save the invoice.');return}
+  if(phone.length===10)phone='91'+phone;
+  const invoiceTotal=totals(invoice);
+  const details=invoice.items.map(item=>`• ${item.name} — ${item.qty} × ${fmt(invoice,item.rate)}`).join('\n');
+  const message=encodeURIComponent(`Hello ${invoice.client.contact||invoice.client.name},\n\nPlease find your invoice from Eric's Designs.\n\nInvoice: ${invoice.number}\nProject: ${invoice.project||'—'}\nIssue date: ${invoice.date}\nDue date: ${invoice.due}\nTotal: ${fmt(invoice,invoiceTotal.total)}\n${invoiceTotal.balance>0?`Balance due: ${fmt(invoice,invoiceTotal.balance)}\n`:''}\nServices:\n${details}\n\nThank you.`);
+  window.open(`https://wa.me/${phone}?text=${message}`,'_blank','noopener');
+}
+
+const showPreviewWithInvoiceWhatsAppShare=showPreview;
+showPreview=function(id){
+  showPreviewWithInvoiceWhatsAppShare(id);
+  const invoice=db.documents.find(document=>document.id===id);
+  if(invoice?.type==='Invoice'){
+    const actions=document.querySelector('#preview .modalbar .actions');
+    if(actions&&!actions.querySelector('[data-whatsapp-invoice-share]')){
+      actions.insertAdjacentHTML('beforeend',`<button data-whatsapp-invoice-share onclick="shareInvoiceOnWhatsApp('${invoice.id}')">Share on WhatsApp</button>`);
+    }
+  }
+};
