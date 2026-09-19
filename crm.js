@@ -720,3 +720,22 @@ async function openMailboxMessage(id){
   }
 }
 function closeMailboxMessage(){const shell=document.getElementById('mailboxShell');if(shell)shell.classList.remove('has-open');}
+
+const openMailboxMessageWithFallback = openMailboxMessage;
+openMailboxMessage = async function(id){
+  const reader = document.getElementById('mailboxReader'), shell = document.getElementById('mailboxShell');
+  const summary = mailboxMessages.find(message => message.id === id);
+  if(!reader || !summary) return;
+  mailboxOpenedId = id; renderMailboxList();
+  if(shell) shell.classList.add('has-open');
+  reader.innerHTML = `<button class="smallbtn mail-reader-back" onclick="closeMailboxMessage()">← Back to inbox</button><header class="mail-reader-head"><h2>${esc(decodeMailboxText(summary.subject) || '(No subject)')}</h2><div class="mail-reader-meta"><div><b>${esc(mailboxSender(summary.from) || 'Unknown sender')}</b><span>Opening full message…</span></div><small>${esc(mailboxDate(summary.date))}</small></div></header><div class="mail-reader-body">${esc(decodeMailboxText(summary.snippet || 'Loading full email…'))}</div><p class="mail-reader-loading">Loading full email…</p>`;
+  try{
+    const message = await erpApi.gmailMessage(id);
+    if(mailboxOpenedId !== id) return;
+    reader.innerHTML = `<button class="smallbtn mail-reader-back" onclick="closeMailboxMessage()">← Back to inbox</button><header class="mail-reader-head"><h2>${esc(decodeMailboxText(message.subject) || '(No subject)')}</h2><div class="mail-reader-meta"><div><b>${esc(mailboxSender(message.from) || 'Unknown sender')}</b><span>To: ${esc(decodeMailboxText(message.to) || 'you')}</span></div><small>${esc(mailboxDate(message.date))}</small></div></header><div class="mail-reader-body">${mailboxBodyHtml(message.body)}</div>`;
+  }catch(error){
+    if(mailboxOpenedId !== id) return;
+    const loading = reader.querySelector('.mail-reader-loading');
+    if(loading) loading.textContent = 'The full message could not be loaded. The email preview is shown above; use Refresh inbox or reconnect Gmail to try again.';
+  }
+};
