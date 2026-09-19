@@ -203,6 +203,38 @@ async function driveAccessToken(userId) {
 }
 async function driveRequest(token, url, options = {}) { const response = await fetch(url, { ...options, headers: { Authorization: `Bearer ${token}`, ...(options.headers || {}) } }); const body = await response.json().catch(() => ({})); if (!response.ok) { const error = new Error(body?.error?.message || 'Google Drive request failed.'); error.status = response.status; throw error; } return body; }
 
+function whatsappConfig() {
+  return {
+    configured: Boolean(process.env.WHATSAPP_ACCESS_TOKEN && process.env.WHATSAPP_PHONE_NUMBER_ID),
+    phoneNumberId: String(process.env.WHATSAPP_PHONE_NUMBER_ID || ''),
+    graphVersion: String(process.env.WHATSAPP_GRAPH_VERSION || 'v22.0')
+  };
+}
+
+function validWhatsAppRecipient(value) {
+  const phone = String(value || '').replace(/\D/g, '');
+  return phone.length >= 8 && phone.length <= 15 ? phone : null;
+}
+
+async function sendWhatsAppInvoice({ to, filename, mimeType, base64, caption }) {
+  const config = whatsappConfig();
+  if (!config.configured) { const error = new Error('WhatsApp Business API is not configured on the server.'); error.status = 409; throw error; }
+  const recipient = validWhatsAppRecipient(to);
+  const bytes = Buffer.from(String(base64 || '').replace(/^data:[^;]+;base64,/, ''), 'base64');
+  if (!recipient) { const error = new Error('A valid client WhatsApp number is required.'); error.status = 400; throw error; }
+  if (!bytes.length || bytes.length > 4 * 1024 * 1024) { const error = new Error('The invoice PDF must be smaller than 4 MB.'); error.status = 400; throw error; }
+  const root = `https://graph.facebook.com/${config.graphVersion}/${encodeURIComponent(config.phoneNumberId)}`;
+  const upload = new FormData();
+  upload.append('messaging_product', 'whatsapp');
+  upload.append('file', new Blob([bytes], { type: mimeType || 'application/pdf' }), filename || 'invoice.pdf');
+  const mediaResponse = await fetch(`${root}/media`, { method: 'POST', headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}` }, body: upload });
+  const media = await mediaResponse.json().catch(() => ({}));
+  if (!mediaResponse.ok || !media.id) { const error = new Error(media?.error?.message || 'WhatsApp could not upload the invoice PDF.'); error.status = mediaResponse.status || 502; throw error; }
+  const messageResponse = await fetch(`${root}/messages`, { method: 'POST', headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ messaging_product: 'whatsapp', recipient_type: 'individual', to: recipient, type: 'document', document: { id: media.id, filename: filename || 'invoice.pdf', caption: String(caption || '').slice(0, 1024) } }) });
+  const message = await messageResponse.json().catch(() => ({}));
+  if (!messageResponse.ok) { const error = new Error(message?.error?.message || 'WhatsApp could not send the invoice.'); error.status = messageResponse.status || 502; throw error; }
+  return message;
+}
 function metaLeadConfig() {
   return { configured: Boolean(process.env.META_VERIFY_TOKEN && process.env.META_APP_SECRET && process.env.META_PAGE_ACCESS_TOKEN) };
 }
@@ -365,6 +397,23 @@ app.post('/api/integrations/make/leads', async (req, res, next) => {
   } catch (error) { return next(error); }
 });
 
+app.get('/api/integrations/whatsapp/status', requireAuth, requireOwner, (_req, res) => {
+  const config = whatsappConfig();
+  return res.json({ configured: config.configured, phoneNumberId: config.configured ? config.phoneNumberId : '' });
+});
+
+app.post('/api/integrations/whatsapp/send-invoice', requireAuth, requireOwner, async (req, res, next) => {
+  try {
+    const result = await sendWhatsAppInvoice({
+      to: req.body.to,
+      filename: String(req.body.filename || 'invoice.pdf').replace(/[^a-zA-Z0-9._-]+/g, '-').slice(0, 150),
+      mimeType: req.body.mimeType || 'application/pdf',
+      base64: req.body.base64,
+      caption: req.body.caption
+    });
+    return res.status(201).json({ ok: true, messageId: result.messages?.[0]?.id || '' });
+  } catch (error) { return next(error); }
+});
 app.get('/api/integrations/make-leads/status', requireAuth, requireOwner, (_req, res) => {
   const baseUrl = String(process.env.PUBLIC_API_URL || `http://localhost:${port}`).replace(/\/$/, '');
   return res.json({ configured: Boolean(process.env.MAKE_WEBHOOK_TOKEN), webhookUrl: `${baseUrl}/api/integrations/make/leads` });
@@ -496,7 +545,7 @@ app.get('/api/integrations/google-drive/callback', async (req, res) => {
       accountEmail = String(profile.email || '');
     }
     await DriveIntegration.findOneAndUpdate({ userId: state.sub }, { userId: state.sub, accountEmail, tokenCiphertext: encryptIntegration(tokens), connectedAt: new Date(), updatedAt: new Date() }, { upsert: true, new: true, runValidators: true });
-    return done('connected', 'Google Drive is connected to Eric’s Designs CRM.');
+    return done('connected', 'Google Drive is connected to Ericï¿½s Designs CRM.');
   } catch (error) { return done('error', 'Google Drive could not be connected. Please try again.'); }
 });
 

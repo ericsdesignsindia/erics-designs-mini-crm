@@ -462,3 +462,35 @@ async function shareInvoiceOnWhatsApp(id){
     toast('Could not prepare the PDF. Check your connection and try again.');
   }
 }
+
+async function invoicePdfBase64(file){
+  return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||'').split(',').pop());reader.onerror=reject;reader.readAsDataURL(file)});
+}
+
+async function shareInvoiceOnWhatsApp(id){
+  const invoice=db.documents.find(document=>document.id===id);
+  if(!invoice||invoice.type!=='Invoice'){toast('Choose a final invoice first.');return}
+  let phone=String(invoice.client?.phone||'').replace(/\D/g,'');
+  if(!phone){const client=db.clients.find(item=>item.id===invoice.client?.id||item.name===invoice.client?.name);phone=String(client?.phone||'').replace(/\D/g,'')}
+  if(!phone){toast('Add the client WhatsApp number, including country code, then save the invoice.');return}
+  if(phone.length===10)phone='91'+phone;
+  const invoiceTotal=totals(invoice);
+  const message=`Hello ${invoice.client.contact||invoice.client.name},\n\nPlease find your invoice ${invoice.number} from Eric's Designs attached.\nTotal: ${fmt(invoice,invoiceTotal.total)}${invoiceTotal.balance>0?`\nBalance due: ${fmt(invoice,invoiceTotal.balance)}`:''}\n\nThank you.`;
+  try{
+    toast('Preparing the invoice PDF…');
+    const file=await createInvoicePdf(invoice);
+    if(window.erpApi?.whatsappStatus&&window.erpApi?.sendInvoiceWhatsApp){
+      const status=await window.erpApi.whatsappStatus();
+      if(status.configured){
+        await window.erpApi.sendInvoiceWhatsApp({to:phone,filename:file.name,mimeType:file.type,base64:await invoicePdfBase64(file),caption:`Invoice ${invoice.number} · ${fmt(invoice,invoiceTotal.total)}`});
+        toast(`Invoice ${invoice.number} was sent on WhatsApp.`);
+        return;
+      }
+    }
+    if(navigator.canShare?.({files:[file]})){await navigator.share({title:`Invoice ${invoice.number}`,text:message,files:[file]});return}
+    const url=URL.createObjectURL(file),link=document.createElement('a');
+    link.href=url;link.download=file.name;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message+'\n\nThe invoice PDF has been downloaded. Please attach it from your Downloads folder.')}`,'_blank','noopener');
+    toast('PDF downloaded. Attach it in the WhatsApp chat that opened.');
+  }catch(error){toast(error?.message||'Could not prepare the PDF. Check your connection and try again.');}
+}
