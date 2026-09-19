@@ -795,3 +795,28 @@ openNewestMailboxMessage = async function(){
     if(hint)hint.textContent='The full email could not be loaded yet. The preview above is available.';
   }
 };
+
+function mailboxNativeSection(){
+  return pageHeader('Mailbox','', 'Your Gmail inbox in a focused Outlook-style workspace.') + `<section class="panel mailbox-panel"><div class="dialog-title"><div><div class="eyebrow">Gmail</div><h2>Inbox</h2></div><div class="actions"><button class="smallbtn" onclick="nav('Settings')">Connection settings</button><button class="primary" onclick="loadMailbox()">Refresh inbox</button></div></div><p class="sub" id="mailboxStatus">Checking your Gmail connection…</p><div id="mailboxList" class="outlook-inbox"><p class="sub" style="padding:16px">Loading recent inbox messages…</p></div></section>`;
+}
+mailboxSection = mailboxNativeSection;
+loadMailbox = async function(){
+  const statusEl = document.getElementById('mailboxStatus'), listEl = document.getElementById('mailboxList');
+  if(!statusEl || !listEl) return;
+  try{
+    const status = await erpApi.gmailStatus();
+    if(!status.connected){
+      statusEl.textContent = 'Gmail is not connected yet.';
+      listEl.innerHTML = `<div class="empty"><h2>Connect Gmail to open your inbox.</h2><p>Open Settings, connect ericsdesignsindia@gmail.com, then return here.</p><button class="primary" onclick="nav('Settings')">Open Gmail settings</button></div>`;
+      return;
+    }
+    statusEl.textContent = `Connected as ${status.accountEmail || 'your Gmail account'}. Click an email to expand and read it.`;
+    listEl.innerHTML = '<p class="sub" style="padding:16px">Refreshing inbox…</p>';
+    const data = await erpApi.gmailMessages();
+    mailboxMessages = data.messages || [];
+    listEl.innerHTML = `<div class="outlook-toolbar"><span>${mailboxMessages.length} recent messages</span><span>Click any email to open it</span></div>` + (mailboxMessages.length ? mailboxMessages.map(message => `<details class="outlook-message ${message.unread?'unread':''}"><summary class="outlook-summary"><span class="outlook-sender">${esc(mailboxSender(message.from) || 'Unknown sender')}</span><span class="outlook-subject">${esc(decodeMailboxText(message.subject) || '(No subject)')}</span><small class="outlook-date">${esc(mailboxDate(message.date))}</small><span class="outlook-snippet">${esc(decodeMailboxText(message.snippet))}</span></summary><article class="outlook-reader"><div class="outlook-reader-meta"><span><b>${esc(mailboxSender(message.from) || 'Unknown sender')}</b><br>To: ${esc(status.accountEmail || 'you')}</span><span>${esc(mailboxDate(message.date))}</span></div><div class="outlook-body">${mailboxBodyHtml(message.body || message.snippet)}</div></article></details>`).join('') : '<div class="empty"><h2>Your inbox is clear.</h2><p>No recent messages were returned by Gmail.</p></div>');
+  }catch(error){
+    statusEl.textContent = error.message || 'Your Gmail inbox could not be loaded.';
+    listEl.innerHTML = '<div class="empty"><h2>Mailbox unavailable.</h2><p>Reconnect Gmail in Settings, then try again.</p><button class="primary" onclick="nav(\'Settings\')">Open Gmail settings</button></div>';
+  }
+};

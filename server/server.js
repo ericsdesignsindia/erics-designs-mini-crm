@@ -573,11 +573,20 @@ app.get('/api/integrations/gmail/messages', requireAuth, requireOwner, async (re
     if (!listResponse.ok) return res.status(listResponse.status).json({ error: list?.error?.message || 'Gmail inbox could not be loaded.' });
     const messages = [];
     for (const item of list.messages || []) {
-      const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(item.id)}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Date`, { headers: { Authorization: `Bearer ${token}` } });
+      const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(item.id)}?format=full`, { headers: { Authorization: `Bearer ${token}` } });
       const message = await response.json().catch(() => ({}));
       if (!response.ok) continue;
       const headers = Object.fromEntries((message.payload?.headers || []).map(header => [String(header.name || '').toLowerCase(), header.value || '']));
-      messages.push({ id: message.id, threadId: message.threadId, from: headers.from || 'Unknown sender', subject: headers.subject || '(No subject)', date: headers.date || '', snippet: message.snippet || '', unread: (message.labelIds || []).includes('UNREAD') });
+      const decodePart = value => Buffer.from(String(value || '').replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
+      const collectText = part => {
+        if (!part) return '';
+        const mime = String(part.mimeType || '').toLowerCase();
+        if (mime === 'text/plain' && part.body?.data) return decodePart(part.body.data);
+        for (const child of part.parts || []) { const text = collectText(child); if (text) return text; }
+        if (mime === 'text/html' && part.body?.data) return decodePart(part.body.data).replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>/gi, '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/gi, ' ');
+        return '';
+      };
+      messages.push({ id: message.id, threadId: message.threadId, from: headers.from || 'Unknown sender', subject: headers.subject || '(No subject)', date: headers.date || '', snippet: message.snippet || '', body: collectText(message.payload) || message.snippet || '', unread: (message.labelIds || []).includes('UNREAD') });
     }
     return res.json({ messages, nextPageToken: list.nextPageToken || null });
   } catch (error) { return next(error); }
