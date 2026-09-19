@@ -287,3 +287,17 @@ saveBackupWithFilePicker = async function(){
     downloadBackupNow();
   }
 };
+
+const documentHTMLWithGooglePayQr = documentHTML;
+documentHTML = function(document){
+  let html = documentHTMLWithGooglePayQr(document);
+  const paymentUpi = String((document.business||{}).upi || db.settings.upi || '').trim();
+  const balance = Math.max(0, totals(document).balance);
+  if(document.type !== 'Invoice' || document.currency !== 'INR' || !paymentUpi || !balance) return html;
+  const paymentUri = `upi://pay?pa=${encodeURIComponent(paymentUpi)}&pn=${encodeURIComponent((document.business||db.settings).name||'Eric’s Designs')}&am=${encodeURIComponent(balance.toFixed(2))}&cu=INR&tn=${encodeURIComponent(document.number)}`;
+  const qrImage = `https://quickchart.io/qr?size=180&margin=1&text=${encodeURIComponent(paymentUri)}`;
+  const paymentQr = `<section class="payment-qr"><img src="${qrImage}" alt="UPI payment QR code for ${esc(document.number)}"><div><h3>PAY WITH GOOGLE PAY</h3><b>Scan to pay ${fmt(document,balance)}</b><p>Scan with Google Pay or any UPI app.</p><small>UPI ID: ${esc(paymentUpi)} · Ref: ${esc(document.number)}</small></div></section>`;
+  return html.replace('<div class="docnotes"><h3>NOTES</h3>', paymentQr+'<div class="docnotes"><h3>NOTES</h3>');
+};
+const settingsWithGooglePayLabel = settings;
+settings = function(){return settingsWithGooglePayLabel().replace('UPI ID','Google Pay / UPI ID')};
