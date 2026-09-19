@@ -676,6 +676,10 @@ app.post('/api/integrations/google-drive/attachments', requireAuth, requireOwner
   catch (error) { return next(error); }
 });
 
+app.get('/api/integrations/ai/status', requireAuth, (_req, res) => {
+  res.json({ configured: Boolean(process.env.OPENAI_API_KEY), model: process.env.OPENAI_MODEL || 'gpt-4.1-mini' });
+});
+
 app.post('/api/ai/draft', requireAuth, async (req, res, next) => {
   try {
     if (!process.env.OPENAI_API_KEY) return res.status(503).json({ error: 'AI drafting is not configured.' });
@@ -684,7 +688,7 @@ app.post('/api/ai/draft', requireAuth, async (req, res, next) => {
     const context = String(req.body.context || '').slice(0, 16000);
     if (!brief) return res.status(400).json({ error: 'Add a brief before generating a draft.' });
     const prompt = `You write professional drafts for Eric's Designs, a creative and digital agency. Task: ${mode}. Use only the reference context below. Do not invent prices, promises, credentials, payment details, or deadlines. Flag missing details as questions. Return clear client-ready text.\n\nBRIEF\n${brief}\n\nREFERENCE CONTEXT\n${context}`;
-    const response = await fetch('https://api.openai.com/v1/responses', { method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: 'gpt-4.1-mini', input: prompt }) });
+    const response = await fetch('https://api.openai.com/v1/responses', { method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: process.env.OPENAI_MODEL || 'gpt-4.1-mini', input: prompt }) });
     const body = await response.json();
     if (!response.ok) return res.status(response.status).json({ error: body?.error?.message || 'AI draft request failed.' });
     const text = body.output_text || body.output?.flatMap(item => item.content || []).filter(item => item.type === 'output_text').map(item => item.text).join('') || '';
