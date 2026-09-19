@@ -18,6 +18,7 @@ const origins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5500,http://12
 const secretFile = path.join(__dirname, '..', '.auth-secret');
 const frontendUrl = String(process.env.FRONTEND_URL || 'https://ericsdesignsindia.github.io/erics-designs-mini-crm/').replace(/\/?$/, '/');
 const googleRedirectUri = process.env.GOOGLE_REDIRECT_URI || `http://localhost:${port}/api/integrations/google-drive/callback`;
+const gmailRedirectUri = process.env.GMAIL_REDIRECT_URI || `http://localhost:${port}/api/integrations/gmail/callback`;
 const jwtSecret = process.env.JWT_SECRET || (fs.existsSync(secretFile)
   ? fs.readFileSync(secretFile, 'utf8').trim()
   : (() => { const secret = randomUUID() + randomUUID(); fs.writeFileSync(secretFile, secret, { mode: 0o600 }); return secret; })());
