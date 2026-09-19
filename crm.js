@@ -674,3 +674,49 @@ loadMailbox = async function(){
     listEl.innerHTML = '<div class="empty"><h2>Mailbox unavailable.</h2><p>Reconnect Gmail in Settings, then try again.</p><button class="primary" onclick="nav(\'Settings\')">Open Gmail settings</button></div>';
   }
 };
+
+let mailboxMessages = [], mailboxOpenedId = null;
+function mailboxBodyHtml(value){return esc(decodeMailboxText(value)).replace(/\n/g,'<br>');}
+function mailboxSection(){
+  return pageHeader('Mailbox','', 'Read and review recent client emails from your Gmail inbox.') + `<section class="panel mailbox-panel"><div class="dialog-title"><div><div class="eyebrow">Gmail</div><h2>Inbox</h2></div><div class="actions"><button class="smallbtn" onclick="nav('Settings')">Connection settings</button><button class="primary" onclick="loadMailbox()">Refresh inbox</button></div></div><p class="sub" id="mailboxStatus">Checking your Gmail connection…</p><div class="mailbox-shell" id="mailboxShell"><div id="mailboxList" class="mailbox-list"><p class="sub" style="padding:16px">Loading recent inbox messages…</p></div><article class="mail-reader" id="mailboxReader"><div class="mail-reader-empty"><div><h2>Select an email</h2><p>Choose a message from the inbox to read it here.</p></div></div></article></div></section>`;
+}
+function renderMailboxList(){
+  const listEl = document.getElementById('mailboxList');
+  if(!listEl) return;
+  listEl.innerHTML = mailboxMessages.length ? mailboxMessages.map(message => `<button type="button" class="mail-row ${message.unread?'unread':''} ${message.id===mailboxOpenedId?'active':''}" onclick="openMailboxMessage('${message.id}')"><div class="mail-row-top"><b>${esc(mailboxSender(message.from) || 'Unknown sender')}</b><small>${esc(mailboxDate(message.date))}</small></div><h3>${esc(decodeMailboxText(message.subject) || '(No subject)')}</h3><p>${esc(decodeMailboxText(message.snippet))}</p></button>`).join('') : '<div class="empty"><h2>Your inbox is clear.</h2><p>No recent messages were returned by Gmail.</p></div>';
+}
+async function loadMailbox(){
+  const statusEl = document.getElementById('mailboxStatus'), listEl = document.getElementById('mailboxList');
+  if(!statusEl || !listEl) return;
+  try{
+    const status = await erpApi.gmailStatus();
+    if(!status.connected){
+      statusEl.textContent = 'Gmail is not connected yet.';
+      listEl.innerHTML = `<div class="empty"><h2>Connect Gmail to open your inbox.</h2><p>Open Settings, connect ericsdesignsindia@gmail.com, then return here.</p><button class="primary" onclick="nav('Settings')">Open Gmail settings</button></div>`;
+      return;
+    }
+    statusEl.textContent = `Connected as ${status.accountEmail || 'your Gmail account'}. Select an email to read it.`;
+    listEl.innerHTML = '<p class="sub" style="padding:16px">Refreshing recent messages…</p>';
+    const data = await erpApi.gmailMessages();
+    mailboxMessages = data.messages || [];
+    mailboxOpenedId = null;
+    renderMailboxList();
+  }catch(error){
+    statusEl.textContent = error.message || 'Your Gmail inbox could not be loaded.';
+    listEl.innerHTML = '<div class="empty"><h2>Mailbox unavailable.</h2><p>Reconnect Gmail in Settings, then try again.</p><button class="primary" onclick="nav(\'Settings\')">Open Gmail settings</button></div>';
+  }
+}
+async function openMailboxMessage(id){
+  const reader = document.getElementById('mailboxReader'), shell = document.getElementById('mailboxShell');
+  if(!reader) return;
+  mailboxOpenedId = id; renderMailboxList();
+  if(shell) shell.classList.add('has-open');
+  reader.innerHTML = '<p class="mail-reader-loading">Opening email…</p>';
+  try{
+    const message = await erpApi.gmailMessage(id);
+    reader.innerHTML = `<button class="smallbtn mail-reader-back" onclick="closeMailboxMessage()">← Back to inbox</button><header class="mail-reader-head"><h2>${esc(decodeMailboxText(message.subject) || '(No subject)')}</h2><div class="mail-reader-meta"><div><b>${esc(mailboxSender(message.from) || 'Unknown sender')}</b><span>To: ${esc(decodeMailboxText(message.to) || 'you')}</span></div><small>${esc(mailboxDate(message.date))}</small></div></header><div class="mail-reader-body">${mailboxBodyHtml(message.body)}</div>`;
+  }catch(error){
+    reader.innerHTML = `<button class="smallbtn mail-reader-back" onclick="closeMailboxMessage()">← Back to inbox</button><div class="mail-reader-empty"><div><h2>Could not open this email.</h2><p>${esc(error.message || 'Please try again.')}</p></div></div>`;
+  }
+}
+function closeMailboxMessage(){const shell=document.getElementById('mailboxShell');if(shell)shell.classList.remove('has-open');}

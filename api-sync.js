@@ -84,6 +84,7 @@ window.erpApi = {
   subscribeMetaLeadPage: () => api('/integrations/meta-leads/subscribe-page', { method: 'POST' }),
   gmailStatus: () => api('/integrations/gmail/status'),
   gmailMessages: () => api('/integrations/gmail/messages'),
+  gmailMessage: id => api(`/integrations/gmail/messages/${encodeURIComponent(id)}`),
   connectGmail: () => api('/integrations/gmail/connect', { method: 'POST' }),
   disconnectGmail: () => api('/integrations/gmail', { method: 'DELETE' }),
   googleDriveStatus: () => api('/integrations/google-drive/status'),

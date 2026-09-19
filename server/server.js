@@ -582,6 +582,27 @@ app.get('/api/integrations/gmail/messages', requireAuth, requireOwner, async (re
     return res.json({ messages, nextPageToken: list.nextPageToken || null });
   } catch (error) { return next(error); }
 });
+app.get('/api/integrations/gmail/messages/:messageId', requireAuth, requireOwner, async (req, res, next) => {
+  try {
+    const messageId = String(req.params.messageId || '');
+    if (!/^[a-zA-Z0-9_-]{8,128}$/.test(messageId)) return res.status(400).json({ error: 'Invalid Gmail message.' });
+    const token = await gmailAccessToken(req.user.sub);
+    const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${encodeURIComponent(messageId)}?format=full`, { headers: { Authorization: `Bearer ${token}` } });
+    const message = await response.json().catch(() => ({}));
+    if (!response.ok) return res.status(response.status).json({ error: message?.error?.message || 'Gmail message could not be opened.' });
+    const headers = Object.fromEntries((message.payload?.headers || []).map(header => [String(header.name || '').toLowerCase(), header.value || '']));
+    const decodePart = value => Buffer.from(String(value || '').replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
+    const collectText = part => {
+      if (!part) return '';
+      const mime = String(part.mimeType || '').toLowerCase();
+      if (mime === 'text/plain' && part.body?.data) return decodePart(part.body.data);
+      for (const child of part.parts || []) { const text = collectText(child); if (text) return text; }
+      if (mime === 'text/html' && part.body?.data) return decodePart(part.body.data).replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>/gi, '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/gi, ' ');
+      return '';
+    };
+    return res.json({ id: message.id, from: headers.from || 'Unknown sender', to: headers.to || '', subject: headers.subject || '(No subject)', date: headers.date || '', body: collectText(message.payload) || message.snippet || '', snippet: message.snippet || '' });
+  } catch (error) { return next(error); }
+});
 app.post('/api/integrations/gmail/connect', requireAuth, requireOwner, async (req, res, next) => {
   try { const config = gmailConfig(); if (!config.configured) return res.status(503).json({ error: 'Gmail setup is pending. Add the Google OAuth settings on Render first.' }); const state = jwt.sign({ purpose: 'gmail', sub: req.user.sub }, jwtSecret, { expiresIn: '10m' }); const params = new URLSearchParams({ client_id: process.env.GOOGLE_CLIENT_ID, redirect_uri: config.redirectUri, response_type: 'code', scope: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email', access_type: 'offline', prompt: 'consent', state }); return res.json({ authorizationUrl: `https://accounts.google.com/o/oauth2/v2/auth?${params}` }); } catch (error) { return next(error); }
 });
