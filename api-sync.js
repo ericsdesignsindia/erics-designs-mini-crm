@@ -153,3 +153,45 @@ async function loadWorkspace() {
 
 window.addEventListener('online', loadWorkspace);
 loadWorkspace();
+
+// Keep cloud data current without interrupting record editing.
+const ERP_AUTO_REFRESH_MS = 5 * 60 * 1000;
+let erpAutoRefreshTimer;
+let erpRefreshInFlight = false;
+
+async function refreshWorkspaceIfChanged() {
+  if (!erpToken || erpRefreshInFlight || document.hidden || recordDraft) return;
+  erpRefreshInFlight = true;
+  try {
+    const remote = await api(`/workspaces/${ERP_WORKSPACE}`);
+    if (remote.revision !== erpRevision) {
+      db = migrate(remote.state);
+      erpRevision = remote.revision;
+      localStorage.setItem(KEY, JSON.stringify(db));
+      lastSnapshot = localStorage.getItem(KEY);
+      render();
+      setErpStatus('MongoDB sync active · updated just now', true);
+      toast('CRM updated with the latest cloud data.');
+    } else {
+      setErpStatus('MongoDB sync active · checked just now', true);
+    }
+  } catch (error) {
+    if (error.status === 401) {
+      erpToken = '';
+      setErpStatus('Sign in to continue', false);
+      showAuth();
+    }
+  } finally {
+    erpRefreshInFlight = false;
+  }
+}
+
+function startWorkspaceAutoRefresh() {
+  clearInterval(erpAutoRefreshTimer);
+  erpAutoRefreshTimer = setInterval(refreshWorkspaceIfChanged, ERP_AUTO_REFRESH_MS);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) refreshWorkspaceIfChanged();
+});
+
