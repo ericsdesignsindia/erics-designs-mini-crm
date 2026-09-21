@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Eric's Designs CRM | Client Demo</title>
+  <meta name="theme-color" content="#0b1220">
+  <link rel="stylesheet" href="./demo.css?v=20260921-01">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-row"><img src="./assets/erics-designs-crm-logo.png" alt="Eric's Designs"><button class="icon-button mobile-menu" id="menuToggle" aria-label="Toggle menu">☰</button></div>
+      <div class="workspace"><span class="workspace-mark">E</span><span><b>Eric's Designs</b><small>Creative workspace</small></span><span class="chevron">⌄</span></div>
+      <nav class="navigation">
+        <button class="nav-item active" data-view="Dashboard"><span>▦</span>Dashboard</button>
+        <button class="nav-item" data-view="Leads"><span>◎</span>Leads <em>24</em></button>
+        <button class="nav-item" data-view="Pipeline"><span>⌁</span>Sales pipeline</button>
+        <button class="nav-item" data-view="Clients"><span>♙</span>Clients</button>
+        <button class="nav-item" data-view="Projects"><span>▣</span>Projects</button>
+        <button class="nav-item" data-view="Invoices"><span>▤</span>Invoices</button>
+        <button class="nav-item" data-view="Calendar"><span>□</span>Calendar</button>
+      </nav>
+      <div class="sidebar-bottom"><div class="ai-mini"><span>✦</span><div><b>AI Copilot</b><small>42 actions this month</small></div><i>›</i></div><div class="user"><div class="avatar">ER</div><div><b>Eric Rodgers</b><small>Administrator</small></div><button>•••</button></div></div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><div class="crumb"><span id="crumb">Dashboard</span><small>Saturday, 21 September</small></div><div class="top-actions"><label class="search"><span>⌕</span><input placeholder="Search clients, invoices or projects"></label><button class="icon-button" id="notice" aria-label="Notifications">♧<i></i></button><button class="help">?</button><button class="new-button" id="newButton">＋ Create</button></div></header>
+      <section class="content">
+        <div class="welcome"><div><p class="eyebrow">BUSINESS OVERVIEW</p><h1>Good afternoon, Eric <span>✦</span></h1><p>Everything you need to keep your studio growing, in one place.</p></div><div class="welcome-actions"><button class="outline">View reports</button><button class="light" id="addLead">＋ New lead</button></div></div>
+        <div class="kpis">
+          <article><div class="metric-icon blue">◎</div><p>Pipeline value</p><h2>₹12.8L</h2><small class="positive">↑ 18.6% <span>vs last month</span></small></article>
+          <article><div class="metric-icon green">₹</div><p>Payments received</p><h2>₹8.4L</h2><small class="positive">↑ 12.1% <span>vs last month</span></small></article>
+          <article><div class="metric-icon gold">◷</div><p>Follow-ups today</p><h2>08</h2><small class="muted">3 high priority</small></article>
+          <article><div class="metric-icon purple">◈</div><p>New leads</p><h2>24</h2><small class="positive">↑ 6 this week</small></article>
+        </div>
+        <div class="grid-main">
+          <section class="panel revenue"><div class="panel-head"><div><h2>Revenue overview</h2><p>Paid invoices and projected revenue</p></div><div class="tabs"><button class="selected">6 months</button><button>Year</button></div></div><div class="chart"><div class="yaxis"><span>₹3L</span><span>₹2L</span><span>₹1L</span><span>₹0</span></div><div class="chart-area"><div class="gridlines"></div><svg viewBox="0 0 620 210" preserveAspectRatio="none" aria-label="Revenue growth chart"><defs><linearGradient id="area" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#356af2" stop-opacity=".24"/><stop offset="1" stop-color="#356af2" stop-opacity="0"/></linearGradient></defs><path d="M0 178 C45 167,74 178,110 151 S176 155,210 119 S271 143,310 100 S375 125,414 83 S478 94,514 45 S575 64,620 18 L620 210 L0 210Z" fill="url(#area)"/><path d="M0 178 C45 167,74 178,110 151 S176 155,210 119 S271 143,310 100 S375 125,414 83 S478 94,514 45 S575 64,620 18" fill="none" stroke="#356af2" stroke-width="4"/><circle cx="514" cy="45" r="6" fill="#fff" stroke="#356af2" stroke-width="4"/></svg><div class="months"><span>Apr</span><span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span></div></div></div><div class="chart-summary"><div><small>Total revenue</small><b>₹18,46,000</b></div><div><small>Projected</small><b>₹12,80,000</b></div><div><small>Collected</small><b>72%</b></div></div></section>
+          <section class="panel focus"><div class="panel-head"><div><h2>Today’s focus</h2><p>Your next best actions</p></div><button class="text-button">View all</button></div><div class="focus-list"><div><span class="task-dot red"></span><div><b>Send quotation to HYBEC</b><small>Due in 45 minutes · ₹9,00,000</small></div><button>Open</button></div><div><span class="task-dot amber"></span><div><b>Follow up with Ava Interiors</b><small>Proposal sent 3 days ago</small></div><button>Open</button></div><div><span class="task-dot blue-dot"></span><div><b>Approve website content</b><small>Project: Casa Botanica</small></div><button>Open</button></div></div></section>
+        </div>
+        <div class="grid-bottom"><section class="panel pipeline"><div class="panel-head"><div><h2>Sales pipeline</h2><p>Move opportunities forward with clarity</p></div><button class="text-button">Open pipeline →</button></div><div class="stages"><div><span class="stage-label">New lead</span><b>08</b><div class="bar"><i style="width:31%;background:#5591ff"></i></div><small>₹2.4L</small></div><div><span class="stage-label">Qualified</span><b>06</b><div class="bar"><i style="width:45%;background:#8665e8"></i></div><small>₹3.1L</small></div><div><span class="stage-label">Proposal sent</span><b>05</b><div class="bar"><i style="width:62%;background:#f0ae47"></i></div><small>₹5.6L</small></div><div><span class="stage-label">Negotiation</span><b>03</b><div class="bar"><i style="width:75%;background:#ee7d65"></i></div><small>₹1.7L</small></div></div></section><section class="panel activity"><div class="panel-head"><div><h2>Recent activity</h2><p>Latest updates across your business</p></div><button class="text-button">See all</button></div><div class="activity-item"><span class="activity-avatar a1">A</span><p><b>Ava Interiors</b> viewed their quotation <small>12 min ago</small></p></div><div class="activity-item"><span class="activity-avatar a2">H</span><p><b>HYBEC</b> was moved to Proposal sent <small>34 min ago</small></p></div><div class="activity-item"><span class="activity-avatar a3">C</span><p><b>Casa Botanica</b> paid Invoice #ED-1028 <small>1 hr ago</small></p></div></section></div>
+      </section>
+    </main>
+  </div>
+  <div class="toast" id="toast">Demo action recorded</div>
+  <script src="./demo.js?v=20260921-01"></script>
+</body>
+</html>
