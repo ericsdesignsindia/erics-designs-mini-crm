@@ -137,6 +137,7 @@ async function loadWorkspace() {
     lastSnapshot = localStorage.getItem(KEY);
     render();
     setErpStatus('MongoDB sync active', true);
+    startWorkspaceAutoRefresh();
   } catch (error) {
     if (error.status === 401) {
       erpToken = '';
@@ -194,4 +195,5 @@ function startWorkspaceAutoRefresh() {
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) refreshWorkspaceIfChanged();
 });
+
 
