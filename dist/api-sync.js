@@ -197,3 +197,11 @@ document.addEventListener('visibilitychange', () => {
 });
 
 
+
+// Notify CRM extensions after a cloud workspace has loaded.
+const erpWorkspaceLoaded = loadWorkspace;
+loadWorkspace = async function () {
+  const result = await erpWorkspaceLoaded();
+  if (erpToken && db) document.dispatchEvent(new Event('erp-workspace-loaded'));
+  return result;
+};
