@@ -1,0 +1,25 @@
+{
+  "appId": "in.ericsdesigns.crm.desktop",
+  "productName": "Eric's Designs CRM",
+  "directories": {
+    "output": "outputs/windows"
+  },
+  "files": [
+    "electron/**/*",
+    "ed-icon-512.png",
+    "package.json"
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "portable",
+        "arch": ["x64"]
+      }
+    ],
+    "artifactName": "Erics-Designs-CRM-${version}-Windows.${ext}",
+    "icon": "ed-icon-512.png"
+  },
+  "portable": {
+    "artifactName": "Erics-Designs-CRM-${version}-Windows.${ext}"
+  }
+}

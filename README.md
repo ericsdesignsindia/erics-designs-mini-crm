@@ -58,3 +58,11 @@ The CRM is ready for Capacitor iOS packaging. The native iOS project is in `ios/
 - Run `npm run mobile:sync` after a CRM update to copy the latest app into the iOS project.
 - On a Mac with Xcode, run `npm run mobile:ios`, choose an Apple development team, test on an iPhone or simulator, and use Xcode Archive to submit the app through App Store Connect.
 - The current iOS application identifier is `in.ericsdesigns.crm`. Change this before App Store submission only if your Apple Developer account requires a different identifier.
+
+## Windows desktop app
+
+A free portable Windows application is included. It opens the live CRM in its own desktop window while keeping the existing HTTPS backend and administrator sign-in.
+
+- Run `npm run windows:app` for development.
+- Run `npm run windows:build` to create a portable 64-bit Windows `.exe` in `outputs/windows`.
+- The portable app does not need installation or a Microsoft Store account. Windows may show a reputation warning until the app is code-signed; code signing is optional and separate from the app itself.
