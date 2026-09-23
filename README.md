@@ -50,3 +50,11 @@ Only publish application source and this README. Do not commit JSON backups, cli
 
 ## Verification
 Tested client creation, project/follow-up storage, pipeline updates, linked Q→P→final conversion, duplicate conversion prevention, INR/AED totals, rate-card quotations, payment balances, backup restoration, AI prompt contents, mobile layout, and PDF generation. This is an operational studio tool, not a certified accounting or tax-compliance system.
+
+## iOS app project
+
+The CRM is ready for Capacitor iOS packaging. The native iOS project is in `ios/App` and uses the same CRM files from `dist`, with the existing secure backend at `https://erics-designs-mini-crm.onrender.com`.
+
+- Run `npm run mobile:sync` after a CRM update to copy the latest app into the iOS project.
+- On a Mac with Xcode, run `npm run mobile:ios`, choose an Apple development team, test on an iPhone or simulator, and use Xcode Archive to submit the app through App Store Connect.
+- The current iOS application identifier is `in.ericsdesigns.crm`. Change this before App Store submission only if your Apple Developer account requires a different identifier.

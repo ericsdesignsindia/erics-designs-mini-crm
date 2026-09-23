@@ -1,0 +1,10 @@
+{
+  "appId": "in.ericsdesigns.crm",
+  "appName": "Eric's Designs CRM",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "ios": {
+    "contentInset": "always",
+    "scrollEnabled": true
+  }
+}
