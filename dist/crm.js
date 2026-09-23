@@ -1102,7 +1102,29 @@ function setSchedulerMode(mode){schedulerMode=mode;render()}
 function setSchedulerFilter(filter){schedulerFilter=filter;render()}
 function schedulerStartOfWeek(date){const result=schedulerLocalDate(date),weekday=result.getDay()||7;result.setDate(result.getDate()-weekday+1);result.setHours(12,0,0,0);return result}
 function schedulerAddDays(date,days){const result=schedulerLocalDate(date);result.setDate(result.getDate()+days);return result}
-function schedulerEvents(){const events=[];for(const task of db.tasks||[]){if(task.done||!task.due)continue;const client=db.clients.find(item=>item.id===task.clientId);events.push({date:task.due,kind:'Follow-up',title:task.title,detail:client?.name||'Studio follow-up',action:`editTask('${task.id}')`})}for(const document of db.documents||[]){if(!document.due||document.status==='Cancelled')continue;const kind=document.type==='Invoice'?'Invoice due':document.type==='Quotation'?'Quotation expiry':'Proforma due';events.push({date:document.due,kind,title:document.number,detail:document.client?.name||'Client document',action:`openDoc('${document.id}')`})}for(const project of db.projects||[]){if(project.due&&project.status!=='Completed')events.push({date:project.due,kind:'Project deadline',title:project.name,detail:db.clients.find(item=>item.id===project.clientId)?.name||'Project delivery',action:`editProject('${project.id}')`});for(const task of project.tasks||[]){if(!task.done&&task.due)events.push({date:task.due,kind:'Project task',title:task.title,detail:project.name,action:`editProjectTask('${project.id}','${task.id}')`})}for(const milestone of project.milestones||[]){if(!milestone.done&&milestone.due)events.push({date:milestone.due,kind:'Milestone',title:milestone.name,detail:project.name,action:`editMilestone('${project.id}','${milestone.id}')`)}}return events.sort((a,b)=>a.date.localeCompare(b.date)||a.title.localeCompare(b.title))}
+function schedulerEvents(){
+  const events=[];
+  for(const task of db.tasks||[]){
+    if(task.done||!task.due)continue;
+    const client=db.clients.find(item=>item.id===task.clientId);
+    events.push({date:task.due,kind:'Follow-up',title:task.title,detail:client?.name||'Studio follow-up',action:`editTask('${task.id}')`});
+  }
+  for(const document of db.documents||[]){
+    if(!document.due||document.status==='Cancelled')continue;
+    const kind=document.type==='Invoice'?'Invoice due':document.type==='Quotation'?'Quotation expiry':'Proforma due';
+    events.push({date:document.due,kind,title:document.number,detail:document.client?.name||'Client document',action:`openDoc('${document.id}')`});
+  }
+  for(const project of db.projects||[]){
+    if(project.due&&project.status!=='Completed')events.push({date:project.due,kind:'Project deadline',title:project.name,detail:db.clients.find(item=>item.id===project.clientId)?.name||'Project delivery',action:`editProject('${project.id}')`});
+    for(const task of project.tasks||[]){
+      if(!task.done&&task.due)events.push({date:task.due,kind:'Project task',title:task.title,detail:project.name,action:`editProjectTask('${project.id}','${task.id}')`});
+    }
+    for(const milestone of project.milestones||[]){
+      if(!milestone.done&&milestone.due)events.push({date:milestone.due,kind:'Milestone',title:milestone.name,detail:project.name,action:`editMilestone('${project.id}','${milestone.id}')`});
+    }
+  }
+  return events.sort((a,b)=>a.date.localeCompare(b.date)||a.title.localeCompare(b.title));
+}
 function schedulerFilterEvents(events){return schedulerFilter==='All'?events:events.filter(event=>schedulerFilter==='Documents'?/Invoice|Quotation|Proforma/.test(event.kind):schedulerFilter==='Projects'?/Project|Milestone/.test(event.kind):event.kind===schedulerFilter)}
 function schedulerEventChip(event,compact=false){return `<button class="scheduler-event scheduler-${event.kind.toLowerCase().replace(/[^a-z]+/g,'-')} ${compact?'compact':''}" onclick="${event.action}" title="${esc(event.kind)} · ${esc(event.detail)}"><span>${esc(event.kind)}</span><b>${esc(event.title)}</b>${compact?'':`<small>${esc(event.detail)}</small>`}</button>`}
 function schedulerTeamAvailability(){const team=db.employees||[];const available=team.filter(member=>member.status==='Active'),leave=team.filter(member=>member.status==='On leave');return `<section class="panel scheduler-team"><div class="dialog-title"><div><div class="eyebrow">TEAM AVAILABILITY</div><h2>Today’s capacity</h2></div><button class="smallbtn" onclick="nav('HR')">Open HR</button></div>${team.length?`<div class="availability-list"><div><span class="availability-dot available"></span><b>${available.length} available</b><small>${available.map(member=>esc(member.name)).join(', ')||'No active team members'}</small></div><div><span class="availability-dot leave"></span><b>${leave.length} on leave</b><small>${leave.map(member=>esc(member.name)).join(', ')||'No leave recorded'}</small></div></div>`:'<p class="sub">Add team members in HR to see availability here.</p>'}</section>`}
