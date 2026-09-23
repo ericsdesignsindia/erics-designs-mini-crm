@@ -612,7 +612,22 @@ app.get('/api/integrations/gmail/messages/:messageId', requireAuth, requireOwner
     return res.json({ id: message.id, from: headers.from || 'Unknown sender', to: headers.to || '', subject: headers.subject || '(No subject)', date: headers.date || '', body: collectText(message.payload) || message.snippet || '', snippet: message.snippet || '' });
   } catch (error) { return next(error); }
 });
-app.post('/api/integrations/gmail/connect', requireAuth, requireOwner, async (req, res, next) => {
+app.post('/api/integrations/gmail/send', requireAuth, requireOwner, async (req, res, next) => {
+  try {
+    const to = String(req.body?.to || '').trim();
+    const subject = String(req.body?.subject || '').trim().replace(/[\r\n]+/g, ' ');
+    const body = String(req.body?.body || '').trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return res.status(400).json({ error: 'Enter a valid recipient email address.' });
+    if (!subject || !body) return res.status(400).json({ error: 'Add both a subject and message.' });
+    if (subject.length > 200 || body.length > 20000) return res.status(400).json({ error: 'Email content is too long.' });
+    const token = await gmailAccessToken(req.user.sub);
+    const raw = Buffer.from(`To: ${to}\r\nSubject: ${subject}\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n${body}`, 'utf8').toString('base64url');
+    const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ raw }) });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) return res.status(response.status).json({ error: result?.error?.message || 'Gmail could not send this email.' });
+    return res.json({ ok: true, id: result.id, threadId: result.threadId });
+  } catch (error) { return next(error); }
+});app.post('/api/integrations/gmail/connect', requireAuth, requireOwner, async (req, res, next) => {
   try { const config = gmailConfig(); if (!config.configured) return res.status(503).json({ error: 'Gmail setup is pending. Add the Google OAuth settings on Render first.' }); const state = jwt.sign({ purpose: 'gmail', sub: req.user.sub }, jwtSecret, { expiresIn: '10m' }); const params = new URLSearchParams({ client_id: process.env.GOOGLE_CLIENT_ID, redirect_uri: config.redirectUri, response_type: 'code', scope: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email', access_type: 'offline', prompt: 'consent', state }); return res.json({ authorizationUrl: `https://accounts.google.com/o/oauth2/v2/auth?${params}` }); } catch (error) { return next(error); }
 });
 app.get('/api/integrations/gmail/callback', async (req, res) => {
