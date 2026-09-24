@@ -245,3 +245,36 @@ body[data-theme="dark"] .settings-hero{background:linear-gradient(120deg,#16263a
 
 /* Settings integrations */
 .settings-card.settings-connections{grid-column:1 / -1}.connection-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.connection-item{padding:17px;border:1px solid #dbe5f3;border-radius:12px;background:#f8fbff;display:grid;gap:14px}.connection-item b{display:block;color:#203858;font-size:15px}.connection-item small{display:block;margin-top:6px;color:#6d7f99;font-size:12px;line-height:1.45;min-height:36px}.connection-actions{display:flex;gap:7px;flex-wrap:wrap}.connection-actions button{font-size:12px;padding:8px 10px}.connection-actions .primary{background:#2c65e8;border-color:#2c65e8;color:#fff}@media(max-width:900px){.settings-card.settings-connections{grid-column:auto}.connection-grid{grid-template-columns:1fr}}body[data-theme="dark"] .connection-item{background:#202a1e;border-color:#3b4b38}body[data-theme="dark"] .connection-item b{color:#edf2eb}body[data-theme="dark"] .connection-item small{color:#aeb9aa}
+
+
+/* Mobile layout hardening */
+@media(max-width:720px){
+  html,body{width:100%;max-width:100%;overflow-x:clip}
+  .shell main,#app,.panel,.toolbar,.pagehead,header,.dialog-title,.modalbar,.actions{min-width:0}
+  header,.dialog-title,.modalbar{align-items:flex-start;flex-wrap:wrap;gap:10px}
+  header>.actions,.dialog-title>.actions,.modalbar>.actions{width:100%;justify-content:flex-start;flex-wrap:wrap}
+  .actions{gap:8px;flex-wrap:wrap}
+  .actions button,.actions a.button,.settings-backup-actions button{min-height:42px}
+  input,select,textarea{font-size:16px!important}
+  .toolbar{gap:8px;flex-wrap:wrap}
+  .toolbar input,.toolbar select{width:100%;min-width:0!important}
+  .tablewrap{max-width:calc(100vw - 24px);overscroll-behavior-inline:contain}
+  .document-card-foot,.client-card-foot{align-items:flex-start;flex-wrap:wrap}
+  .document-card-foot .actions,.client-card-foot .actions{width:100%}
+  .client-form{box-sizing:border-box;width:calc(100vw - 20px);max-height:calc(100dvh - 20px);margin:10px;padding:18px;overflow:auto}
+  #preview{box-sizing:border-box;width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;margin:0;border:0;border-radius:0}
+  #preview .modalbar{position:sticky;top:0;z-index:3}
+  .settings-hero-actions,.settings-backup-actions{width:100%;justify-items:start}
+  .connection-actions{width:100%}
+  .connection-actions button{flex:1 1 124px;min-height:40px}
+  .scheduler-board{padding:10px}
+  .scheduler-grid.week{max-width:calc(100vw - 44px)}
+}
+@media(max-width:370px){
+  .shell main{padding-left:9px;padding-right:9px}
+  .command-actions{grid-template-columns:minmax(0,1fr) repeat(3,38px)}
+  .command-icon,.profile-menu{width:38px;height:38px}
+  #mobileNav{padding-left:4px;padding-right:4px}
+  #mobileNav button{min-width:43px;font-size:9px}
+  .mobile-fab{width:54px!important;height:54px!important}
+}
