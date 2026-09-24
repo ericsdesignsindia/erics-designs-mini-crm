@@ -1,6 +1,6 @@
 {
   "name": "erics-designs-erp-backend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Local MongoDB API for Eric's Designs Mini CRM",
   "scripts": {
