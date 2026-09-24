@@ -1193,9 +1193,10 @@ const editorWithProformaAdvance=editor;
 editor=function(){
   let html=editorWithProformaAdvance();
   if(!draft||draft.type!=='Proforma')return html;
+  draft.payments=Array.isArray(draft.payments)?draft.payments:[];
   const total=totals(draft).total,advance=proformaAdvanceTotal(draft),remaining=Math.max(0,round(total-advance));
   const panel=`<section class="panel proforma-advances"><div class="eyebrow">ADVANCE COLLECTION</div><h2>Advance payments</h2><p class="sub">Record a client deposit against this proforma. It will appear in Accounts and carry into the final invoice when you convert it.</p>${draft.payments.length?draft.payments.map((payment,index)=>`<div class="totalrow"><span>${esc(payment.date)} · ${esc(payment.reference||'Advance payment')}</span><b>${fmt(draft,payment.amount)}</b><button class="danger" onclick="draft.payments.splice(${index},1);render()">Remove</button></div>`).join(''):'<p class="sub">No advance payment recorded yet.</p>'}<div class="grid three">${field('Received date','payDate',today(),'date')}${field('Advance amount '+esc(draft.currency||'INR'),'payAmount','','number','min="0.01" step="0.01"')}${field('Reference / method','payRef','')}</div><div class="actions" style="margin-top:15px"><button onclick="addPayment()">Record advance</button></div><p class="hint">Advance received: <b>${fmt(draft,advance)}</b> · Remaining for final invoice: <b>${fmt(draft,remaining)}</b>. Save the proforma to retain changes.</p></section>`;
-  const marker='</div></div>',position=html.lastIndexOf(marker);
+  const marker='</div><div class="stack"><section class="panel summary">',position=html.indexOf(marker);
   return position<0?html+panel:html.slice(0,position)+panel+html.slice(position);
 };
 
@@ -1252,4 +1253,17 @@ clientTimeline=function(client){
   const events=clientTimelineWithProformaAdvance(client);
   for(const document of clientDocuments(client).filter(item=>item.type==='Proforma'))for(const payment of document.payments||[])events.push({date:payment.date,type:'Advance payment',title:`Advance received · ${document.number}`,detail:`${fmt(document,payment.amount)}${payment.reference?' · '+payment.reference:''}`});
   return events.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+};
+
+
+/* Reliable proforma editing for existing and imported documents. */
+openDoc=function(id){
+  const document=db.documents.find(item=>item.id===id);
+  if(!document){toast('Document not found. Refresh and try again.');return}
+  draft=structuredClone(document);
+  draft.payments=Array.isArray(draft.payments)?draft.payments:[];
+  draft.items=Array.isArray(draft.items)?draft.items:[];
+  draft.client=draft.client&&typeof draft.client==='object'?draft.client:{name:'',contact:'',email:'',phone:'',address:'',gstin:''};
+  view=docView(draft.type);
+  render();
 };
