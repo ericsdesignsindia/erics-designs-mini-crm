@@ -1174,3 +1174,82 @@ render=function(){renderWithWindowsRefresh();if(!isWindowsDesktopApp())return;co
 /* CRM sign-in controls */
 const renderWithAuthControls=render;
 render=function(){renderWithAuthControls();const actions=document.querySelector('#commandBar .command-actions');if(actions&&typeof erpToken!=='undefined'&&erpToken&&!document.getElementById('erp-logout-button')){const button=document.createElement('button');button.id='erp-logout-button';button.className='command-logout';button.title='Log out';button.setAttribute('aria-label','Log out');button.textContent='Log out';button.onclick=()=>window.erpAuth.logout();actions.append(button)}};
+
+/* Proforma advance payments: keep deposits connected from proforma to final invoice. */
+function proformaAdvanceTotal(document){return round((document?.payments||[]).reduce((sum,payment)=>sum+num(payment.amount),0))}
+
+const addPaymentWithProformaAdvance=addPayment;
+addPayment=function(){
+  if(!draft||draft.type!=='Proforma')return addPaymentWithProformaAdvance();
+  const amount=num(document.getElementById('payAmount')?.value),date=document.getElementById('payDate')?.value;
+  const remaining=Math.max(0,round(totals(draft).total-proformaAdvanceTotal(draft)));
+  if(amount<=0||!date||amount>remaining){toast('Enter an advance date and amount within the proforma total.');return}
+  draft.payments.push({id:uid(),date,amount:round(amount),reference:document.getElementById('payRef')?.value||''});
+  if(draft.status==='Draft')draft.status='Sent';
+  render();toast('Advance payment recorded. Save the proforma to reflect it in Accounts.');
+};
+
+const editorWithProformaAdvance=editor;
+editor=function(){
+  let html=editorWithProformaAdvance();
+  if(!draft||draft.type!=='Proforma')return html;
+  const total=totals(draft).total,advance=proformaAdvanceTotal(draft),remaining=Math.max(0,round(total-advance));
+  const panel=`<section class="panel proforma-advances"><div class="eyebrow">ADVANCE COLLECTION</div><h2>Advance payments</h2><p class="sub">Record a client deposit against this proforma. It will appear in Accounts and carry into the final invoice when you convert it.</p>${draft.payments.length?draft.payments.map((payment,index)=>`<div class="totalrow"><span>${esc(payment.date)} · ${esc(payment.reference||'Advance payment')}</span><b>${fmt(draft,payment.amount)}</b><button class="danger" onclick="draft.payments.splice(${index},1);render()">Remove</button></div>`).join(''):'<p class="sub">No advance payment recorded yet.</p>'}<div class="grid three">${field('Received date','payDate',today(),'date')}${field('Advance amount '+esc(draft.currency||'INR'),'payAmount','','number','min="0.01" step="0.01"')}${field('Reference / method','payRef','')}</div><div class="actions" style="margin-top:15px"><button onclick="addPayment()">Record advance</button></div><p class="hint">Advance received: <b>${fmt(draft,advance)}</b> · Remaining for final invoice: <b>${fmt(draft,remaining)}</b>. Save the proforma to retain changes.</p></section>`;
+  const marker='</div></div>',position=html.lastIndexOf(marker);
+  return position<0?html+panel:html.slice(0,position)+panel+html.slice(position);
+};
+
+const updateTotalWithProformaAdvance=updateTotal;
+updateTotal=function(){
+  updateTotalWithProformaAdvance();
+  if(!draft||draft.type!=='Proforma'||draft.rateCard)return;
+  const target=document.getElementById('total');if(!target)return;
+  const current=totals(draft),advance=proformaAdvanceTotal(draft),remaining=Math.max(0,round(current.total-advance));
+  target.innerHTML=`<div class="totalrow"><span>Subtotal</span><span>${money(current.subtotal)}</span></div><div class="totalrow"><span>Discount</span><span>−${money(current.discount)}</span></div><div class="totalrow"><span>GST / tax (${num(draft.tax)}%)</span><span>${money(current.tax)}</span></div><div class="totalrow big"><span>Total</span><span>${money(current.total)}</span></div><div class="totalrow"><span>Advance received</span><span>${money(advance)}</span></div><div class="totalrow"><b>Remaining for final invoice</b><b>${money(remaining)}</b></div>`;
+  draft.items.forEach((item,index)=>{const line=document.getElementById('lineTotal'+index);if(line)line.textContent=money(round(item.qty*item.rate))});
+};
+
+const convertToWithProformaAdvance=convertTo;
+convertTo=function(type){
+  if(!draft||draft.type!=='Proforma'||type!=='Invoice')return convertToWithProformaAdvance(type);
+  if(!saveDoc(true))return;
+  const root=draft.rootId||draft.sourceId||draft.id;
+  const existing=db.documents.find(document=>document.type===type&&document.status!=='Cancelled'&&(document.rootId===root||document.sourceId===root));
+  if(existing){openDoc(existing.id);toast('Opened the existing final invoice.');return}
+  const source=draft.id,sourcePayments=structuredClone(draft.payments||[]);
+  draft=structuredClone(draft);draft.sourceId=source;draft.rootId=root;draft.id=uid();draft.type='Invoice';draft.number=nextNumber('Invoice');draft.date=today();draft.due=addDays(7);draft.status='Draft';draft.rateCard=false;
+  draft.payments=sourcePayments.map(payment=>({...payment,sourceProformaId:source}));
+  draft.terms=db.settings.invoiceTerms;
+  view=docView('Invoice');render();toast(sourcePayments.length?'Final invoice created with the recorded proforma advance.':'Review and save the new final invoice.');
+};
+
+const documentHTMLWithProformaAdvance=documentHTML;
+documentHTML=function(document){
+  let html=documentHTMLWithProformaAdvance(document);
+  if(!document||document.type!=='Proforma'||!document.payments?.length)return html;
+  const advance=proformaAdvanceTotal(document),remaining=Math.max(0,round(totals(document).total-advance));
+  const summary=`<div class="doctotals proforma-advance-summary"><div class="totalrow"><span>Advance received</span><span>${money(advance)}</span></div><div class="totalrow"><b>REMAINING FOR FINAL INVOICE</b><b>${money(remaining)}</b></div></div>`;
+  return html.replace('<div class="docnotes"><h3>TERMS & CONDITIONS</h3>',summary+'<div class="docnotes"><h3>TERMS & CONDITIONS</h3>');
+};
+
+function accountLedger(){
+  const manual=(db.accounts||[]).map(entry=>({...entry,source:'manual'}));
+  const invoicePayments=[],proformaPayments=[];
+  for(const invoice of db.documents.filter(document=>document.type==='Invoice'&&document.status!=='Cancelled'))for(const payment of invoice.payments||[])if(!payment.sourceProformaId)invoicePayments.push({id:`invoice-payment-${invoice.id}-${payment.id||payment.date}-${payment.amount}`,date:payment.date||invoice.updated?.slice(0,10)||today(),type:'Income',category:'Invoice payment',amount:num(payment.amount),currency:invoice.currency||'INR',note:`${invoice.number} · ${invoice.client?.name||'Client'}${payment.reference?' · '+payment.reference:''}`,source:'invoice',invoiceId:invoice.id});
+  for(const proforma of db.documents.filter(document=>document.type==='Proforma'&&document.status!=='Cancelled'))for(const payment of proforma.payments||[])proformaPayments.push({id:`proforma-advance-${proforma.id}-${payment.id||payment.date}-${payment.amount}`,date:payment.date||proforma.updated?.slice(0,10)||today(),type:'Income',category:'Proforma advance',amount:num(payment.amount),currency:proforma.currency||'INR',note:`${proforma.number} · ${proforma.client?.name||'Client'}${payment.reference?' · '+payment.reference:''}`,source:'proforma',proformaId:proforma.id});
+  return [...manual,...invoicePayments,...proformaPayments].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+}
+function accountLedgerRow(row){
+  const amount=currencySymbol(row.currency||'INR')+Number(row.amount).toLocaleString(row.currency==='AED'?'en-AE':'en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const sourceLabel=row.source==='invoice'?'Invoice':row.source==='proforma'?'Proforma advance':'Manual';
+  const action=row.source==='invoice'?'<button class="smallbtn" onclick="openInvoiceFromAccount(\''+esc(row.invoiceId)+'\')">Open invoice</button>':row.source==='proforma'?'<button class="smallbtn" onclick="openDoc(\''+esc(row.proformaId)+'\')">Open proforma</button>':'<button class="smallbtn" onclick="editAccount(\''+esc(row.id)+'\')">Edit</button>';
+  return '<tr><td>'+esc(row.date)+'</td><td><span class="badge '+(row.type==='Income'?'Paid':'Overdue')+'">'+esc(row.type)+'</span></td><td>'+esc(row.category)+'</td><td>'+esc(row.note||'—')+'</td><td class="right"><b>'+amount+'</b></td><td><span class="badge '+(row.source==='manual'?'Draft':'Sent')+'">'+sourceLabel+'</span></td><td>'+action+'</td></tr>';
+}
+function exportAccounts(){csvDownload('CRM-Accounts-'+today()+'.csv',[['Date','Type','Currency','Category','Reference / note','Amount','Source'],...accountLedger().map(entry=>[entry.date,entry.type,entry.currency||'INR',entry.category,entry.note,entry.amount,entry.source==='invoice'?'Invoice payment':entry.source==='proforma'?'Proforma advance':'Manual entry'])]);toast('Accounts export downloaded.');}
+
+const clientTimelineWithProformaAdvance=clientTimeline;
+clientTimeline=function(client){
+  const events=clientTimelineWithProformaAdvance(client);
+  for(const document of clientDocuments(client).filter(item=>item.type==='Proforma'))for(const payment of document.payments||[])events.push({date:payment.date,type:'Advance payment',title:`Advance received · ${document.number}`,detail:`${fmt(document,payment.amount)}${payment.reference?' · '+payment.reference:''}`});
+  return events.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+};
