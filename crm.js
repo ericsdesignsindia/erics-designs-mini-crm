@@ -1267,3 +1267,61 @@ openDoc=function(id){
   view=docView(draft.type);
   render();
 };
+
+/* Business rules and configurable dashboard notifications. */
+const businessRulesMigrate=migrate;
+migrate=function(data){
+  const result=businessRulesMigrate(data),rules=result.businessRules&&typeof result.businessRules==='object'?result.businessRules:{};
+  result.businessRules={
+    defaultCurrency:rules.defaultCurrency==='AED'?'AED':'INR',
+    invoiceDueDays:Math.min(365,Math.max(1,Math.round(num(rules.invoiceDueDays)||7))),
+    quotationValidDays:Math.min(365,Math.max(1,Math.round(num(rules.quotationValidDays)||30))),
+    proformaValidDays:Math.min(365,Math.max(1,Math.round(num(rules.proformaValidDays)||30))),
+    reminderDays:Math.min(60,Math.max(1,Math.round(num(rules.reminderDays)||7))),
+    financialYear:typeof rules.financialYear==='string'&&rules.financialYear.trim()?rules.financialYear.trim():'April – March',
+    projectDeadlineAlerts:rules.projectDeadlineAlerts!==false,
+    proformaAdvanceAlerts:rules.proformaAdvanceAlerts!==false
+  };
+  return result;
+};
+migrate(db);
+function businessRules(){return db.businessRules||{defaultCurrency:'INR',invoiceDueDays:7,quotationValidDays:30,proformaValidDays:30,reminderDays:7,financialYear:'April – March',projectDeadlineAlerts:true,proformaAdvanceAlerts:true}}
+function documentRuleDays(type){const rules=businessRules();return type==='Invoice'?rules.invoiceDueDays:type==='Proforma'?rules.proformaValidDays:rules.quotationValidDays}
+
+const newDocWithBusinessRules=newDoc;
+newDoc=function(type){newDocWithBusinessRules(type);if(!draft)return;draft.currency=businessRules().defaultCurrency;draft.due=addDays(documentRuleDays(type));render()};
+const convertToWithBusinessRules=convertTo;
+convertTo=function(type){const beforeId=draft?.id;convertToWithBusinessRules(type);if(draft&&draft.id!==beforeId&&draft.type===type){draft.due=addDays(documentRuleDays(type));render()}};
+
+const settingsWithBusinessRules=settings;
+settings=function(){
+  const rules=businessRules();let html=settingsWithBusinessRules();
+  const panel=`<section class="panel"><div class="eyebrow">BUSINESS RULES</div><h2>Documents and reminders</h2><p class="sub">These defaults apply to new documents. Existing records keep their current dates and currency.</p><div class="grid three"><div><label for="rule-currency">Default currency</label><select id="rule-currency"><option value="INR" ${rules.defaultCurrency==='INR'?'selected':''}>INR - Indian rupee</option><option value="AED" ${rules.defaultCurrency==='AED'?'selected':''}>AED - UAE dirham</option></select></div>${field('Final invoice due days','rule-invoice-days',rules.invoiceDueDays,'number','min="1" max="365" required')}${field('Quotation validity days','rule-quotation-days',rules.quotationValidDays,'number','min="1" max="365" required')}${field('Proforma validity days','rule-proforma-days',rules.proformaValidDays,'number','min="1" max="365" required')}${field('Reminder window (days)','rule-reminder-days',rules.reminderDays,'number','min="1" max="60" required')}${field('Financial year label','rule-financial-year',rules.financialYear,'text','required')}</div><h3 style="margin-top:22px">Dashboard alerts</h3><div class="actions"><label style="display:flex;gap:9px;align-items:center"><input id="rule-project-alerts" style="width:auto" type="checkbox" ${rules.projectDeadlineAlerts?'checked':''}> Project deadline alerts</label><label style="display:flex;gap:9px;align-items:center"><input id="rule-proforma-alerts" style="width:auto" type="checkbox" ${rules.proformaAdvanceAlerts?'checked':''}> Proforma advance alerts</label></div></section>`;
+  const marker='</div>';const position=html.lastIndexOf(marker);return position<0?html+panel:html.slice(0,position)+panel+html.slice(position);
+};
+saveSettings=function(){
+  const nextSettings=structuredClone(db.settings),oldSettings=db.settings,oldRules=structuredClone(businessRules());
+  Object.keys(nextSettings).forEach(key=>{const element=document.getElementById('set-'+key);if(element)nextSettings[key]=element.value});
+  const nextRules={defaultCurrency:val('rule-currency')==='AED'?'AED':'INR',invoiceDueDays:Math.round(num(val('rule-invoice-days'))),quotationValidDays:Math.round(num(val('rule-quotation-days'))),proformaValidDays:Math.round(num(val('rule-proforma-days'))),reminderDays:Math.round(num(val('rule-reminder-days'))),financialYear:val('rule-financial-year').trim(),projectDeadlineAlerts:document.getElementById('rule-project-alerts').checked,proformaAdvanceAlerts:document.getElementById('rule-proforma-alerts').checked};
+  if(!nextSettings.name.trim()||!Number.isFinite(+nextSettings.tax)||+nextSettings.tax<0||+nextSettings.tax>100||!nextRules.financialYear||[nextRules.invoiceDueDays,nextRules.quotationValidDays,nextRules.proformaValidDays].some(days=>days<1||days>365)||nextRules.reminderDays<1||nextRules.reminderDays>60){toast('Check your business name, tax rate, document timelines, and reminder window.');return}
+  db.settings=nextSettings;db.businessRules=nextRules;if(persist())toast('Business settings and rules saved.');else{db.settings=oldSettings;db.businessRules=oldRules}
+};
+
+notificationItems=function(){
+  const rules=businessRules(),soon=addDays(rules.reminderDays),items=[];
+  for(const invoice of db.documents.filter(document=>document.type==='Invoice'&&document.status!=='Cancelled'&&totals(document).balance>0)){
+    if(invoice.due<today())items.push({level:'urgent',title:`Invoice ${invoice.number} is overdue`,detail:`${invoice.client.name} · ${fmt(invoice,totals(invoice).balance)} outstanding`,action:`openDoc('${invoice.id}')`});
+    else if(invoice.due<=soon)items.push({level:'due',title:`Invoice ${invoice.number} is due soon`,detail:`${invoice.client.name} · due ${invoice.due}`,action:`openDoc('${invoice.id}')`});
+  }
+  for(const task of db.tasks.filter(task=>!task.done&&task.due<=soon))items.push({level:task.due<today()?'urgent':'due',title:task.title,detail:`Follow-up due ${task.due}`,action:`editTask('${task.id}')`});
+  for(const quote of db.documents.filter(document=>document.type==='Quotation'&&document.status==='Sent'&&document.due>=today()&&document.due<=soon))items.push({level:'due',title:`Quotation ${quote.number} expires soon`,detail:`${quote.client.name} · valid until ${quote.due}`,action:`openDoc('${quote.id}')`});
+  if(rules.proformaAdvanceAlerts)for(const proforma of db.documents.filter(document=>document.type==='Proforma'&&document.status!=='Cancelled')){
+    const advance=proformaAdvanceTotal(proforma),finalInvoice=db.documents.find(document=>document.type==='Invoice'&&document.sourceId===proforma.id&&document.status!=='Cancelled');
+    if(advance>0&&!finalInvoice)items.push({level:'due',title:`Advance received on ${proforma.number}`,detail:`${proforma.client.name} · ${fmt(proforma,advance)} awaiting final invoice`,action:`openDoc('${proforma.id}')`});
+    else if(!advance&&proforma.status==='Sent'&&proforma.due<=soon)items.push({level:'due',title:`No advance on ${proforma.number}`,detail:`${proforma.client.name} · valid until ${proforma.due}`,action:`openDoc('${proforma.id}')`});
+  }
+  if(rules.projectDeadlineAlerts)for(const project of db.projects.filter(project=>project.due&&project.status!=='Completed'&&project.due<=soon))items.push({level:project.due<today()?'urgent':'due',title:`Project deadline · ${project.name}`,detail:`Due ${project.due}`,action:`editProject('${project.id}')`});
+  return items.sort((a,b)=>a.level===b.level?String(a.title).localeCompare(String(b.title)):a.level==='urgent'?-1:1).slice(0,20);
+};
+const commandBarWithBusinessRules=commandBar;
+commandBar=function(){const alerts=notificationItems().length;let html=commandBarWithBusinessRules();return html.replace(/◌(?:<b>\d+<\/b>)?/,`◌${alerts?`<b>${alerts}</b>`:''}`)};
