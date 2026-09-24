@@ -304,3 +304,22 @@ body[data-theme="dark"] .settings-hero{background:linear-gradient(120deg,#16263a
 @media(max-width:370px){
   .command-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+
+/* Separate the mobile command bar from dashboard actions. */
+@media(max-width:720px){
+  #commandBar .command-actions{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;align-items:stretch}
+  #commandBar .command-actions button{width:100%;min-width:0;height:44px}
+  #commandBar .command-actions .command-ai{grid-column:1;background:#f7f9fd;border-color:#dce5f4;color:#23436f}
+  #commandBar .command-actions .command-ai span{display:none!important}
+  #commandBar .command-actions .command-new{grid-column:span 2;font-size:13px!important;padding:0 8px}
+  #commandBar .command-actions .command-icon,#commandBar .command-actions .profile-menu{width:100%;height:44px}
+  #commandBar .command-actions .command-logout{grid-column:span 2;font-size:12px!important;padding:0 8px!important}
+  .command-hero .command-actions{display:flex!important;grid-template-columns:none!important;width:100%;gap:9px;align-items:stretch}
+  .command-hero .command-actions button{width:auto!important;min-width:0;height:auto!important;min-height:52px;flex:1;padding:10px 8px;font-size:13px}
+  .command-hero .command-actions .command-ai,.command-hero .command-actions .command-new,.command-hero .command-actions .command-logout{grid-column:auto!important}
+}
+@media(max-width:370px){
+  #commandBar .command-actions{grid-template-columns:repeat(3,minmax(0,1fr))}
+  #commandBar .command-actions .command-new,#commandBar .command-actions .command-logout{grid-column:span 2}
+}
