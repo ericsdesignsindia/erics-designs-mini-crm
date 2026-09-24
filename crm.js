@@ -1170,3 +1170,7 @@ function markVendorBillPaid(id){const bill=(db.vendorBills||[]).find(item=>item.
 function isWindowsDesktopApp(){try{return new URLSearchParams(location.search).get('app')==='windows'}catch{return false}}
 const renderWithWindowsRefresh=render;
 render=function(){renderWithWindowsRefresh();if(!isWindowsDesktopApp())return;const actions=document.querySelector('#commandBar .command-actions');if(actions&&!document.getElementById('windows-app-refresh')){const button=document.createElement('button');button.id='windows-app-refresh';button.className='command-icon windows-refresh';button.title='Refresh CRM';button.setAttribute('aria-label','Refresh CRM');button.textContent='↻';button.onclick=()=>location.reload();actions.prepend(button)}};
+
+/* CRM sign-in controls */
+const renderWithAuthControls=render;
+render=function(){renderWithAuthControls();const actions=document.querySelector('#commandBar .command-actions');if(actions&&typeof erpToken!=='undefined'&&erpToken&&!document.getElementById('erp-logout-button')){const button=document.createElement('button');button.id='erp-logout-button';button.className='command-logout';button.title='Log out';button.setAttribute('aria-label','Log out');button.textContent='Log out';button.onclick=()=>window.erpAuth.logout();actions.append(button)}};

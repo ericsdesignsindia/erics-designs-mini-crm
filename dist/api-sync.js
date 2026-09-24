@@ -7,9 +7,8 @@ const ERP_TOKEN_KEY = 'erics-designs-erp-token';
 let erpRevision = null;
 let erpSyncTimer;
 let erpOnline = false;
-// Keep the access token only in this open page. Opening or refreshing the CRM requires a new administrator sign-in.
-localStorage.removeItem(ERP_TOKEN_KEY);
-let erpToken = '';
+// A remembered device keeps only the expiring access token; the password is never stored by the CRM.
+let erpToken = localStorage.getItem(ERP_TOKEN_KEY) || '';
 
 function setErpStatus(text, online) {
   erpOnline = online;
@@ -44,16 +43,18 @@ function showAuth() {
     const dialog = document.createElement('dialog');
     dialog.id = 'erp-auth';
     dialog.className = 'client-form';
-    dialog.innerHTML = `<div class="dialog-title"><h2>${setupRequired ? 'Set up ERP access' : 'Sign in to ERP'}</h2></div><p class="sub">${setupRequired ? 'Create the first administrator account for this local ERP.' : 'Enter your administrator account details to load MongoDB records.'}</p><form id="erp-auth-form"><div class="grid"><div class="full"><label for="erp-username">Username</label><input id="erp-username" autocomplete="username" required></div><div class="full"><label for="erp-password">Password</label><input id="erp-password" type="password" autocomplete="${setupRequired ? 'new-password' : 'current-password'}" minlength="10" required></div></div><p id="erp-auth-error" class="form-error" role="alert"></p><button class="primary" type="submit">${setupRequired ? 'Create administrator account' : 'Sign in'}</button></form>`;
+    dialog.innerHTML = `<div class="dialog-title"><h2>${setupRequired ? 'Set up ERP access' : 'Log in to CRM'}</h2></div><p class="sub">${setupRequired ? 'Create the first administrator account for this local ERP.' : 'Enter your administrator account details to load MongoDB records.'}</p><form id="erp-auth-form"><div class="grid"><div class="full"><label for="erp-username">Username</label><input id="erp-username" autocomplete="username" required></div><div class="full"><label for="erp-password">Password</label><input id="erp-password" type="password" autocomplete="${setupRequired ? 'new-password' : 'current-password'}" minlength="10" required></div><label class="erp-remember full"><input id="erp-remember" type="checkbox" ${localStorage.getItem(ERP_TOKEN_KEY)?'checked':''}> Remember this device for up to 7 days</label></div><p class="hint">Your password is never saved by the CRM.</p><p id="erp-auth-error" class="form-error" role="alert"></p><button class="primary" type="submit">${setupRequired ? 'Create administrator account' : 'Log in'}</button></form>`;
     document.body.append(dialog);
     dialog.querySelector('form').onsubmit = async event => {
       event.preventDefault();
       const username = dialog.querySelector('#erp-username').value.trim();
       const password = dialog.querySelector('#erp-password').value;
+      const remember = dialog.querySelector('#erp-remember').checked;
       const error = dialog.querySelector('#erp-auth-error');
       try {
         const result = await api(`/auth/${setupRequired ? 'setup' : 'login'}`, { method: 'POST', body: JSON.stringify({ username, password }) });
         erpToken = result.token;
+        if (remember) localStorage.setItem(ERP_TOKEN_KEY, erpToken); else localStorage.removeItem(ERP_TOKEN_KEY);
         dialog.close(); dialog.remove();
         loadWorkspace();
       } catch (requestError) { error.textContent = requestError.message; }
@@ -94,7 +95,7 @@ window.erpApi = {
   connectGoogleDrive: () => api('/integrations/google-drive/connect', { method: 'POST' }),
   disconnectGoogleDrive: () => api('/integrations/google-drive', { method: 'DELETE' })
 };
-window.erpAuth = { logout: () => { erpToken = ''; location.reload(); } };
+window.erpAuth = { logout: () => { erpToken = ''; localStorage.removeItem(ERP_TOKEN_KEY); location.reload(); }, login: () => { erpToken = ''; showAuth(); } };
 
 async function pushWorkspace() {
   try {
@@ -124,7 +125,7 @@ persist = function () {
 
 async function loadWorkspace() {
   if (!erpToken) {
-    setErpStatus('Sign in to load MongoDB records', false);
+    setErpStatus('Log in to load MongoDB records', false);
     showAuth();
     return;
   }
@@ -141,7 +142,8 @@ async function loadWorkspace() {
   } catch (error) {
     if (error.status === 401) {
       erpToken = '';
-      setErpStatus('Sign in to continue', false);
+      localStorage.removeItem(ERP_TOKEN_KEY);
+      setErpStatus('Log in to continue', false);
       showAuth();
       return;
     }
@@ -179,7 +181,8 @@ async function refreshWorkspaceIfChanged() {
   } catch (error) {
     if (error.status === 401) {
       erpToken = '';
-      setErpStatus('Sign in to continue', false);
+      localStorage.removeItem(ERP_TOKEN_KEY);
+      setErpStatus('Log in to continue', false);
       showAuth();
     }
   } finally {

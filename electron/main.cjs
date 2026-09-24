@@ -1,7 +1,7 @@
 const { app, BrowserWindow, shell } = require('electron');
 const path = require('path');
 
-const crmUrl = 'https://ericsdesignsindia.github.io/erics-designs-mini-crm/?app=windows&v=20260924-03';
+const crmUrl = 'https://ericsdesignsindia.github.io/erics-designs-mini-crm/?app=windows&v=20260924-04';
 
 function createWindow() {
   const window = new BrowserWindow({

@@ -229,3 +229,7 @@ body[data-theme="dark"] .demo-banner b{color:#90c9f0}body[data-theme="dark"] .de
 
 /* Windows desktop refresh control */
 .windows-refresh{font-size:21px!important;line-height:1;font-weight:700}
+
+/* Secure remembered-device sign-in */
+.erp-remember{display:flex!important;align-items:center;gap:9px;font-weight:600;color:var(--text)}.erp-remember input{width:auto!important;margin:0}.auth-logout{font-size:20px!important;line-height:1;font-weight:700}
+.command-logout{padding:9px 12px!important;background:#fff5f4!important;color:#a94442!important;border:1px solid #efc8c5!important;font-weight:700;font-size:12px!important}.command-logout:hover{background:#ffe9e6!important}body[data-theme="dark"] .command-logout{background:#3a2525!important;color:#ffb9b2!important;border-color:#70413d!important}
