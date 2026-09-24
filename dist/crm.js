@@ -1325,3 +1325,12 @@ notificationItems=function(){
 };
 const commandBarWithBusinessRules=commandBar;
 commandBar=function(){const alerts=notificationItems().length;let html=commandBarWithBusinessRules();return html.replace(/◌(?:<b>\d+<\/b>)?/,`◌${alerts?`<b>${alerts}</b>`:''}`)};
+
+/* Status seals for client-ready documents and PDFs. */
+const documentHTMLWithStatusSeals=documentHTML;
+documentHTML=function(document){
+  let html=documentHTMLWithStatusSeals(document);
+  const seal=document?.type==='Invoice'&&status(document)==='Paid'?'payment-received-seal.svg':document?.type==='Quotation'&&status(document)==='Accepted'?'quotation-accepted-seal.svg':'';
+  if(!seal)return html;
+  return html.replace('<article class="document">',`<article class="document"><img class="document-seal" src="./assets/${seal}" alt="${seal==='payment-received-seal.svg'?'Payment received':'Quotation accepted'}">`);
+};

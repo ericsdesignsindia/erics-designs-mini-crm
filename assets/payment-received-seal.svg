@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 420" role="img" aria-labelledby="title desc">
+  <title id="title">Payment Received</title><desc id="desc">Green circular payment received seal</desc>
+  <g transform="rotate(-12 210 210)" fill="none" stroke="#178a5b">
+    <circle cx="210" cy="210" r="192" stroke-width="15"/><circle cx="210" cy="210" r="164" stroke-width="4" stroke-dasharray="6 10"/>
+    <path d="M112 210l61 61 137-137" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <g fill="#178a5b" font-family="Arial, Helvetica, sans-serif" text-anchor="middle" font-weight="800">
+    <text x="210" y="105" font-size="30" letter-spacing="5">PAYMENT</text>
+    <text x="210" y="335" font-size="30" letter-spacing="5">RECEIVED</text>
+  </g>
+</svg>
