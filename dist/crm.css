@@ -357,3 +357,29 @@ body[data-theme="dark"] .command-kpi,body[data-theme="dark"] .command-card{backg
 body[data-theme="dark"] .pipeline-step,body[data-theme="dark"] .client360-grid article{background:#16233b;border-color:#2b4262}
 body[data-theme="dark"] .smart-insight{background:#122843;border-color:#234d72}
 body[data-theme="dark"] .attention-card{background:#15233a;border-color:#2a4261}
+
+
+/* Eric's Designs gold palette from the CRM logo. */
+body[data-theme="light"]{--bg:#f8f5ed;--paper:#fffdf8;--line:#e8dfc5;--ink:#252619;--muted:#756f5d;background:radial-gradient(circle at 100% 0,#f0e4b8 0,transparent 29%),#f8f5ed}
+body[data-theme="light"] .shell aside{background:linear-gradient(180deg,#fffdf8,#f5f0e1);border-right-color:#e6dcc1}
+body[data-theme="light"] .shell aside nav button{color:#686353}
+body[data-theme="light"] .shell aside nav button.active{background:linear-gradient(90deg,#f4e6b2,#fbf7ea);color:#765910;box-shadow:inset 3px 0 #c8aa3c}
+body[data-theme="light"] .commandbar{background:#fffdf9eF;border-color:#e6dcc1;box-shadow:0 12px 28px #806b2612}
+body[data-theme="light"] .command-search{background:#faf7ee;border-color:#e7ddc4}
+body[data-theme="light"] .command-new,body[data-theme="light"] .primary{background:linear-gradient(135deg,#d3b647,#b8952d);border-color:#c5a239;color:#242316;box-shadow:0 9px 18px #b8952d31}
+body[data-theme="light"] .command-new:hover,body[data-theme="light"] .primary:hover{background:linear-gradient(135deg,#e0c55c,#c09a2e);border-color:#c09a2e;color:#242316}
+body[data-theme="light"] .panel,body[data-theme="light"] .stat,body[data-theme="light"] .document-card,body[data-theme="light"] .client-card{border-color:#e8dfc8;box-shadow:0 10px 24px #6c5b2210}
+body[data-theme="light"] .command-card,body[data-theme="light"] .command-kpi{border-color:#e8dfc8;box-shadow:0 10px 25px #6c5b2210}
+body[data-theme="light"] .command-hero{background:linear-gradient(125deg,#1c241b,#3d4826 56%,#9d8130)}
+body[data-theme="light"] .eyebrow{color:#9a7721}
+body[data-theme="light"] .command-ai{background:#3e4928;border-color:#59683a;color:#fff}
+body[data-theme="dark"]{--bg:#11140f;--paper:#1a1e16;--line:#3d4330;--ink:#f3f0e4;--muted:#b6b29f;background:radial-gradient(circle at 90% 0,#8f742f42 0,transparent 32%),#11140f}
+body[data-theme="dark"] .shell aside{background:linear-gradient(180deg,#202519,#11140f 74%);border-right-color:#414833}
+body[data-theme="dark"] .shell aside nav button.active{background:linear-gradient(90deg,#5e5428,#2c321e);box-shadow:inset 3px 0 #e1c25c}
+body[data-theme="dark"] .commandbar{background:#1a1e16ef;border-color:#4a4c34;box-shadow:0 16px 34px #00000056}
+body[data-theme="dark"] .command-search{background:#11140f;border-color:#464b35}
+body[data-theme="dark"] .command-new,body[data-theme="dark"] .primary{background:linear-gradient(135deg,#e1c25c,#b8902f);border-color:#e0c05a;color:#202016}
+body[data-theme="dark"] .command-hero{background:linear-gradient(125deg,#151a12,#374021 58%,#8c7029)}
+body[data-theme="dark"] .panel,body[data-theme="dark"] .stat,body[data-theme="dark"] .document-card,body[data-theme="dark"] .client-card{border-color:#3c4530}
+body[data-theme="dark"] .command-kpi,body[data-theme="dark"] .command-card{background:linear-gradient(145deg,#20251a,#171b14);border-color:#3e4731}
+body[data-theme="dark"] .smart-insight{background:#26311f;border-color:#53623b}
