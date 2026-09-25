@@ -1443,3 +1443,6 @@ render=function(){renderWithAutomationCentre();const nav=document.getElementById
 const mobileSectionsWithAutomationCentre=showMobileSections;
 showMobileSections=function(){mobileSectionsWithAutomationCentre();const list=document.querySelector('#mobileSections .mobile-section-list');if(list&&![...list.querySelectorAll('button')].some(button=>button.textContent.includes('Automations'))){const button=document.createElement('button');button.innerHTML='<span>⚙</span>Automations';button.onclick=()=>{document.getElementById('mobileSections').close();nav('Automations')};list.append(button)}};
 document.addEventListener('erp-workspace-loaded',()=>setTimeout(()=>runAutomationEngine(true),650));
+
+/* Ensure the extended navigation is rendered on the first app load. */
+setTimeout(()=>{if(!draft)render()},0);
