@@ -1556,3 +1556,7 @@ render=function(){renderWithJarvis();const navElement=document.getElementById('n
 function mountJarvisWorkspace(){if(view!=='Jarvis')return;const app=document.getElementById('app');if(!app)return;try{app.innerHTML=jarvisWorkspace();applyNavbarEnhancements();renderJarvisResult()}catch(error){app.innerHTML=pageHeader('Jarvis assistant.','','Your CRM assistant is ready to help.')+'<section class="panel"><h2>Jarvis is preparing your workspace.</h2><p class="sub">Refresh once and try again. Your CRM records are safe.</p></section>'}}
 const renderWithJarvisMount=render;
 render=function(){renderWithJarvisMount();if(view==='Jarvis')mountJarvisWorkspace()};
+
+/* Register Jarvis as a first-class workspace route. */
+const navWithJarvisRoute=nav;
+nav=function(name){if(name==='Jarvis'){if(draft&&!confirm('Leave this document? Unsaved changes will be lost.'))return;draft=null;view='Jarvis';query='';filter='';selectedClient=null;render();return}navWithJarvisRoute(name)};
