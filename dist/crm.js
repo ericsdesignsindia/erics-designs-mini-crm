@@ -1467,3 +1467,66 @@ const renderWithHorizontalNavigation=render;
 render=function(){renderWithHorizontalNavigation();applyHorizontalNavigation()};
 window.addEventListener('resize',applyHorizontalNavigation);
 setTimeout(applyHorizontalNavigation,0);
+
+/* Advanced workspace navigation controls. */
+const NAVBAR_FAVORITES_KEY='erics-designs-navbar-favorites-v1';
+const HORIZONTAL_MORE_GROUPS=[
+  {title:'Workspace',items:['AI Copilot','Mailbox','Client portal','Automations']},
+  {title:'Operations',items:['Follow-ups','Calendar','Templates','Services']},
+  {title:'Administration',items:['HR','Settings']}
+];
+let navbarGmailState=localStorage.getItem('erics-designs-navbar-gmail-state')||'Checking Gmail';
+let commandPaletteResults=[];
+function navbarFavorites(){try{return JSON.parse(localStorage.getItem(NAVBAR_FAVORITES_KEY)||'[]').filter(item=>HORIZONTAL_MORE_SECTIONS.includes(item))}catch{return []}}
+function navbarBadge(section){
+  if(section==='Clients')return db.clients.filter(client=>client.stage==='New lead').length;
+  if(section==='Projects')return db.projects.filter(project=>project.status!=='Completed').length;
+  if(section==='Accounts')return db.documents.filter(document=>document.type==='Invoice'&&num(documentTotals(document).balance)>0).length;
+  if(section==='More')return notificationItems().length;
+  return 0;
+}
+function sectionButtonHtml(section){const badge=navbarBadge(section);return `<span class="nav-icon">${navIcon(section)}</span><span class="nav-label">${esc(section)}</span>${badge?`<span class="nav-count">${badge>99?'99+':badge}</span>`:''}`}
+function refreshNavbarGmailState(){
+  if(!erpApi?.gmailStatus)return;
+  erpApi.gmailStatus().then(status=>{navbarGmailState=status.connected?'Gmail connected':status.configured?'Gmail ready':'Gmail setup';localStorage.setItem('erics-designs-navbar-gmail-state',navbarGmailState);updateNavbarStatus()}).catch(()=>{navbarGmailState='Gmail unavailable';updateNavbarStatus()});
+}
+function navbarBackupStatus(){const saved=localStorage.getItem('erics-designs-last-backup');if(!saved)return 'Backup pending';const age=Math.max(0,Math.floor((Date.now()-Date.parse(saved))/86400000));return age===0?'Backup today':`Backup ${age}d ago`}
+function updateNavbarStatus(){const el=document.getElementById('navbarStatus');if(!el)return;const cloud=navigator.onLine?'Cloud synced':'Offline mode';el.innerHTML=`<span class="nav-status-dot ${navigator.onLine?'online':'offline'}"></span><span>${cloud}</span><span class="nav-status-sep">•</span><span>${esc(navbarGmailState)}</span><span class="nav-status-sep">•</span><span>${esc(navbarBackupStatus())}</span>`}
+function toggleNavbarCompact(){const compact=!document.body.classList.contains('navbar-compact');document.body.classList.toggle('navbar-compact',compact);localStorage.setItem('erics-designs-navbar-compact',compact?'1':'0');applyNavbarEnhancements()}
+function toggleNavbarFavorite(section){const current=navbarFavorites(),index=current.indexOf(section);if(index<0)current.push(section);else current.splice(index,1);localStorage.setItem(NAVBAR_FAVORITES_KEY,JSON.stringify(current));applyHorizontalNavigation();const dialog=document.getElementById('horizontalMoreMenu');if(dialog?.open)renderHorizontalMoreMenu(dialog)}
+function renderHorizontalMoreMenu(dialog){const favorites=navbarFavorites();dialog.innerHTML=`<div class="dialog-title"><div><div class="eyebrow">WORKSPACE DIRECTORY</div><h2>More sections</h2><p class="sub">Pin the tools you open most often to the navigation bar.</p></div><button aria-label="Close" onclick="document.getElementById('horizontalMoreMenu').close()">×</button></div><div class="desktop-more-groups">${HORIZONTAL_MORE_GROUPS.map(group=>`<section><h3>${group.title}</h3><div class="desktop-more-grid">${group.items.map(section=>`<div class="desktop-more-item"><button class="${view===section?'active':''}" onclick="document.getElementById('horizontalMoreMenu').close();nav('${section}')"><span>${navIcon(section)}</span>${esc(section)}</button><button class="favorite-toggle ${favorites.includes(section)?'is-favorite':''}" title="${favorites.includes(section)?'Unpin':'Pin'} ${esc(section)}" onclick="toggleNavbarFavorite('${section}')">★</button></div>`).join('')}</div></section>`).join('')}</div>`}
+function showHorizontalMoreMenu(){let dialog=document.getElementById('horizontalMoreMenu');if(!dialog){dialog=document.createElement('dialog');dialog.id='horizontalMoreMenu';dialog.className='client-form desktop-more-menu';document.body.append(dialog)}renderHorizontalMoreMenu(dialog);if(!dialog.open)dialog.showModal()}
+function applyHorizontalNavigation(){
+  const navElement=document.getElementById('nav');if(!navElement)return;
+  const desktop=window.matchMedia('(min-width: 1024px)').matches;
+  navElement.querySelectorAll('[data-navbar-favorite]').forEach(item=>item.remove());
+  for(const button of navElement.querySelectorAll('button')){if(button.dataset.horizontalMore||button.dataset.navbarCompact)continue;const section=button.title||button.textContent.trim();button.style.display=desktop&&!HORIZONTAL_PRIMARY_SECTIONS.includes(section)?'none':'';if(HORIZONTAL_PRIMARY_SECTIONS.includes(section))button.innerHTML=sectionButtonHtml(section)}
+  let moreButton=navElement.querySelector('[data-horizontal-more]');
+  let compactButton=navElement.querySelector('[data-navbar-compact]');
+  if(!desktop){moreButton?.remove();compactButton?.remove();return}
+  const insertBefore=moreButton||null;
+  navbarFavorites().forEach(section=>{const favorite=document.createElement('button');favorite.dataset.navbarFavorite=section;favorite.title=section;favorite.innerHTML=sectionButtonHtml(section);favorite.onclick=()=>nav(section);navElement.insertBefore(favorite,insertBefore)});
+  if(!moreButton){moreButton=document.createElement('button');moreButton.dataset.horizontalMore='1';moreButton.title='More';moreButton.onclick=showHorizontalMoreMenu;navElement.append(moreButton)}
+  moreButton.innerHTML=sectionButtonHtml('More');moreButton.classList.toggle('active',HORIZONTAL_MORE_SECTIONS.includes(view));
+  if(!compactButton){compactButton=document.createElement('button');compactButton.dataset.navbarCompact='1';compactButton.className='navbar-compact-toggle';compactButton.onclick=toggleNavbarCompact;navElement.parentElement.append(compactButton)}
+  const compact=document.body.classList.contains('navbar-compact');compactButton.title=compact?'Use full navigation':'Use compact navigation';compactButton.setAttribute('aria-label',compactButton.title);compactButton.innerHTML=compact?'☷':'⇤';
+}
+function applyNavbarBreadcrumb(){const app=document.getElementById('app'),header=app?.querySelector(':scope > header');if(!header)return;let crumb=header.querySelector('.workspace-breadcrumb');if(!crumb){crumb=document.createElement('div');crumb.className='workspace-breadcrumb';header.prepend(crumb)}crumb.innerHTML=`<button title="Go to overview" onclick="nav('Overview')">Workspace</button><span>/</span><b>${esc(view)}</b>`}
+function applyNavbarEnhancements(){document.body.classList.toggle('navbar-compact',localStorage.getItem('erics-designs-navbar-compact')==='1');applyHorizontalNavigation();applyNavbarBreadcrumb();updateNavbarStatus();refreshNavbarGmailState()}
+function showQuickCreateMenu(){let dialog=document.getElementById('quickCreateMenu');if(!dialog){dialog=document.createElement('dialog');dialog.id='quickCreateMenu';dialog.className='client-form quick-create-menu';document.body.append(dialog)}const actions=[['Lead','＋','editClient()'],['Client','◉','editClient()'],['Quotation','▤',"newDoc('Quotation')"],['Proforma invoice','▤',"newDoc('Proforma')"],['Final invoice','₹',"newDoc('Invoice')"],['Payment or expense','↕',"editAccount()"],['Follow-up','✓','editTask()'],['Project','□','editProject()'],['Team member','♙','editEmployee()']];dialog.innerHTML=`<div class="dialog-title"><div><div class="eyebrow">QUICK CREATE</div><h2>Add to your workspace</h2></div><button aria-label="Close" onclick="document.getElementById('quickCreateMenu').close()">×</button></div><div class="quick-create-grid">${actions.map(([label,icon,action])=>`<button onclick="document.getElementById('quickCreateMenu').close();${action}"><span>${icon}</span>${label}</button>`).join('')}</div>`;if(!dialog.open)dialog.showModal()}
+function commandPaletteItems(){return [
+  ...['Overview','Reports','Clients','Pipeline','Documents','Projects','Accounts','Follow-ups','Calendar','AI Copilot','Automations','Templates','Services','Mailbox','Client portal','HR','Settings'].map(section=>({label:`Open ${section}`,meta:'Workspace',run:()=>nav(section)})),
+  {label:'Create new lead',meta:'Create',run:()=>editClient()},{label:'Create quotation',meta:'Create',run:()=>newDoc('Quotation')},{label:'Create invoice',meta:'Create',run:()=>newDoc('Invoice')},{label:'Record payment or expense',meta:'Create',run:()=>editAccount()},{label:'Schedule follow-up',meta:'Create',run:()=>editTask()},
+  ...db.clients.slice(0,30).map(client=>({label:client.name,meta:`Client · ${client.stage}`,run:()=>{selectedClient=client.id;view='Clients';render()}})),
+  ...db.documents.slice(0,30).map(document=>({label:document.type+' '+(document.number||''),meta:document.client?.name||'Document',run:()=>openDoc(document.id)}))
+]}
+function renderCommandPalette(query=''){const list=document.getElementById('commandPaletteResults');if(!list)return;const term=query.trim().toLowerCase();commandPaletteResults=commandPaletteItems().filter(item=>!term||`${item.label} ${item.meta}`.toLowerCase().includes(term)).slice(0,12);list.innerHTML=commandPaletteResults.length?commandPaletteResults.map((item,index)=>`<button onclick="runCommandPalette(${index})"><span>${esc(item.label)}</span><small>${esc(item.meta)}</small></button>`).join(''):'<p class="sub">No matching workspace action or record.</p>'}
+function openCommandPalette(){let dialog=document.getElementById('commandPalette');if(!dialog){dialog=document.createElement('dialog');dialog.id='commandPalette';dialog.className='client-form command-palette';document.body.append(dialog)}dialog.innerHTML=`<div class="command-palette-search"><span>⌕</span><input id="commandPaletteInput" aria-label="Search workspace" placeholder="Search actions, pages, clients, and documents" oninput="renderCommandPalette(this.value)"><kbd>Esc</kbd></div><div id="commandPaletteResults"></div><p class="hint">Use Ctrl + K from anywhere in the CRM.</p>`;renderCommandPalette();if(!dialog.open)dialog.showModal();setTimeout(()=>document.getElementById('commandPaletteInput')?.focus(),0)}
+function runCommandPalette(index){const item=commandPaletteResults[index];document.getElementById('commandPalette')?.close();item?.run()}
+document.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='k'){event.preventDefault();openCommandPalette()}});
+const commandBarWithNavbarTools=commandBar;
+commandBar=function(){let html=commandBarWithNavbarTools();html=html.replace('onkeydown="if(event.key===\'Enter\')quickSearch(this.value)"','aria-keyshortcuts="Control+K" title="Press Ctrl + K to search your workspace" onkeydown="if(event.key===\'Enter\')quickSearch(this.value)"');return html.replace('onclick="newDoc(\'Quotation\')"','onclick="showQuickCreateMenu()"')};
+const renderWithNavbarEnhancements=render;
+render=function(){renderWithNavbarEnhancements();applyNavbarEnhancements()};
+window.addEventListener('online',updateNavbarStatus);window.addEventListener('offline',updateNavbarStatus);
+setTimeout(applyNavbarEnhancements,0);
