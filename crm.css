@@ -410,3 +410,9 @@ body[data-theme="dark"] .collection-summary b,body[data-theme="dark"] .collectio
 body[data-theme="dark"] .command-ai{background:#354123;border-color:#68774a;color:#fff7da}@media(max-width:720px){body[data-theme="dark"] #commandBar .command-actions .command-ai{background:#354123;border-color:#68774a;color:#fff7da}}
 body[data-theme="light"] .collection-summary b,body[data-theme="light"] .collection-amount>b,body[data-theme="light"] .reconciliation-stats b{background-color:transparent}
 body[data-theme="light"] .finance-progress i{background:#b8952d}
+
+/* Reports and dashboard KPI contrast. */
+body[data-theme="dark"] .stats .stat{background:linear-gradient(145deg,#20261a,#1a1e16);border-color:#424c33;color:#f3f0e4}
+body[data-theme="dark"] .stats .stat span,body[data-theme="dark"] .stats .stat small{color:#c8c4b1}
+body[data-theme="dark"] .stats .stat strong{color:#f1d57c}
+body[data-theme="dark"] .report-bar-value,body[data-theme="dark"] .totalrow b{color:#f3f0e4}
