@@ -1446,3 +1446,24 @@ document.addEventListener('erp-workspace-loaded',()=>setTimeout(()=>runAutomatio
 
 /* Ensure the extended navigation is rendered on the first app load. */
 setTimeout(()=>{if(!draft)render()},0);
+
+/* Hybrid horizontal navigation for desktop workspaces. */
+const HORIZONTAL_PRIMARY_SECTIONS=['Overview','Clients','Pipeline','Documents','Projects','Accounts','Reports'];
+const HORIZONTAL_MORE_SECTIONS=['Follow-ups','Calendar','AI Copilot','Automations','Templates','Services','Mailbox','Client portal','HR','Settings'];
+function showHorizontalMoreMenu(){
+  let dialog=document.getElementById('horizontalMoreMenu');if(!dialog){dialog=document.createElement('dialog');dialog.id='horizontalMoreMenu';dialog.className='client-form desktop-more-menu';document.body.append(dialog)}
+  dialog.innerHTML=`<div class="dialog-title"><div><div class="eyebrow">WORKSPACES</div><h2>More sections</h2></div><button aria-label="Close" onclick="document.getElementById('horizontalMoreMenu').close()">×</button></div><div class="desktop-more-grid">${HORIZONTAL_MORE_SECTIONS.map(section=>`<button class="${view===section?'active':''}" onclick="document.getElementById('horizontalMoreMenu').close();nav('${section}')"><span>${navIcon(section)}</span>${section}</button>`).join('')}</div>`;dialog.showModal();
+}
+function applyHorizontalNavigation(){
+  const navElement=document.getElementById('nav');if(!navElement)return;
+  const desktop=window.matchMedia('(min-width: 1024px)').matches;
+  for(const button of navElement.querySelectorAll('button')){if(button.dataset.horizontalMore)continue;const section=button.title||button.textContent.trim();button.style.display=desktop&&!HORIZONTAL_PRIMARY_SECTIONS.includes(section)?'none':''}
+  let moreButton=navElement.querySelector('[data-horizontal-more]');
+  if(!desktop){moreButton?.remove();return}
+  if(!moreButton){moreButton=document.createElement('button');moreButton.dataset.horizontalMore='1';moreButton.title='More';moreButton.innerHTML=`<span class="nav-icon">${navIcon('More')}</span><span class="nav-label">More</span>`;moreButton.onclick=showHorizontalMoreMenu;navElement.append(moreButton)}
+  moreButton.classList.toggle('active',HORIZONTAL_MORE_SECTIONS.includes(view));
+}
+const renderWithHorizontalNavigation=render;
+render=function(){renderWithHorizontalNavigation();applyHorizontalNavigation()};
+window.addEventListener('resize',applyHorizontalNavigation);
+setTimeout(applyHorizontalNavigation,0);
