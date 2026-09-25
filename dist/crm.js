@@ -1551,3 +1551,8 @@ const commandBarWithJarvis=commandBar;
 commandBar=function(){return commandBarWithJarvis().replace("aiMode='CRM action plan';nav('AI Copilot')","nav('Jarvis')").replace('Ask AI','Ask Jarvis')};
 const renderWithJarvis=render;
 render=function(){renderWithJarvis();const navElement=document.getElementById('nav');if(navElement&&!navElement.querySelector('[title="Jarvis"]')){const button=document.createElement('button');button.title='Jarvis';button.className=view==='Jarvis'?'active':'';button.innerHTML='<span class="nav-icon">✦</span><span class="nav-label">Jarvis</span>';button.onclick=()=>nav('Jarvis');const anchor=navElement.querySelector('[title="AI Copilot"]')||navElement.firstChild;if(anchor)anchor.before(button);else navElement.append(button)}if(view==='Jarvis'){document.getElementById('app').innerHTML=jarvisWorkspace();applyNavbarEnhancements();renderJarvisResult()}};
+
+/* Keep the Jarvis workspace available even when CRM navigation is refreshed by another module. */
+function mountJarvisWorkspace(){if(view!=='Jarvis')return;const app=document.getElementById('app');if(!app)return;try{app.innerHTML=jarvisWorkspace();applyNavbarEnhancements();renderJarvisResult()}catch(error){app.innerHTML=pageHeader('Jarvis assistant.','','Your CRM assistant is ready to help.')+'<section class="panel"><h2>Jarvis is preparing your workspace.</h2><p class="sub">Refresh once and try again. Your CRM records are safe.</p></section>'}}
+const renderWithJarvisMount=render;
+render=function(){renderWithJarvisMount();if(view==='Jarvis')mountJarvisWorkspace()};
