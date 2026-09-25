@@ -1377,3 +1377,69 @@ accountLedgerRow=function(row){const amount=currencySymbol(row.currency||'INR')+
 accountLedgerRows=function(rows){return rows.length?`<div class="tablewrap"><table><thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Reference / note</th><th class="right">Amount</th><th>Source</th><th>Bank</th><th></th></tr></thead><tbody>${rows.map(accountLedgerRow).join('')}</tbody></table></div>`:'<div class="empty"><h2>No account activity yet.</h2><p>Record an income or expense, or save a payment on a final invoice.</p></div>'}
 const accountsWithBankReconciliation=accounts;
 accounts=function(){const page=accountsWithBankReconciliation();const marker='<section class="panel collections-panel">';return page.includes(marker)?page.replace(marker,bankReconciliationPanel()+marker):page+bankReconciliationPanel()};
+
+/* Lead scoring and configurable automation centre. */
+const automationRuleDefaults=[
+  {id:'new-lead-followup',name:'New lead follow-up',description:'Creates a task when a new lead has not been contacted after two days.',enabled:true},
+  {id:'high-value-alert',name:'High-value lead alert',description:'Creates a priority task for open opportunities valued at ₹1,00,000 or more.',enabled:true},
+  {id:'quotation-nudge',name:'Quotation expiry follow-up',description:'Creates a follow-up for a sent quotation that expires within seven days.',enabled:true},
+  {id:'payment-reminder',name:'Outstanding payment reminder',description:'Creates a follow-up for each sent or overdue final invoice with a balance.',enabled:true}
+];
+function automationRules(){
+  const stored=Array.isArray(db.automationRules)?db.automationRules:[];
+  db.automationRules=automationRuleDefaults.map(rule=>({...rule,...(stored.find(item=>item&&item.id===rule.id)||{})}));
+  return db.automationRules;
+}
+function leadScore(client){
+  if(!client||client.stage==='Lost')return 0;
+  if(client.stage==='Won')return 100;
+  const stagePoints={'New lead':30,'Contacted':48,'Proposal sent':65};
+  let score=stagePoints[client.stage]||25,value=num(client.value);
+  if(value>=100000)score+=18;else if(value>=50000)score+=12;else if(value>=20000)score+=7;
+  if(client.contact)score+=5;if(client.email)score+=5;if(client.phone)score+=3;
+  const tasks=db.tasks.filter(task=>task.clientId===client.id&&!task.done);
+  if(tasks.length)score+=7;if(tasks.some(task=>task.due&&task.due<=today()))score+=8;
+  const sentQuote=db.documents.some(document=>document.type==='Quotation'&&status(document)==='Sent'&&(document.client?.id===client.id||document.client?.name===client.name));
+  if(sentQuote)score+=9;
+  return Math.max(0,Math.min(99,score));
+}
+function leadTemperature(score){return score>=75?'Hot':score>=50?'Warm':'Cold'}
+function leadScoreMarkup(client){const score=leadScore(client),temperature=leadTemperature(score);return `<span class="lead-score ${temperature.toLowerCase()}" title="Lead score ${score}/100">${temperature} ${score}</span>`}
+function automationCandidates(){
+  const enabled=Object.fromEntries(automationRules().map(rule=>[rule.id,rule.enabled]));const candidates=[];
+  if(enabled['new-lead-followup'])for(const client of db.clients.filter(item=>item.stage==='New lead')){
+    const created=Date.parse(client.created||'');if(Number.isFinite(created)&&Date.now()-created<2*86400000)continue;
+    const key=`automation:new-lead:${client.id}`;if(!db.tasks.some(task=>task.autoKey===key))candidates.push({key,clientId:client.id,title:`Contact new lead: ${client.name}`,notes:'Created automatically because this new lead has not been contacted after two days.'});
+  }
+  if(enabled['high-value-alert'])for(const client of db.clients.filter(item=>!['Won','Lost'].includes(item.stage)&&num(item.value)>=100000)){
+    const key=`automation:high-value:${client.id}`;if(!db.tasks.some(task=>task.autoKey===key))candidates.push({key,clientId:client.id,title:`Priority lead: ${client.name}`,notes:`High-value opportunity of ${money(client.value)} requires attention.`});
+  }
+  for(const item of reminderCandidates()){
+    const ruleId=item.key.startsWith('payment:')?'payment-reminder':'quotation-nudge';if(enabled[ruleId])candidates.push(item);
+  }
+  return candidates;
+}
+function runAutomationEngine(silent=false){
+  const candidates=automationCandidates();if(!candidates.length){if(!silent)toast('All enabled automations are up to date.');return 0}
+  commitChange(()=>candidates.forEach(item=>db.tasks.push({id:uid(),title:item.title,clientId:item.clientId||'',due:today(),notes:item.notes,done:false,autoKey:item.key})),`${candidates.length} automation task${candidates.length===1?'':'s'} created`);return candidates.length;
+}
+function toggleAutomationRule(id){const rule=automationRules().find(item=>item.id===id);if(!rule)return;commitChange(()=>rule.enabled=!rule.enabled,`${rule.name} ${rule.enabled?'enabled':'paused'}`)}
+function automationCentre(){
+  const rules=automationRules(),candidates=automationCandidates(),open=db.tasks.filter(task=>task.autoKey&&!task.done),hot=db.clients.filter(client=>leadTemperature(leadScore(client))==='Hot'&&!['Won','Lost'].includes(client.stage));
+  return pageHeader('Automation centre.',`<button onclick="nav('Pipeline')">Review pipeline</button><button class="primary" onclick="runAutomationEngine()">Run automations</button>`,'Automate repeatable follow-ups and use lead scores to focus on the clients most likely to convert.')+
+  `<div class="stats four"><div class="stat"><span>Active rules</span><strong>${rules.filter(rule=>rule.enabled).length}</strong><small>${rules.length} configured rules</small></div><div class="stat"><span>Tasks ready now</span><strong>${candidates.length}</strong><small>Created when you run automations</small></div><div class="stat"><span>Open automation tasks</span><strong>${open.length}</strong><small>Follow-ups still in progress</small></div><div class="stat"><span>Hot leads</span><strong>${hot.length}</strong><small>Score of 75 or higher</small></div></div>`+
+  `<section class="panel automation-rules"><div class="dialog-title"><div><div class="eyebrow">AUTOMATION BUILDER</div><h2>Rules that keep work moving</h2><p class="sub">Switch a rule on or off whenever your process changes. No client message is sent automatically.</p></div></div><div class="automation-rule-list">${rules.map(rule=>`<article class="automation-rule ${rule.enabled?'is-enabled':'is-paused'}"><div><b>${esc(rule.name)}</b><p>${esc(rule.description)}</p></div><button class="smallbtn" onclick="toggleAutomationRule('${rule.id}')">${rule.enabled?'Pause rule':'Enable rule'}</button></article>`).join('')}</div></section>`+
+  `<div class="dashboard-columns"><section class="panel"><div class="dialog-title"><div><div class="eyebrow">PRIORITY LEADS</div><h2>Focus your next action</h2></div><button class="smallbtn" onclick="nav('Pipeline')">Open pipeline</button></div>${hot.length?hot.slice().sort((a,b)=>leadScore(b)-leadScore(a)).map(client=>`<div class="automation-lead"><div><b>${esc(client.name)}</b><small>${esc(client.contact||client.email||'No contact recorded')} · ${money(client.value)}</small></div>${leadScoreMarkup(client)}</div>`).join(''):'<p class="sub">No hot leads yet. Add deal values, contact details, and follow-ups to improve scoring.</p>'}</section><section class="panel"><div class="eyebrow">HOW SCORING WORKS</div><h2>Lead score signals</h2><div class="score-signals"><span>Pipeline stage</span><span>Deal value</span><span>Contact details</span><span>Open follow-ups</span><span>Sent quotations</span></div><p class="hint">Scores guide your attention. They do not replace your judgement or change client records automatically.</p></section></div>`+
+  `<section class="panel"><div class="dialog-title"><div><div class="eyebrow">AUTOMATION QUEUE</div><h2>Tasks created by CRM rules</h2></div><button class="smallbtn" onclick="runAutomationEngine()">Check again</button></div>${open.length?open.slice(0,10).map(taskRow).join(''):'<p class="sub">No automation tasks are waiting.</p>'}</section>`;
+}
+const clientRowsWithLeadScores=clientRows;
+clientRows=function(){let list=db.clients.filter(client=>[client.name,client.contact,client.email].join(' ').toLowerCase().includes(clientSearch.toLowerCase()));return list.length?`<div class="tablewrap"><table><thead><tr><th>Client</th><th>Contact</th><th>Pipeline</th><th>Lead score</th><th>Potential value</th><th></th></tr></thead><tbody>${list.map(client=>`<tr><td><b>${esc(client.name)}</b><small>${esc(client.email)}</small></td><td>${esc(client.contact)}<small>${esc(client.phone)}</small></td><td><span class="badge">${esc(client.stage)}</span></td><td>${leadScoreMarkup(client)}</td><td>${money(client.value)}</td><td><button onclick="selectedClient='${client.id}';render()">Open profile</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="empty"><h2>Make room for your next client.</h2><p>Add a lead now, before the first quotation.</p><button onclick="editClient()">Add client</button></div>'}
+const pipelineWithLeadScores=pipeline;
+pipeline=function(){return pageHeader('Sales pipeline.',`<button onclick="nav('Automations')">Automation centre</button><button class="primary" onclick="editClient()">+ Add lead</button>`,'Drag a lead to another stage, or open it in the quick panel without leaving the board.')+`<div class="pipeline advanced-pipeline">${STAGES.map(stage=>{const clients=db.clients.filter(client=>client.stage===stage),value=clients.reduce((sum,client)=>sum+num(client.value),0);return `<section class="lane pipeline-dropzone" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="this.classList.remove('drag-over');pipelineDrop('${stage}',event)"><header><h3>${esc(stage)}<span class="counts">${clients.length}</span></h3><span class="counts">${money(value)}</span></header><div class="pipeline-cards">${clients.length?clients.map(client=>`<article class="lead-card" draggable="true" ondragstart="event.dataTransfer.setData('text/plain','${client.id}');event.dataTransfer.effectAllowed='move'" onclick="openClientDrawer('${client.id}')"><div class="lead-card-top"><strong>${esc(client.name)}</strong>${leadScoreMarkup(client)}</div><p>${esc(client.contact||client.email||'No contact added')}</p><b>${money(client.value)}</b><small>Drag to move · Click for details</small></article>`).join(''):`<div class="pipeline-empty">Drop a lead here</div>`}</div></section>`}).join('')}</div>`+quickClientDrawer()}
+const clientDetailWithLeadScore=clientDetail;
+clientDetail=function(){const markup=clientDetailWithLeadScore(),client=db.clients.find(item=>item.id===selectedClient);if(!client)return markup;return markup.replace('<div class="client-layout">',`<section class="panel lead-score-summary"><div><div class="eyebrow">LEAD PRIORITY</div><h2>${leadTemperature(leadScore(client))} lead</h2><p class="sub">Score updates from stage, deal value, contact details, open tasks, and quotations.</p></div>${leadScoreMarkup(client)}</section><div class="client-layout">`)};
+const renderWithAutomationCentre=render;
+render=function(){renderWithAutomationCentre();const nav=document.getElementById('nav');if(nav&&!nav.querySelector('[title="Automations"]')){const anchor=nav.querySelector('[title="AI Copilot"]')||nav.querySelector('[title="Settings"]');const button=document.createElement('button');button.title='Automations';button.className=view==='Automations'?'active':'';button.innerHTML=`<span class="nav-icon">⚙</span><span class="nav-label">Automations</span>`;button.onclick=()=>nav('Automations');if(anchor)anchor.before(button);else nav.append(button)}if(view==='Automations')document.getElementById('app').innerHTML=automationCentre()};
+const mobileSectionsWithAutomationCentre=showMobileSections;
+showMobileSections=function(){mobileSectionsWithAutomationCentre();const list=document.querySelector('#mobileSections .mobile-section-list');if(list&&![...list.querySelectorAll('button')].some(button=>button.textContent.includes('Automations'))){const button=document.createElement('button');button.innerHTML='<span>⚙</span>Automations';button.onclick=()=>{document.getElementById('mobileSections').close();nav('Automations')};list.append(button)}};
+document.addEventListener('erp-workspace-loaded',()=>setTimeout(()=>runAutomationEngine(true),650));
