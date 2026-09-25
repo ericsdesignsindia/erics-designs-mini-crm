@@ -416,3 +416,17 @@ body[data-theme="dark"] .stats .stat{background:linear-gradient(145deg,#20261a,#
 body[data-theme="dark"] .stats .stat span,body[data-theme="dark"] .stats .stat small{color:#c8c4b1}
 body[data-theme="dark"] .stats .stat strong{color:#f1d57c}
 body[data-theme="dark"] .report-bar-value,body[data-theme="dark"] .totalrow b{color:#f3f0e4}
+
+/* Full workspace contrast audit: prevent inherited light colors in dark mode. */
+body[data-theme="dark"] #app :is(.panel,.stat,.document-card,.client-card,.lead-card,.lane,.client-form,.mailbox-panel,.mailbox-list,.mail-row,.mail-reader,.mail-detail,.notification-dialog,.settings-card,.connection-item,.template-card,.template-intro,.finance-forecast>div,.reconciliation-stats>div){color:#f3f0e4}
+body[data-theme="dark"] #app :is(.panel,.stat,.document-card,.client-card,.lead-card,.lane,.client-form,.mailbox-panel,.mailbox-list,.mail-row,.mail-reader,.mail-detail,.notification-dialog,.settings-card,.connection-item,.template-card,.template-intro,.finance-forecast>div,.reconciliation-stats>div) :is(h1,h2,h3,h4,strong,b,.detail-number){color:#f3f0e4}
+body[data-theme="dark"] #app :is(.panel,.stat,.document-card,.client-card,.lead-card,.lane,.client-form,.mailbox-panel,.mailbox-list,.mail-row,.mail-reader,.mail-detail,.notification-dialog,.settings-card,.connection-item,.template-card,.template-intro,.finance-forecast>div,.reconciliation-stats>div) :is(p,small,label,.sub,.hint,.counts,td,th){color:#c8c4b1}
+body[data-theme="dark"] #app :is(.eyebrow,.calendar-event span,.template-steps b){color:#f0d57c}
+body[data-theme="dark"] .ai-result{background:#151a12;border-color:#414a34;color:#f3f0e4}body[data-theme="dark"] .ai-status{background:#2a321f;color:#f1df9e}
+body[data-theme="dark"] .bar-track{background:#3a4330}body[data-theme="dark"] .report-bar-track span{background:linear-gradient(180deg,#e1c25c,#b8902f)}
+body[data-theme="dark"] .filter-buttons button.active{background:#d9bb50;color:#202016}body[data-theme="dark"] a.button{background:#242b1b;border-color:#5b6541;color:#f3f0e4}
+body[data-theme="dark"] .template-steps b{background:#3d4a29}body[data-theme="dark"] .calendar-date{background:#30391f;color:#f4df8c}body[data-theme="dark"] .calendar-date small{color:#d5cfb8}
+body[data-theme="light"] #app :is(.panel,.stat,.document-card,.client-card,.lead-card,.lane,.client-form,.mailbox-panel,.mailbox-list,.mail-row,.mail-reader,.mail-detail,.notification-dialog,.settings-card,.connection-item,.template-card,.template-intro,.finance-forecast>div,.reconciliation-stats>div){color:#252619}
+body[data-theme="light"] #app :is(.panel,.stat,.document-card,.client-card,.lead-card,.lane,.client-form,.mailbox-panel,.mailbox-list,.mail-row,.mail-reader,.mail-detail,.notification-dialog,.settings-card,.connection-item,.template-card,.template-intro,.finance-forecast>div,.reconciliation-stats>div) :is(h1,h2,h3,h4,strong,b,.detail-number){color:#252619}
+body[data-theme="light"] #app :is(.panel,.stat,.document-card,.client-card,.lead-card,.lane,.client-form,.mailbox-panel,.mailbox-list,.mail-row,.mail-reader,.mail-detail,.notification-dialog,.settings-card,.connection-item,.template-card,.template-intro,.finance-forecast>div,.reconciliation-stats>div) :is(p,small,label,.sub,.hint,.counts,td,th){color:#756f5d}
+body[data-theme="light"] .stats .stat strong{color:#252619}
