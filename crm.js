@@ -1597,6 +1597,8 @@ async function createQuotationPdf(document){
   const pdf=new jsPDF({unit:'mm',format:'a4',compress:true});
   const business=document.business||db.settings,margin=18,pageWidth=210,contentWidth=174;
   const gold=[190,157,78],ink=[16,29,48],muted=[88,103,120],tableInk=[31,43,27],line=[205,207,199];
+  const type=document.type||'Quotation',isInvoice=type==='Invoice',isProforma=type==='Proforma';
+  const title=isInvoice?'FINAL INVOICE':isProforma?'PROFORMA INVOICE':'QUOTATION';
   const currency=document.currency==='AED'?'AED':'INR';
   // jsPDF's built-in fonts do not reliably contain the Indian rupee glyph.
   // Use explicit currency labels so PDF readers never split or corrupt prices.
@@ -1608,17 +1610,17 @@ async function createQuotationPdf(document){
   let y=18;
   // One clean header-logo image prevents PDF readers from splitting brand lettering.
   try{const response=await fetch('./assets/pdf-quotation-logo-clean.png',{cache:'no-store'});if(response.ok){const blob=await response.blob();const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});pdf.addImage(data,'PNG',margin,y+2,78,15.6)}}catch{}
-  text('QUOTATION',pageWidth-margin,y+10,17,'bold','right',ink);
+  text(title,pageWidth-margin,y+10,17,'bold','right',ink);
   const state=status(document),stateLabel=state==='Draft'?'DRAFT':state==='Cancelled'?'CANCELLED':'';
   text(document.number+(stateLabel?' · '+stateLabel:''),pageWidth-margin,y+17,8.5,'normal','right',muted);
   y=55;rule(y);y+=13;
-  text('PREPARED FOR',margin,y,8.5,'bold','left',gold);text('DETAILS',pageWidth-margin,y,8.5,'bold','right',gold);
+  text(isInvoice?'BILL TO':'PREPARED FOR',margin,y,8.5,'bold','left',gold);text('DETAILS',pageWidth-margin,y,8.5,'bold','right',gold);
   const client=document.client||{};
   text(client.name||'—',margin,y+12,11,'bold');
   [client.contact,client.address,client.phone].filter(Boolean).forEach((value,index)=>text(value,margin,y+18+(index*5),9));
-  [['Issue date',document.date||'—'],['Valid until',document.due||'—'],['Project',document.project||'—'],['Currency',currency]].forEach(([label,value],index)=>text(label+': '+value,pageWidth-margin,y+12+(index*5),9,'normal','right'));
+  [[isInvoice?'Issue date':'Prepared date',document.date||'—'],[isInvoice?'Due date':'Valid until',document.due||'—'],['Project',document.project||'—'],['Currency',currency]].forEach(([label,value],index)=>text(label+': '+value,pageWidth-margin,y+12+(index*5),9,'normal','right'));
   y+=40;
-  text('SERVICES QUOTED',margin,y,8.5,'bold','left',gold);y+=8;
+  text(isInvoice?'SERVICES PROVIDED':'SERVICES QUOTED',margin,y,8.5,'bold','left',gold);y+=8;
   const columns=[margin,35,128,148,170,192],tableRight=pageWidth-margin;
   pdf.setFillColor(...tableInk);pdf.rect(margin,y,contentWidth,12,'F');
   [['#',columns[0]+3,'left'],['SERVICE / DESCRIPTION',columns[1]+2,'left'],['QTY',columns[3]-2,'right'],['RATE',columns[4]-2,'right'],['AMOUNT',columns[5]-2,'right']].forEach(([label,pos,align])=>text(label,pos,y+7.4,7.5,'bold',align,[255,255,255]));
@@ -1634,12 +1636,12 @@ async function createQuotationPdf(document){
     softRule(y+rowHeight);y+=rowHeight+3;
   });
   text('Tailored services are provided on request',tableRight,y+3,8.5,'italic','right',ink);y+=10;
-  if(!document.rateCard){const summary=totals(document),totalRows=[['Subtotal',money(summary.subtotal)],...(num(summary.discount)>0?[['Discount','−'+money(summary.discount)]]:[]),['GST / tax ('+num(document.tax)+'%)',money(summary.tax)],['TOTAL',money(summary.total)]];totalRows.forEach(([label,value])=>{const bold=label==='TOTAL';text(label,145,y,8.2,bold?'bold':'normal','left',bold?ink:muted);text(value,tableRight,y,8.5,bold?'bold':'normal','right');y+=bold?7:5.5});y+=3}
+  if(!document.rateCard){const summary=totals(document),totalRows=[['Subtotal',money(summary.subtotal)],...(num(summary.discount)>0?[['Discount','−'+money(summary.discount)]]:[]),['GST / tax ('+num(document.tax)+'%)',money(summary.tax)],['TOTAL',money(summary.total)],...(isInvoice?[['Paid',money(summary.paid)],['BALANCE DUE',money(summary.balance)]]:[])];totalRows.forEach(([label,value])=>{const bold=label==='TOTAL'||label==='BALANCE DUE';text(label,145,y,8.2,bold?'bold':'normal','left',bold?ink:muted);text(value,tableRight,y,8.5,bold?'bold':'normal','right');y+=bold?7:5.5});y+=3}
   rule(y);y+=7;text('TERMS & CONDITIONS',margin,y,8.5,'bold','left',gold);y+=5;softRule(y);y+=5;
   const terms=(document.terms||'').split(/\n/).map(value=>value.trim()).filter(Boolean);
   for(const term of terms){const lines=pdf.splitTextToSize(term.replace(/^[•-]\s*/,''),contentWidth-7);text('— '+(lines[0]||''),margin+3,y,8);if(lines.length>1)text(lines.slice(1),margin+7,y+4,8);y+=Math.max(5,lines.length*4+1)}
   const footerY=267;
-  text('Thank you for considering Eric’s Designs.',margin,footerY-13,9,'italic');text('We look forward to bringing your brand to life.',margin,footerY-8,8);
+  text(isInvoice?'Thank you for choosing Eric’s Designs.':'Thank you for considering Eric’s Designs.',margin,footerY-13,9,'italic');text(isInvoice?'We appreciate your business.':'We look forward to bringing your brand to life.',margin,footerY-8,8);
   text(String(business.name||"Eric's Designs"),margin,footerY,8,'bold');text(business.address||'',margin,footerY+5,7.5);text((business.phone||'')+'  |  '+(business.email||''),margin,footerY+10,7.5);
   rule(286);text((business.name||"Eric's Designs")+' · '+(business.address||'')+' · '+(business.tagline||''),pageWidth/2,291,7,'normal','center',[80,80,80]);
   // Give each browser-generated file a unique name so Acrobat never reopens a stale copy.
@@ -1647,7 +1649,7 @@ async function createQuotationPdf(document){
   return new File([pdf.output('blob')],String(document.number)+'-'+generatedAt+'.pdf',{type:'application/pdf'});
 }
 async function createDocumentPdf(document){
-  if(document?.type==='Quotation')return createQuotationPdf(document);
+  return createQuotationPdf(document);
   const jsPDF=await loadInvoicePdfLibrary();
   const pdf=new jsPDF({unit:'mm',format:'a4',compress:true});
   const invoice=document;
@@ -1716,3 +1718,23 @@ async function downloadPreviewPdf(){
   if(!previewDoc){toast('Open a document preview first.');return}
   try{toast('Creating PDF…');const file=await createDocumentPdf(previewDoc);downloadPdfFile(file);toast(`${previewDoc.number||'Document'}.pdf downloaded.`)}catch(error){toast(error?.message||'Could not create the PDF. Check your connection and try again.')}}
 printDoc=function(){downloadPreviewPdf()};
+
+/* Payment receipts use the same PDF engine and header as every client document. */
+async function createPaymentReceiptPdf(invoice){
+  const jsPDF=await loadInvoicePdfLibrary(),pdf=new jsPDF({unit:'mm',format:'a4',compress:true});
+  const margin=18,pageWidth=210,gold=[190,157,78],ink=[16,29,48],muted=[88,103,120],summary=totals(invoice),currency=invoice.currency==='AED'?'AED':'INR';
+  const money=value=>(currency==='AED'?'AED ':'INR ')+Number(value||0).toLocaleString(currency==='AED'?'en-AE':'en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const text=(value,x,y,size=9,style='normal',align='left',color=ink)=>{pdf.setFont('helvetica',style);pdf.setFontSize(size);pdf.setTextColor(...color);pdf.text(String(value??''),x,y,{align});};
+  const rule=y=>{pdf.setDrawColor(...gold);pdf.setLineWidth(.4);pdf.line(margin,y,pageWidth-margin,y)};
+  try{const response=await fetch('./assets/pdf-quotation-logo-clean.png',{cache:'no-store'});if(response.ok){const blob=await response.blob();const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});pdf.addImage(data,'PNG',margin,20,78,15.6)}}catch{}
+  text('PAYMENT RECEIPT',pageWidth-margin,28,17,'bold','right');text('Invoice '+invoice.number,pageWidth-margin,35,8.5,'normal','right',muted);rule(55);
+  text('RECEIVED FROM',margin,68,8.5,'bold','left',gold);text('PAYMENT SUMMARY',pageWidth-margin,68,8.5,'bold','right',gold);
+  const client=invoice.client||{};text(client.name||'—',margin,80,11,'bold');[client.contact,client.address,client.phone].filter(Boolean).forEach((value,index)=>text(value,margin,86+(index*5),9));
+  [['Invoice total',money(summary.total)],['Payments received',money(summary.paid)],['Balance remaining',money(summary.balance)]].forEach(([label,value],index)=>text(label+': '+value,pageWidth-margin,80+(index*6),9,'normal','right'));
+  let y=116;text('PAYMENTS RECORDED',margin,y,8.5,'bold','left',gold);y+=8;pdf.setFillColor(31,43,27);pdf.rect(margin,y,174,11,'F');[['DATE',margin+3,'left'],['REFERENCE / METHOD',margin+55,'left'],['AMOUNT',pageWidth-margin-3,'right']].forEach(([label,x,align])=>text(label,x,y+7,7.5,'bold',align,[255,255,255]));y+=16;
+  (invoice.payments||[]).forEach(payment=>{text(payment.date||'—',margin+3,y,9);text(payment.reference||'Payment received',margin+55,y,9);text(money(payment.amount),pageWidth-margin-3,y,9,'normal','right');pdf.setDrawColor(205,207,199);pdf.setLineWidth(.25);pdf.line(margin,y+5,pageWidth-margin,y+5);y+=11;});
+  rule(Math.max(y+8,178));text('Thank you for your payment.',margin,Math.max(y+22,192),10,'italic');text((invoice.business||db.settings).email||'',margin,Math.max(y+30,200),8,'normal','left',muted);rule(286);text((invoice.business||db.settings).name||"Eric's Designs",pageWidth/2,291,7,'normal','center',muted);
+  const stamp=new Date().toISOString().replace(/[-:.TZ]/g,'').slice(0,14);return new File([pdf.output('blob')],`${invoice.number}-payment-receipt-${stamp}.pdf`,{type:'application/pdf'});
+}
+async function downloadPaymentReceiptPdf(){if(!previewDoc||previewDoc.type!=='Invoice'){toast('Open an invoice with a recorded payment first.');return}try{toast('Creating payment receipt…');downloadPdfFile(await createPaymentReceiptPdf(previewDoc));toast('Payment receipt downloaded.')}catch(error){toast(error?.message||'Could not create the payment receipt.')}}
+showPaymentReceipt=function(){if(!draft||draft.type!=='Invoice'||!draft.payments?.length){toast('Record a payment before creating a receipt.');return}previewDoc=structuredClone(draft);const dialog=document.getElementById('preview');dialog.innerHTML=`<div class="modalbar"><div><strong>Payment receipt</strong><small>${esc(previewDoc.number)}</small></div><div class="actions"><button class="primary" onclick="downloadPaymentReceiptPdf()">Download PDF</button><button onclick="document.getElementById('preview').close()">Close</button></div></div><div id="previewBody"><article class="document receipt"><h2>Payment receipt ready</h2><p>${esc(previewDoc.client?.name||'Client')} · ${esc(previewDoc.number)}</p><p>Payments received: <b>${esc(fmt(previewDoc,totals(previewDoc).paid))}</b></p></article></div>`;dialog.showModal()};
