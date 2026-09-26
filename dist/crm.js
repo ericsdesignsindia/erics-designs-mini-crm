@@ -1606,10 +1606,10 @@ async function createQuotationPdf(document){
   const rule=y=>{pdf.setDrawColor(...gold);pdf.setLineWidth(.4);pdf.line(margin,y,pageWidth-margin,y)};
   const softRule=y=>{pdf.setDrawColor(...line);pdf.setLineWidth(.25);pdf.line(margin,y,pageWidth-margin,y)};
   let y=18;
-  try{const response=await fetch('./ed-icon-192.png');if(response.ok){const blob=await response.blob();const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});pdf.addImage(data,'PNG',margin+7,y+1,9,9)}}catch{}
+  try{const response=await fetch('./ed-icon-192.png');if(response.ok){const blob=await response.blob();const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});pdf.addImage(data,'PNG',margin+2,y+1,8,8)}}catch{}
   // Reference-style vertical logo lock-up beside the primary brand title.
-  text("ERIC'S",margin+7,y+14.5,6.5,'bold','left',gold);
-  text('DESIGNS',margin+7,y+20,6.5,'bold','left',gold);
+  text("ERIC'S",margin+1,y+12.5,3.8,'bold','left',gold);
+  text('DESIGNS',margin+1,y+16.5,3.8,'bold','left',gold);
   pdf.setFont('times','bold');pdf.setFontSize(21);pdf.setTextColor(...ink);pdf.text("ERIC'S",31,y+6);pdf.text('DESIGNS',31,y+15);
   text(business.tagline||'Software Development & Digital Marketing Agency',margin,y+25,8,'normal','left',muted);
   text(business.address||'Mumbai, Maharashtra, India',margin,y+31,8,'normal','left',muted);
