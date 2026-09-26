@@ -1604,7 +1604,7 @@ async function createQuotationPdf(document){
   text(String(business.name||"Eric's Designs").toUpperCase(),margin,y,17,'bold');
   text(business.tagline||'Creative & Digital Marketing Agency',margin,y+6,8,'italic','left',[55,55,55]);
   text(business.address||'',margin,y+11,8,'normal','left',[55,55,55]);
-  try{const response=await fetch('./assets/erics-designs-crm-logo.png');if(response.ok){const blob=await response.blob();const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});pdf.addImage(data,'PNG',pageWidth-margin-18,12,18,18)}}catch{}
+  try{const response=await fetch('./assets/erics-designs-crm-logo.png');if(response.ok){const blob=await response.blob();const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});pdf.addImage(data,'PNG',pageWidth-margin-38,12,38,12)}}catch{}
   text('QUOTATION',margin,y+24,16,'normal','left',gold);y+=34;rule(y);y+=10;
   text('DATE',margin,y,8,'bold', 'left',gold);text(document.date||'',margin,y+5,9);
   text('VALID UNTIL',margin,y+12,8,'bold','left',gold);text(document.due||'',margin,y+17,9);y+=27;
