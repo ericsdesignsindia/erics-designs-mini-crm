@@ -1604,7 +1604,8 @@ async function createQuotationPdf(document){
   // Use explicit currency labels so PDF readers never split or corrupt prices.
   const money=value=>(currency==='AED'?'AED ':'INR ')+Number(value||0).toLocaleString(currency==='AED'?'en-AE':'en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
   const tablePrice=value=>Number(value||0).toLocaleString(currency==='AED'?'en-AE':'en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
-  const text=(value,x,y,size=9,style='normal',align='left',color=ink)=>{pdf.setFont('helvetica',style);pdf.setFontSize(size);pdf.setTextColor(...color);pdf.text(String(value??''),x,y,{align});};
+  const cleanPdfText=value=>String(value??'').replace(/₹/g,'INR ').replace(/[ \t]{2,}/g,' ').trim();
+  const text=(value,x,y,size=9,style='normal',align='left',color=ink)=>{pdf.setFont('helvetica',style);pdf.setFontSize(size);pdf.setTextColor(...color);pdf.text(cleanPdfText(value),x,y,{align});};
   const rule=y=>{pdf.setDrawColor(...gold);pdf.setLineWidth(.4);pdf.line(margin,y,pageWidth-margin,y)};
   const softRule=y=>{pdf.setDrawColor(...line);pdf.setLineWidth(.25);pdf.line(margin,y,pageWidth-margin,y)};
   let y=18;
@@ -1618,7 +1619,7 @@ async function createQuotationPdf(document){
   const client=document.client||{};
   text(client.name||'—',margin,y+12,11,'bold');
   [client.contact,client.address,client.phone].filter(Boolean).forEach((value,index)=>text(value,margin,y+18+(index*5),9));
-  [[isInvoice?'Issue date':'Prepared date',document.date||'—'],[isInvoice?'Due date':'Valid until',document.due||'—'],['Project',document.project||'—'],['Currency',currency]].forEach(([label,value],index)=>text(label+': '+value,pageWidth-margin,y+12+(index*5),9,'normal','right'));
+  [[isInvoice?'Issue date':'Prepared date',document.date||'—'],[isInvoice?'Due date':'Valid until',document.due||'—'],['Project',document.project||'—'],['Currency',currency]].forEach(([label,value],index)=>{const lines=pdf.splitTextToSize(cleanPdfText(label+': '+value),62);lines.forEach((line,lineIndex)=>text(line,pageWidth-margin,y+12+(index*5)+(lineIndex*3.8),9,'normal','right'))});
   y+=40;
   text(isInvoice?'SERVICES PROVIDED':'SERVICES QUOTED',margin,y,8.5,'bold','left',gold);y+=8;
   const columns=[margin,35,128,148,170,192],tableRight=pageWidth-margin;
@@ -1626,7 +1627,7 @@ async function createQuotationPdf(document){
   [['#',columns[0]+3,'left'],['SERVICE / DESCRIPTION',columns[1]+2,'left'],['QTY',columns[3]-2,'right'],['RATE',columns[4]-2,'right'],['AMOUNT',columns[5]-2,'right']].forEach(([label,pos,align])=>text(label,pos,y+7.4,7.5,'bold',align,[255,255,255]));
   y+=17;
   (document.items||[]).forEach((item,index)=>{
-    const nameLines=pdf.splitTextToSize(String(item.name||''),columns[2]-columns[1]-3),descLines=pdf.splitTextToSize(String(item.description||''),columns[2]-columns[1]-3);
+    const nameLines=pdf.splitTextToSize(cleanPdfText(item.name||''),columns[2]-columns[1]-3),descLines=pdf.splitTextToSize(cleanPdfText(item.description||''),columns[2]-columns[1]-3);
     const rowHeight=Math.max(13,Math.max(nameLines.length+descLines.length,1)*3.6+6);
     text(String(index+1),columns[0]+3,y+4.5,8.8);text(nameLines[0]||'',columns[1]+2,y+4.5,8.8,'bold');
     if(nameLines.length>1)text(nameLines.slice(1),columns[1]+2,y+8.4,8.3,'bold');
@@ -1638,7 +1639,7 @@ async function createQuotationPdf(document){
   text('Tailored services are provided on request',tableRight,y+3,8.5,'italic','right',ink);y+=10;
   if(!document.rateCard){const summary=totals(document),totalRows=[['Subtotal',money(summary.subtotal)],...(num(summary.discount)>0?[['Discount','−'+money(summary.discount)]]:[]),['GST / tax ('+num(document.tax)+'%)',money(summary.tax)],['TOTAL',money(summary.total)],...(isInvoice?[['Paid',money(summary.paid)],['BALANCE DUE',money(summary.balance)]]:[])];totalRows.forEach(([label,value])=>{const bold=label==='TOTAL'||label==='BALANCE DUE';text(label,145,y,8.2,bold?'bold':'normal','left',bold?ink:muted);text(value,tableRight,y,8.5,bold?'bold':'normal','right');y+=bold?7:5.5});y+=3}
   rule(y);y+=7;text('TERMS & CONDITIONS',margin,y,8.5,'bold','left',gold);y+=5;softRule(y);y+=5;
-  const terms=(document.terms||'').split(/\n/).map(value=>value.trim()).filter(Boolean);
+  const terms=cleanPdfText(document.terms||'').split(/\n/).map(value=>value.trim()).filter(Boolean);
   for(const term of terms){const lines=pdf.splitTextToSize(term.replace(/^[•-]\s*/,''),contentWidth-7);text('— '+(lines[0]||''),margin+3,y,8);if(lines.length>1)text(lines.slice(1),margin+7,y+4,8);y+=Math.max(5,lines.length*4+1)}
   const footerY=267;
   text(isInvoice?'Thank you for choosing Eric’s Designs.':'Thank you for considering Eric’s Designs.',margin,footerY-13,9,'italic');text(isInvoice?'We appreciate your business.':'We look forward to bringing your brand to life.',margin,footerY-8,8);
