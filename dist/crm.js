@@ -1601,6 +1601,7 @@ async function createQuotationPdf(document){
   // jsPDF's built-in fonts do not reliably contain the Indian rupee glyph.
   // Use explicit currency labels so PDF readers never split or corrupt prices.
   const money=value=>(currency==='AED'?'AED ':'INR ')+Number(value||0).toLocaleString(currency==='AED'?'en-AE':'en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const tablePrice=value=>Number(value||0).toLocaleString(currency==='AED'?'en-AE':'en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
   const text=(value,x,y,size=9,style='normal',align='left',color=ink)=>{pdf.setFont('helvetica',style);pdf.setFontSize(size);pdf.setTextColor(...color);pdf.text(String(value??''),x,y,{align});};
   const rule=y=>{pdf.setDrawColor(...gold);pdf.setLineWidth(.4);pdf.line(margin,y,pageWidth-margin,y)};
   const softRule=y=>{pdf.setDrawColor(...line);pdf.setLineWidth(.25);pdf.line(margin,y,pageWidth-margin,y)};
@@ -1618,7 +1619,7 @@ async function createQuotationPdf(document){
   text(client.name||'—',margin,y+12,11,'bold');
   [client.contact,client.address,client.phone].filter(Boolean).forEach((value,index)=>text(value,margin,y+18+(index*5),9));
   [['Issue date',document.date||'—'],['Valid until',document.due||'—'],['Project',document.project||'—'],['Currency',currency]].forEach(([label,value],index)=>text(label+': '+value,pageWidth-margin,y+12+(index*5),9,'normal','right'));
-  y+=48;
+  y+=45;
   text('SERVICES QUOTED',margin,y,8.5,'bold','left',gold);y+=8;
   const columns=[margin,35,128,148,170,192],tableRight=pageWidth-margin;
   pdf.setFillColor(...tableInk);pdf.rect(margin,y,contentWidth,12,'F');
@@ -1626,20 +1627,22 @@ async function createQuotationPdf(document){
   y+=17;
   (document.items||[]).forEach((item,index)=>{
     const nameLines=pdf.splitTextToSize(String(item.name||''),columns[2]-columns[1]-3),descLines=pdf.splitTextToSize(String(item.description||''),columns[2]-columns[1]-3);
-    const rowHeight=Math.max(15,Math.max(nameLines.length+descLines.length,1)*4.2+8);
+    const rowHeight=Math.max(13,Math.max(nameLines.length+descLines.length,1)*3.6+6);
     text(String(index+1),columns[0]+3,y+4.5,8.8);text(nameLines[0]||'',columns[1]+2,y+4.5,8.8,'bold');
     if(nameLines.length>1)text(nameLines.slice(1),columns[1]+2,y+8.4,8.3,'bold');
     if(descLines.length)text(descLines,columns[1]+2,y+9+(nameLines.length>1?(nameLines.length-1)*3.8:0),7.3,'normal','left',muted);
-    text(num(item.qty),columns[3]-2,y+4.5,8.1,'normal','right');text(item.rateText||money(item.rate),columns[4]-2,y+4.5,6.4,'normal','right');text(money(num(item.qty)*num(item.rate)),columns[5]-2,y+4.5,6.4,'normal','right');
-    softRule(y+rowHeight);y+=rowHeight+4;
+    const rateText=item.rateText?String(item.rateText).replace(/₹/g,'INR '):tablePrice(item.rate);
+    text(num(item.qty),columns[3]-2,y+4.5,8.1,'normal','right');text(rateText,columns[4]-2,y+4.5,7,'normal','right');text(tablePrice(num(item.qty)*num(item.rate)),columns[5]-2,y+4.5,7,'normal','right');
+    softRule(y+rowHeight);y+=rowHeight+3;
   });
-  text('Tailored services are provided on request',tableRight,y+3,8.5,'italic','right',ink);y+=15;
-  if(!document.rateCard){const summary=totals(document),totalRows=[['Subtotal',money(summary.subtotal)],['Discount','−'+money(summary.discount)],['GST / tax ('+num(document.tax)+'%)',money(summary.tax)],['TOTAL',money(summary.total)]];totalRows.forEach(([label,value])=>{const bold=label==='TOTAL';text(label,145,y,8.2,bold?'bold':'normal','left',bold?ink:muted);text(value,tableRight,y,8.5,bold?'bold':'normal','right');y+=bold?7:5.5});y+=6}
-  rule(y);y+=9;text('TERMS & CONDITIONS',margin,y,8.5,'bold','left',gold);y+=7;softRule(y);y+=7;
+  text('Tailored services are provided on request',tableRight,y+3,8.5,'italic','right',ink);y+=10;
+  if(!document.rateCard){const summary=totals(document),totalRows=[['Subtotal',money(summary.subtotal)],...(num(summary.discount)>0?[['Discount','−'+money(summary.discount)]]:[]),['GST / tax ('+num(document.tax)+'%)',money(summary.tax)],['TOTAL',money(summary.total)]];totalRows.forEach(([label,value])=>{const bold=label==='TOTAL';text(label,145,y,8.2,bold?'bold':'normal','left',bold?ink:muted);text(value,tableRight,y,8.5,bold?'bold':'normal','right');y+=bold?7:5.5});y+=3}
+  rule(y);y+=7;text('TERMS & CONDITIONS',margin,y,8.5,'bold','left',gold);y+=5;softRule(y);y+=5;
   const terms=(document.terms||'').split(/\n/).map(value=>value.trim()).filter(Boolean);
   for(const term of terms){const lines=pdf.splitTextToSize(term.replace(/^[•-]\s*/,''),contentWidth-7);text('— '+(lines[0]||''),margin+3,y,8);if(lines.length>1)text(lines.slice(1),margin+7,y+4,8);y+=Math.max(5,lines.length*4+1)}
-  y+=8;text('Thank you for considering Eric’s Designs.',margin,y,9,'italic');text('We look forward to bringing your brand to life.',margin,y+5,8);y+=18;
-  text(String(business.name||"Eric's Designs"),margin,y,8,'bold');text(business.address||'',margin,y+5,7.5);text((business.phone||'')+'  |  '+(business.email||''),margin,y+10,7.5);
+  const footerY=267;
+  text('Thank you for considering Eric’s Designs.',margin,footerY-13,9,'italic');text('We look forward to bringing your brand to life.',margin,footerY-8,8);
+  text(String(business.name||"Eric's Designs"),margin,footerY,8,'bold');text(business.address||'',margin,footerY+5,7.5);text((business.phone||'')+'  |  '+(business.email||''),margin,footerY+10,7.5);
   rule(286);text((business.name||"Eric's Designs")+' · '+(business.address||'')+' · '+(business.tagline||''),pageWidth/2,291,7,'normal','center',[80,80,80]);
   return new File([pdf.output('blob')],String(document.number)+'.pdf',{type:'application/pdf'});
 }
