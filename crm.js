@@ -519,10 +519,10 @@ function copyClientPortalLink(id){
 const showPreviewWithClientPortal=showPreview;
 showPreview=function(id){
   showPreviewWithClientPortal(id);
-  const document=db.documents.find(item=>item.id===id);
-  if(document&&document.type!=='Proforma'){
-    const actions=document.querySelector('#preview .modalbar .actions');
-    if(actions&&!actions.querySelector('[data-client-portal]'))actions.insertAdjacentHTML('beforeend',`<button data-client-portal onclick="copyClientPortalLink('${document.id}')">Client portal link</button>`);
+  const record=db.documents.find(item=>item.id===id);
+  if(record&&record.type!=='Proforma'){
+    const actions=window.document.querySelector('#preview .modalbar .actions');
+    if(actions&&!actions.querySelector('[data-client-portal]'))actions.insertAdjacentHTML('beforeend',`<button data-client-portal onclick="copyClientPortalLink('${record.id}')">Client portal link</button>`);
   }
 };
 
