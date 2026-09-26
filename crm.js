@@ -1609,7 +1609,7 @@ async function createQuotationPdf(document){
   const softRule=y=>{pdf.setDrawColor(...line);pdf.setLineWidth(.25);pdf.line(margin,y,pageWidth-margin,y)};
   let y=18;
   // One clean header-logo image prevents PDF readers from splitting brand lettering.
-  try{const response=await fetch('./assets/pdf-quotation-logo-clean.png',{cache:'no-store'});if(response.ok){const blob=await response.blob();const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});pdf.addImage(data,'PNG',margin,y+2,78,15.6)}}catch{}
+  try{const response=await fetch('./assets/pdf-quotation-logo-clean.png',{cache:'no-store'});if(response.ok){const blob=await response.blob();const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});pdf.addImage(data,'PNG',margin,y+2,105,21)}}catch{}
   text(title,pageWidth-margin,y+10,17,'bold','right',ink);
   const state=status(document),stateLabel=state==='Draft'?'DRAFT':state==='Cancelled'?'CANCELLED':'';
   text(document.number+(stateLabel?' · '+stateLabel:''),pageWidth-margin,y+17,8.5,'normal','right',muted);
@@ -1726,7 +1726,7 @@ async function createPaymentReceiptPdf(invoice){
   const money=value=>(currency==='AED'?'AED ':'INR ')+Number(value||0).toLocaleString(currency==='AED'?'en-AE':'en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
   const text=(value,x,y,size=9,style='normal',align='left',color=ink)=>{pdf.setFont('helvetica',style);pdf.setFontSize(size);pdf.setTextColor(...color);pdf.text(String(value??''),x,y,{align});};
   const rule=y=>{pdf.setDrawColor(...gold);pdf.setLineWidth(.4);pdf.line(margin,y,pageWidth-margin,y)};
-  try{const response=await fetch('./assets/pdf-quotation-logo-clean.png',{cache:'no-store'});if(response.ok){const blob=await response.blob();const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});pdf.addImage(data,'PNG',margin,20,78,15.6)}}catch{}
+  try{const response=await fetch('./assets/pdf-quotation-logo-clean.png',{cache:'no-store'});if(response.ok){const blob=await response.blob();const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});pdf.addImage(data,'PNG',margin,20,105,21)}}catch{}
   text('PAYMENT RECEIPT',pageWidth-margin,28,17,'bold','right');text('Invoice '+invoice.number,pageWidth-margin,35,8.5,'normal','right',muted);rule(55);
   text('RECEIVED FROM',margin,68,8.5,'bold','left',gold);text('PAYMENT SUMMARY',pageWidth-margin,68,8.5,'bold','right',gold);
   const client=invoice.client||{};text(client.name||'—',margin,80,11,'bold');[client.contact,client.address,client.phone].filter(Boolean).forEach((value,index)=>text(value,margin,86+(index*5),9));
