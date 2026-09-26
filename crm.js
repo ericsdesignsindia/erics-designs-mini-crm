@@ -1495,8 +1495,9 @@ function navbarBadge(section){
 }
 function sectionButtonHtml(section){const badge=navbarBadge(section);return `<span class="nav-icon">${navIcon(section)}</span><span class="nav-label">${esc(section)}</span>${badge?`<span class="nav-count">${badge>99?'99+':badge}</span>`:''}`}
 function refreshNavbarGmailState(){
-  if(!erpApi?.gmailStatus)return;
-  erpApi.gmailStatus().then(status=>{navbarGmailState=status.connected?'Gmail connected':status.configured?'Gmail ready':'Gmail setup';localStorage.setItem('erics-designs-navbar-gmail-state',navbarGmailState);updateNavbarStatus()}).catch(()=>{navbarGmailState='Gmail unavailable';updateNavbarStatus()});
+  const api=window.erpApi;
+  if(!api?.gmailStatus)return;
+  api.gmailStatus().then(status=>{navbarGmailState=status.connected?'Gmail connected':status.configured?'Gmail ready':'Gmail setup';localStorage.setItem('erics-designs-navbar-gmail-state',navbarGmailState);updateNavbarStatus()}).catch(()=>{navbarGmailState='Gmail unavailable';updateNavbarStatus()});
 }
 function navbarBackupStatus(){const saved=localStorage.getItem('erics-designs-last-backup');if(!saved)return 'Backup pending';const age=Math.max(0,Math.floor((Date.now()-Date.parse(saved))/86400000));return age===0?'Backup today':`Backup ${age}d ago`}
 function updateNavbarStatus(){const el=document.getElementById('navbarStatus');if(!el)return;const cloud=navigator.onLine?'Cloud synced':'Offline mode';el.innerHTML=`<span class="nav-status-dot ${navigator.onLine?'online':'offline'}"></span><span>${cloud}</span><span class="nav-status-sep">•</span><span>${esc(navbarGmailState)}</span><span class="nav-status-sep">•</span><span>${esc(navbarBackupStatus())}</span>`}
