@@ -1585,3 +1585,67 @@ async function refreshWhatsAppStatus(){const el=document.getElementById('whatsap
 function openWhatsAppSetup(){window.open('https://developers.facebook.com/docs/whatsapp/cloud-api/get-started','_blank','noopener')}
 const settingsWithWhatsAppConnection=settings;
 settings=function(){let markup=settingsWithWhatsAppConnection();setTimeout(refreshWhatsAppStatus,0);const metaEnd='<button class="primary" onclick="connectMetaLeadPage()">Connect Page</button></div></article></div></section>';const whatsappCard='<button class="primary" onclick="connectMetaLeadPage()">Connect Page</button></div></article><article class="connection-item"><div><b>WhatsApp Business</b><small id="whatsappStatus">Checking WhatsApp Business connection…</small></div><div class="connection-actions"><button class="smallbtn" onclick="refreshWhatsAppStatus()">Check status</button><button class="primary" onclick="openWhatsAppSetup()">Open Meta setup</button></div></article></div></section>';return markup.replace(metaEnd,whatsappCard)};
+
+/* Client-ready PDFs and document delivery for quotations, proformas, and invoices. */
+const createInvoicePdfLegacy=createInvoicePdf;
+async function createDocumentPdf(document){
+  const jsPDF=await loadInvoicePdfLibrary();
+  const pdf=new jsPDF({unit:'mm',format:'a4',compress:true});
+  const invoice=document;
+  const business=invoice.business||db.settings;
+  const summary=totals(invoice);
+  const documentTitle=docLabel(invoice.type).toUpperCase();
+  const margin=16,pageWidth=210,contentWidth=178;
+  let y=18;
+  const text=(value,x,yPos,size=10,style='normal',align='left')=>{pdf.setFont('helvetica',style);pdf.setFontSize(size);pdf.text(String(value||''),x,yPos,{align});};
+  const rule=(yPos)=>{pdf.setDrawColor(190,157,78);pdf.setLineWidth(.65);pdf.line(margin,yPos,pageWidth-margin,yPos)};
+  const space=(required)=>{if(y+required<=280)return;pdf.addPage();y=18;};
+  text(String(business.name||"Eric's Designs").toUpperCase(),margin,y,20,'bold');
+  text(business.tagline||'',margin,y+6,8);
+  text(business.address||'',margin,y+11,8);
+  text(documentTitle,pageWidth-margin,y,16,'bold','right');
+  text(invoice.number,pageWidth-margin,y+7,9,'normal','right');
+  y+=22;rule(y);y+=11;
+  text(invoice.type==='Invoice'?'BILL TO':'PREPARED FOR',margin,y,9,'bold');
+  text('DETAILS',110,y,9,'bold');
+  const clientLines=[invoice.client?.name,invoice.client?.address,invoice.client?.phone,invoice.client?.email].filter(Boolean);
+  clientLines.forEach((line,index)=>text(line,margin,y+8+(index*5),9,index===0?'bold':'normal'));
+  [[invoice.type==='Invoice'?'Issue date':'Prepared date',invoice.date],[invoice.type==='Invoice'?'Due date':'Valid until',invoice.due],['Project',invoice.project||'—'],['Currency',invoice.currency||'INR']].forEach(([label,value],index)=>text(`${label}: ${value}`,110,y+8+(index*5),9));
+  y+=Math.max(clientLines.length,4)*5+16;
+  text(invoice.type==='Invoice'?'SERVICES PROVIDED':'SERVICES QUOTED',margin,y,9,'bold');y+=7;
+  const columns=[margin,28,117,136,158,194];
+  pdf.setFillColor(245,247,242);pdf.rect(margin,y,contentWidth,8,'F');
+  ['#','SERVICE / DESCRIPTION','QTY','RATE','AMOUNT'].forEach((label,index)=>text(label,[columns[0]+3,columns[1]+2,columns[3]-3,columns[4]-3,columns[5]-1][index],y+5.2,7,'bold',index<2?'left':'right'));
+  y+=12;
+  (invoice.items||[]).forEach((item,index)=>{
+    const description=[item.name,item.description].filter(Boolean).join('\n');
+    const lines=pdf.splitTextToSize(description,84);
+    const height=Math.max(12,lines.length*4.2+4);space(height+4);
+    text(index+1,columns[0]+3,y+4,8);pdf.setFont('helvetica','bold');pdf.setFontSize(8);pdf.text(lines[0]||'',columns[1]+2,y+4);
+    if(lines.length>1){pdf.setFont('helvetica','normal');pdf.setFontSize(7);pdf.text(lines.slice(1),columns[1]+2,y+8,{lineHeightFactor:1.15});}
+    text(item.qty,columns[3]-3,y+4,8,'normal','right');text(fmt(invoice,item.rate),columns[4]-3,y+4,8,'normal','right');text(fmt(invoice,num(item.qty)*num(item.rate)),columns[5]-1,y+4,8,'normal','right');
+    pdf.setDrawColor(225,228,220);pdf.setLineWidth(.2);pdf.line(margin,y+height,194,y+height);y+=height+4;
+  });
+  space(invoice.type==='Invoice'?48:34);const totalX=119;
+  const totalsRows=[['Subtotal',fmt(invoice,summary.subtotal)],['Discount',`−${fmt(invoice,summary.discount)}`],[`GST / tax (${num(invoice.tax)}%)`,fmt(invoice,summary.tax)],['TOTAL',fmt(invoice,summary.total)]];
+  if(invoice.type==='Invoice')totalsRows.push(['Paid',fmt(invoice,summary.paid)],['BALANCE DUE',fmt(invoice,summary.balance)]);
+  totalsRows.forEach(([label,value],index)=>{const bold=label==='TOTAL'||label==='BALANCE DUE';text(label,totalX,y,bold?11:8,bold?'bold':'normal');text(value,194,y,bold?11:8,bold?'bold':'normal','right');y+=bold?8:6;});
+  if(invoice.type==='Invoice'&&invoice.currency==='INR'){
+    space(55);y+=4;try{const qr=await invoiceQrData();pdf.addImage(qr,'JPEG',margin,y,35,42);text('PAY WITH GOOGLE PAY',58,y+7,9,'bold');text(summary.balance>0?`Scan to pay ${fmt(invoice,summary.balance)}`:'Scan to pay with any UPI app',58,y+15,11,'bold');text('UPI ID: ericrodgers555@oksbi',58,y+23,8);text(`Reference: ${invoice.number}`,58,y+29,8);y+=50;}catch{}
+  }
+  if(invoice.terms){space(28);text(invoice.type==='Invoice'?'NOTES':'TERMS & CONDITIONS',margin,y,9,'bold');y+=6;pdf.setFont('helvetica','normal');pdf.setFontSize(8);const notes=pdf.splitTextToSize(invoice.terms,contentWidth);pdf.text(notes,margin,y,{lineHeightFactor:1.35});}
+  pdf.setDrawColor(220,220,220);pdf.setLineWidth(.2);pdf.line(margin,286,pageWidth-margin,286);text(`Thank you for ${invoice.type==='Invoice'?'choosing':'considering'} ${business.name||"Eric's Designs"}.`,pageWidth/2,291,8,'normal','center');
+  return new File([pdf.output('blob')],`${invoice.number}.pdf`,{type:'application/pdf'});
+}
+async function createInvoicePdf(invoice){return createDocumentPdf(invoice)}
+function documentForDelivery(id){return db.documents.find(document=>document.id===id)}
+function documentClient(document){return db.clients.find(client=>client.id===document?.client?.id||client.name===document?.client?.name)}
+function downloadPdfFile(file){const url=URL.createObjectURL(file),link=document.createElement('a');link.href=url;link.download=file.name;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1500)}
+async function downloadDocumentPdf(id){const document=documentForDelivery(id);if(!document){toast('Document not found.');return}try{toast('Creating PDF…');const file=await createDocumentPdf(document);downloadPdfFile(file);toast(`${document.number}.pdf downloaded.`)}catch(error){toast(error?.message||'Could not create the PDF. Check your connection and try again.')}}
+function documentDeliveryMessage(document){const total=totals(document);return `Hello ${document.client?.contact||document.client?.name||'there'},\n\nPlease find ${docLabel(document.type).toLowerCase()} ${document.number} from Eric's Designs attached.\nProject: ${document.project||'—'}\nTotal: ${fmt(document,total.total)}${document.type==='Invoice'&&total.balance>0?`\nBalance due: ${fmt(document,total.balance)}`:''}\n\nThank you.`}
+async function sendDocumentWhatsApp(id){const document=documentForDelivery(id),client=documentClient(document);if(!document){toast('Document not found.');return}let phone=String(document.client?.phone||client?.phone||'').replace(/\D/g,'');if(!phone){toast('Add the client WhatsApp number, including country code, first.');return}if(phone.length===10)phone='91'+phone;try{toast('Creating PDF…');const file=await createDocumentPdf(document);if(window.erpApi?.whatsappStatus&&window.erpApi?.sendDocumentWhatsApp){const status=await window.erpApi.whatsappStatus();if(status.configured){await window.erpApi.sendDocumentWhatsApp({to:phone,filename:file.name,mimeType:file.type,base64:await invoicePdfBase64(file),caption:`${docLabel(document.type)} ${document.number} · ${fmt(document,totals(document).total)}`});toast(`${document.number} was sent on WhatsApp.`);return}}downloadPdfFile(file);window.open(`https://wa.me/${phone}?text=${encodeURIComponent(documentDeliveryMessage(document)+'\n\nThe PDF has been downloaded. Please attach it from your Downloads folder.')}`,'_blank','noopener');toast('PDF downloaded. Attach it in the WhatsApp chat that opened.');}catch(error){toast(error?.message||'Could not prepare the document PDF.')}}
+function composeDocumentEmail(id){const document=documentForDelivery(id),client=documentClient(document);if(!document)return;const email=document.client?.email||client?.email||'';if(!email){toast('Add the client email address first.');return}recordDraft={documentId:id};modal(`Send ${esc(document.number)}`,field('To *','document-email-to',email,'email','required')+field('Subject *','document-email-subject',`${docLabel(document.type)} ${document.number} from ${db.settings.name}`,'text','required')+`<div class="full"><label for="document-email-body">Message *</label><textarea id="document-email-body" style="min-height:180px">${esc(documentDeliveryMessage(document))}</textarea></div><p class="hint full">A PDF copy is attached when you send this email.</p>`,()=>sendDocumentEmail(id))}
+async function sendDocumentEmail(id){const document=documentForDelivery(id),to=val('document-email-to'),subject=val('document-email-subject'),body=val('document-email-body'),client=documentClient(document);if(!document||!to||!subject||!body){document.getElementById('recordError').textContent='Add a recipient, subject, and message.';return}const button=document.querySelector('#recordForm button[type="submit"]');if(button){button.disabled=true;button.textContent='Sending…'}try{const file=await createDocumentPdf(document);await window.erpApi.sendDocumentEmail({to,subject,body,filename:file.name,mimeType:file.type,base64:await invoicePdfBase64(file)});const clientId=client?.id;if(clientId&&commitChange(()=>db.emailLog.push({id:uid(),clientId,to,subject,body,sentAt:new Date().toISOString(),status:'Sent'}),`Sent ${document.number} to ${to}`)){closeSaved()}else closeSaved();toast(`${document.number} emailed to the client.`)}catch(error){document.getElementById('recordError').textContent=error?.message||'Could not send the email.';if(button){button.disabled=false;button.textContent='Send email'}}}
+function openDocumentDelivery(id){const document=documentForDelivery(id);if(!document)return;let dialog=document.getElementById('documentDeliveryMenu');if(!dialog){dialog=document.createElement('dialog');dialog.id='documentDeliveryMenu';dialog.className='client-form';document.body.append(dialog)}dialog.innerHTML=`<div class="dialog-title"><div><div class="eyebrow">SEND TO CLIENT</div><h2>${esc(document.number)}</h2><p class="sub">Choose a delivery method. A PDF copy is generated for every option.</p></div><button aria-label="Close" onclick="document.getElementById('documentDeliveryMenu').close()">×</button></div><div class="quick-create-grid"><button onclick="document.getElementById('documentDeliveryMenu').close();sendDocumentWhatsApp('${document.id}')"><span>◉</span>WhatsApp</button><button onclick="document.getElementById('documentDeliveryMenu').close();composeDocumentEmail('${document.id}')"><span>✉</span>Email</button><button onclick="document.getElementById('documentDeliveryMenu').close();downloadDocumentPdf('${document.id}')"><span>⇩</span>Download PDF</button></div>`;if(!dialog.open)dialog.showModal()}
+const showPreviewWithDocumentDelivery=showPreview;
+showPreview=function(id){showPreviewWithDocumentDelivery(id);const document=documentForDelivery(id),actions=document.querySelector('#preview .modalbar .actions');if(document&&actions&&!actions.querySelector('[data-document-delivery]'))actions.insertAdjacentHTML('beforeend',`<button data-document-download onclick="downloadDocumentPdf('${document.id}')">Download PDF</button><button class="primary" data-document-delivery onclick="openDocumentDelivery('${document.id}')">Send to client</button>`)};

@@ -460,6 +460,18 @@ app.get('/api/integrations/whatsapp/status', requireAuth, requireOwner, (_req, r
   return res.json({ configured: config.configured, phoneNumberId: config.configured ? config.phoneNumberId : '' });
 });
 
+app.post('/api/integrations/whatsapp/send-document', requireAuth, requireOwner, async (req, res, next) => {
+  try {
+    const result = await sendWhatsAppInvoice({
+      to: req.body.to,
+      filename: String(req.body.filename || 'invoice.pdf').replace(/[^a-zA-Z0-9._-]+/g, '-').slice(0, 150),
+      mimeType: req.body.mimeType || 'application/pdf',
+      base64: req.body.base64,
+      caption: req.body.caption
+    });
+    return res.status(201).json({ ok: true, messageId: result.messages?.[0]?.id || '' });
+  } catch (error) { return next(error); }
+});
 app.post('/api/integrations/whatsapp/send-invoice', requireAuth, requireOwner, async (req, res, next) => {
   try {
     const result = await sendWhatsAppInvoice({
@@ -610,6 +622,32 @@ app.get('/api/integrations/gmail/messages/:messageId', requireAuth, requireOwner
       return '';
     };
     return res.json({ id: message.id, from: headers.from || 'Unknown sender', to: headers.to || '', subject: headers.subject || '(No subject)', date: headers.date || '', body: collectText(message.payload) || message.snippet || '', snippet: message.snippet || '' });
+  } catch (error) { return next(error); }
+});
+app.post('/api/integrations/gmail/send-document', requireAuth, requireOwner, async (req, res, next) => {
+  try {
+    const to = String(req.body?.to || '').trim();
+    const subject = String(req.body?.subject || '').trim().replace(/[\r\n]+/g, ' ');
+    const body = String(req.body?.body || '').trim();
+    const filename = String(req.body?.filename || 'document.pdf').replace(/[^a-zA-Z0-9._-]+/g, '-').slice(0, 150);
+    const mimeType = String(req.body?.mimeType || 'application/pdf');
+    const attachment = Buffer.from(String(req.body?.base64 || '').replace(/^data:[^;]+;base64,/, ''), 'base64');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return res.status(400).json({ error: 'Enter a valid recipient email address.' });
+    if (!subject || !body) return res.status(400).json({ error: 'Add both a subject and message.' });
+    if (!attachment.length || attachment.length > 4 * 1024 * 1024) return res.status(400).json({ error: 'The document PDF must be smaller than 4 MB.' });
+    const token = await gmailAccessToken(req.user.sub);
+    const boundary = `crm-${randomUUID()}`;
+    const encoded = attachment.toString('base64').match(/.{1,76}/g)?.join('\r\n') || '';
+    const rawMessage = [
+      `To: ${to}`, `Subject: ${subject}`, 'MIME-Version: 1.0', `Content-Type: multipart/mixed; boundary="${boundary}"`, '',
+      `--${boundary}`, 'Content-Type: text/plain; charset=UTF-8', 'Content-Transfer-Encoding: 8bit', '', body, '',
+      `--${boundary}`, `Content-Type: ${mimeType}; name="${filename}"`, 'Content-Transfer-Encoding: base64', `Content-Disposition: attachment; filename="${filename}"`, '', encoded,
+      `--${boundary}--`, ''
+    ].join('\r\n');
+    const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ raw: Buffer.from(rawMessage, 'utf8').toString('base64url') }) });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) return res.status(response.status).json({ error: result?.error?.message || 'Gmail could not send this document.' });
+    return res.json({ ok: true, id: result.id, threadId: result.threadId });
   } catch (error) { return next(error); }
 });
 app.post('/api/integrations/gmail/send', requireAuth, requireOwner, async (req, res, next) => {
