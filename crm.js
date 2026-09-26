@@ -1592,7 +1592,36 @@ settings=function(){let markup=settingsWithWhatsAppConnection();setTimeout(refre
 
 /* Client-ready PDFs and document delivery for quotations, proformas, and invoices. */
 const createInvoicePdfLegacy=createInvoicePdf;
+async function createQuotationPdf(document){
+  const jsPDF=await loadInvoicePdfLibrary();
+  const pdf=new jsPDF({unit:'mm',format:'a4',compress:true});
+  const business=document.business||db.settings,margin=18,pageWidth=210,contentWidth=174,gold=[190,157,78],dark=[28,28,28];
+  const currency=document.currency==='AED'?'AED':'INR';
+  const money=value=>`${currency} ${Number(value||0).toLocaleString(currency==='AED'?'en-AE':'en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+  const text=(value,x,y,size=9,style='normal',align='left',color=dark)=>{pdf.setFont('helvetica',style);pdf.setFontSize(size);pdf.setTextColor(...color);pdf.text(String(value||''),x,y,{align});};
+  const rule=y=>{pdf.setDrawColor(...gold);pdf.setLineWidth(.35);pdf.line(margin,y,pageWidth-margin,y)};
+  let y=20;
+  text(String(business.name||"Eric's Designs").toUpperCase(),margin,y,17,'bold');
+  text(business.tagline||'Creative & Digital Marketing Agency',margin,y+6,8,'italic',[55,55,55]);
+  text(business.address||'',margin,y+11,8,'normal','left',[55,55,55]);
+  try{const response=await fetch('./assets/erics-designs-crm-logo.png');if(response.ok){const blob=await response.blob();const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});pdf.addImage(data,'PNG',pageWidth-margin-18,12,18,18)}}catch{}
+  text('QUOTATION',margin,y+24,16,'normal','left',gold);y+=34;rule(y);y+=10;
+  text('DATE',margin,y,8,'bold', 'left',gold);text(document.date||'',margin,y+5,9);
+  text('VALID UNTIL',margin,y+12,8,'bold','left',gold);text(document.due||'',margin,y+17,9);y+=27;
+  text('SERVICES QUOTED',margin,y,9,'bold','left',gold);y+=7;rule(y);y+=5;
+  const x=[margin,34,78,150,192];pdf.setFillColor(...dark);pdf.rect(margin,y,contentWidth,8,'F');
+  [['NO.',x[0]+4],['SERVICE',x[1]+2],['DESCRIPTION',x[2]+2],['PRICE ('+currency+')',x[4]-2]].forEach(([label,pos],i)=>text(label,pos,y+5.3,7,'bold',i===3?'right':'left',[255,255,255]));y+=13;
+  (document.items||[]).forEach((item,index)=>{const description=pdf.splitTextToSize(item.description||'',68);const height=Math.max(11,description.length*3.8+4);text(String(index+1).padStart(2,'0'),x[0]+4,y+4,8);text(item.name||'',x[1]+2,y+4,8,'bold');if(description.length)text(description,x[2]+2,y+4,7.2);text(money(num(item.qty)*num(item.rate)),x[4]-2,y+4,8,'normal','right');pdf.setDrawColor(200,195,180);pdf.setLineWidth(.25);pdf.line(margin,y+height,pageWidth-margin,y+height);y+=height+5});
+  text('Tailored services are provided on request',pageWidth-margin,y+4,9,'italic','right');y+=17;rule(y);y+=9;
+  text('TERMS & CONDITIONS',margin,y,8,'bold','left',gold);y+=7;rule(y);y+=7;
+  const terms=(document.terms||'').split(/\n/).map(line=>line.trim()).filter(Boolean);
+  for(const line of terms){const lines=pdf.splitTextToSize(line.replace(/^[•-]\s*/,''),contentWidth-5);text('- '+(lines[0]||''),margin+3,y,8);if(lines.length>1)text(lines.slice(1),margin+7,y+4,8);y+=Math.max(5,lines.length*4+1)}
+  y+=8;text('Thank you for considering Eric’s Designs.',margin,y,9,'italic');text('We look forward to bringing your brand to life.',margin,y+5,8);y+=18;
+  text(String(business.name||"Eric's Designs"),margin,y,8,'bold');text(business.address||'',margin,y+5,7.5);text(`${business.phone||''}  |  ${business.email||''}`,margin,y+10,7.5);rule(286);text(`${business.name||"Eric's Designs"} · ${business.address||''} · ${business.tagline||''}`,pageWidth/2,291,7,'normal','center',[80,80,80]);
+  return new File([pdf.output('blob')],`${document.number}.pdf`,{type:'application/pdf'});
+}
 async function createDocumentPdf(document){
+  if(document?.type==='Quotation')return createQuotationPdf(document);
   const jsPDF=await loadInvoicePdfLibrary();
   const pdf=new jsPDF({unit:'mm',format:'a4',compress:true});
   const invoice=document;
