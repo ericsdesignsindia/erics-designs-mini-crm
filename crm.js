@@ -1502,7 +1502,7 @@ function applyHorizontalNavigation(){
   navElement.querySelectorAll('[data-navbar-favorite]').forEach(item=>item.remove());
   for(const button of navElement.querySelectorAll('button')){if(button.dataset.horizontalMore||button.dataset.navbarCompact)continue;const section=button.title||button.textContent.trim();button.style.display=desktop&&!HORIZONTAL_PRIMARY_SECTIONS.includes(section)?'none':'';if(HORIZONTAL_PRIMARY_SECTIONS.includes(section))button.innerHTML=sectionButtonHtml(section)}
   let moreButton=navElement.querySelector('[data-horizontal-more]');
-  let compactButton=navElement.parentElement?.querySelector('[data-navbar-compact]');
+  const compactButtons=[...(navElement.parentElement?.querySelectorAll('[data-navbar-compact]')||[])];let compactButton=compactButtons.shift();compactButtons.forEach(button=>button.remove());
   if(!desktop){moreButton?.remove();compactButton?.remove();return}
   const insertBefore=moreButton||null;
   navbarFavorites().forEach(section=>{const favorite=document.createElement('button');favorite.dataset.navbarFavorite=section;favorite.title=section;favorite.innerHTML=sectionButtonHtml(section);favorite.onclick=()=>nav(section);navElement.insertBefore(favorite,insertBefore)});
