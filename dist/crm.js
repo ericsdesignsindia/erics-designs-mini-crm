@@ -1611,7 +1611,7 @@ async function createQuotationPdf(document){
   text('SERVICES QUOTED',margin,y,9,'bold','left',gold);y+=7;rule(y);y+=5;
   const x=[margin,34,80,152,192];pdf.setFillColor(...dark);pdf.rect(margin,y,contentWidth,8,'F');
   [['NO.',x[0]+4],['SERVICE',x[1]+2],['DESCRIPTION',x[2]+2],['PRICE ('+currency+')',x[4]-2]].forEach(([label,pos],i)=>text(label,pos,y+5.3,7,'bold',i===3?'right':'left',[255,255,255]));y+=13;
-  (document.items||[]).forEach((item,index)=>{const description=pdf.splitTextToSize(item.description||'',52);const height=Math.max(11,description.length*3.8+4);text(String(index+1).padStart(2,'0'),x[0]+4,y+4,8);text(item.name||'',x[1]+2,y+4,8,'bold');if(description.length)text(description,x[2]+2,y+4,7.2);text(money(num(item.qty)*num(item.rate)),x[4]-2,y+4,8,'normal','right');pdf.setDrawColor(200,195,180);pdf.setLineWidth(.25);pdf.line(margin,y+height,pageWidth-margin,y+height);y+=height+5});
+  (document.items||[]).forEach((item,index)=>{const description=pdf.splitTextToSize(item.description||'',44);const height=Math.max(11,description.length*3.8+4);text(String(index+1).padStart(2,'0'),x[0]+4,y+4,8);text(item.name||'',x[1]+2,y+4,8,'bold');if(description.length)text(description,x[2]+2,y+4,7.2);text(money(num(item.qty)*num(item.rate)),x[4]-2,y+4,8,'normal','right');pdf.setDrawColor(200,195,180);pdf.setLineWidth(.25);pdf.line(margin,y+height,pageWidth-margin,y+height);y+=height+5});
   text('Tailored services are provided on request',pageWidth-margin,y+4,9,'italic','right');y+=17;rule(y);y+=9;
   text('TERMS & CONDITIONS',margin,y,8,'bold','left',gold);y+=7;rule(y);y+=7;
   const terms=(document.terms||'').split(/\n/).map(line=>line.trim()).filter(Boolean);
