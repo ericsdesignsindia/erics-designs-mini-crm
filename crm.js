@@ -1549,11 +1549,11 @@ async function createQuotationPdf(document){
   [['#',columns[0]+3,'left'],['SERVICE / DESCRIPTION',columns[1]+2,'left'],['QTY',columns[3]-2,'right'],['RATE',columns[4]-2,'right'],['AMOUNT',columns[5]-2,'right']].forEach(([label,pos,align])=>text(label,pos,y+7.4,7.5,'bold',align,[255,255,255]));
   y+=17;
   (document.items||[]).forEach((item,index)=>{
-    const descriptionWidth=columns[2]-columns[1]-4,nameLines=pdf.splitTextToSize(cleanPdfText(item.name||''),descriptionWidth),descLines=pdf.splitTextToSize(cleanPdfText(item.description||''),descriptionWidth);
+    const descriptionWidth=columns[2]-columns[1]-4,serviceName=cleanPdfText(item.name||''),serviceDescription=cleanPdfText(item.description||'').replace(/([,;:/])(?=\\S)/g,' ').replace(/(\\S{22})(?=\\S)/g,' '),nameLines=pdf.splitTextToSize(serviceName,descriptionWidth),descLines=pdf.splitTextToSize(serviceDescription,descriptionWidth);
     const rowHeight=Math.max(13,Math.max(nameLines.length+descLines.length,1)*3.6+6);
     text(String(index+1),columns[0]+3,y+4.5,8.8);text(nameLines[0]||'',columns[1]+2,y+4.5,8.8,'bold');
     if(nameLines.length>1)text(nameLines.slice(1),columns[1]+2,y+8.4,8.3,'bold');
-    if(descLines.length)text(descLines,columns[1]+2,y+9+(nameLines.length>1?(nameLines.length-1)*3.8:0),6.6,'normal','left',muted);
+    if(descLines.length)text(descLines,columns[1]+2,y+10+(Math.max(nameLines.length,1)-1)*3.8,6.6,'normal','left',muted);
     const rateText=item.rateText?String(item.rateText).replace(/₹/g,'INR '):tablePrice(item.rate);
     text(num(item.qty),columns[3]-2,y+4.5,7.6,'normal','right');text(rateText,columns[4]-2,y+4.5,6.4,'normal','right');text(tablePrice(num(item.qty)*num(item.rate)),columns[5]-2,y+4.5,6.4,'normal','right');
     softRule(y+rowHeight);y+=rowHeight+3;
