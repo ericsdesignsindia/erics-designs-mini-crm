@@ -1606,11 +1606,22 @@ async function createQuotationPdf(document){
   const rule=y=>{pdf.setDrawColor(...gold);pdf.setLineWidth(.4);pdf.line(margin,y,pageWidth-margin,y)};
   const softRule=y=>{pdf.setDrawColor(...line);pdf.setLineWidth(.25);pdf.line(margin,y,pageWidth-margin,y)};
   let y=18;
-  try{const response=await fetch('./ed-icon-192.png');if(response.ok){const blob=await response.blob();const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});pdf.addImage(data,'PNG',margin+2,y+1,8,8)}}catch{}
-  // Reference-style vertical logo lock-up beside the primary brand title.
-  text("ERIC'S",margin+1,y+12.5,3.8,'bold','left',gold);
-  text('DESIGNS',margin+1,y+16.5,3.8,'bold','left',gold);
-  pdf.setFont('times','bold');pdf.setFontSize(21);pdf.setTextColor(...ink);pdf.text("ERIC'S",31,y+6);pdf.text('DESIGNS',31,y+15);
+  // Render the complete small mark to a high-resolution canvas before adding it to jsPDF.
+  // Tiny built-in PDF text was being split by some PDF readers after download.
+  let logoUrl='';
+  try{
+    const response=await fetch('./ed-icon-192.png',{cache:'no-store'});
+    if(response.ok){
+      logoUrl=URL.createObjectURL(await response.blob());
+      const icon=await new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=reject;image.src=logoUrl;});
+      const canvas=window.document.createElement('canvas');canvas.width=360;canvas.height=520;
+      const context=canvas.getContext('2d');context.clearRect(0,0,canvas.width,canvas.height);
+      context.drawImage(icon,85,0,190,190);context.fillStyle='rgb(190,157,78)';context.textAlign='center';context.font='700 40px Arial';
+      context.fillText("ERIC'S",180,292);context.fillText('DESIGNS',180,342);
+      pdf.addImage(canvas.toDataURL('image/png'),'PNG',margin,y+1,10.5,18);
+    }
+  }catch{}finally{if(logoUrl)URL.revokeObjectURL(logoUrl);}
+  pdf.setFont('times','bold');pdf.setFontSize(21);pdf.setTextColor(...ink);pdf.text("ERIC'S",32,y+6);pdf.text('DESIGNS',32,y+15);
   text(business.tagline||'Software Development & Digital Marketing Agency',margin,y+25,8,'normal','left',muted);
   text(business.address||'Mumbai, Maharashtra, India',margin,y+31,8,'normal','left',muted);
   text('QUOTATION',pageWidth-margin,y+10,17,'bold','right',ink);
