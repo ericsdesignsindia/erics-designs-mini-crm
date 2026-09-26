@@ -1595,30 +1595,51 @@ const createInvoicePdfLegacy=createInvoicePdf;
 async function createQuotationPdf(document){
   const jsPDF=await loadInvoicePdfLibrary();
   const pdf=new jsPDF({unit:'mm',format:'a4',compress:true});
-  const business=document.business||db.settings,margin=18,pageWidth=210,contentWidth=174,gold=[190,157,78],dark=[28,28,28];
+  const business=document.business||db.settings,margin=18,pageWidth=210,contentWidth=174;
+  const gold=[190,157,78],ink=[16,29,48],muted=[88,103,120],tableInk=[31,43,27],line=[205,207,199];
   const currency=document.currency==='AED'?'AED':'INR';
-  const money=value=>`${currency} ${Number(value||0).toLocaleString(currency==='AED'?'en-AE':'en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
-  const text=(value,x,y,size=9,style='normal',align='left',color=dark)=>{pdf.setFont('helvetica',style);pdf.setFontSize(size);pdf.setTextColor(...color);pdf.text(String(value||''),x,y,{align});};
-  const rule=y=>{pdf.setDrawColor(...gold);pdf.setLineWidth(.35);pdf.line(margin,y,pageWidth-margin,y)};
-  let y=20;
-  text(String(business.name||"Eric's Designs").toUpperCase(),margin,y,17,'bold');
-  text(business.tagline||'Creative & Digital Marketing Agency',margin,y+6,8,'italic','left',[55,55,55]);
-  text(business.address||'',margin,y+11,8,'normal','left',[55,55,55]);
-  try{const response=await fetch('./assets/erics-designs-crm-logo.png');if(response.ok){const blob=await response.blob();const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});pdf.addImage(data,'PNG',pageWidth-margin-38,12,38,12)}}catch{}
-  text('QUOTATION',margin,y+24,16,'normal','left',gold);y+=34;rule(y);y+=10;
-  text('DATE',margin,y,8,'bold', 'left',gold);text(document.date||'',margin,y+5,9);
-  text('VALID UNTIL',margin,y+12,8,'bold','left',gold);text(document.due||'',margin,y+17,9);y+=27;
-  text('SERVICES QUOTED',margin,y,9,'bold','left',gold);y+=7;rule(y);y+=5;
-  const x=[margin,34,80,152,192];pdf.setFillColor(...dark);pdf.rect(margin,y,contentWidth,8,'F');
-  [['NO.',x[0]+4],['SERVICE',x[1]+2],['DESCRIPTION',x[2]+2],['PRICE ('+currency+')',x[4]-2]].forEach(([label,pos],i)=>text(label,pos,y+5.3,7,'bold',i===3?'right':'left',[255,255,255]));y+=13;
-  (document.items||[]).forEach((item,index)=>{const words=String(item.description||'').split(/\s+/).filter(Boolean),description=[];let line='';for(const word of words){if(line&&line.length+1+word.length>44){description.push(line);line=word}else line=line?line+' '+word:word}if(line)description.push(line);const height=Math.max(11,description.length*3.8+4);text(String(index+1).padStart(2,'0'),x[0]+4,y+4,8);text(item.name||'',x[1]+2,y+4,8,'bold');if(description.length)text(description,x[2]+2,y+4,7.2);text(money(num(item.qty)*num(item.rate)),x[4]-2,y+4,8,'normal','right');pdf.setDrawColor(200,195,180);pdf.setLineWidth(.25);pdf.line(margin,y+height,pageWidth-margin,y+height);y+=height+5});
-  text('Tailored services are provided on request',pageWidth-margin,y+4,9,'italic','right');y+=17;rule(y);y+=9;
-  text('TERMS & CONDITIONS',margin,y,8,'bold','left',gold);y+=7;rule(y);y+=7;
-  const terms=(document.terms||'').split(/\n/).map(line=>line.trim()).filter(Boolean);
-  for(const line of terms){const lines=pdf.splitTextToSize(line.replace(/^[•-]\s*/,''),contentWidth-5);text('- '+(lines[0]||''),margin+3,y,8);if(lines.length>1)text(lines.slice(1),margin+7,y+4,8);y+=Math.max(5,lines.length*4+1)}
+  const money=value=>(currency==='AED'?'AED':'₹')+Number(value||0).toLocaleString(currency==='AED'?'en-AE':'en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const text=(value,x,y,size=9,style='normal',align='left',color=ink)=>{pdf.setFont('helvetica',style);pdf.setFontSize(size);pdf.setTextColor(...color);pdf.text(String(value??''),x,y,{align});};
+  const rule=y=>{pdf.setDrawColor(...gold);pdf.setLineWidth(.4);pdf.line(margin,y,pageWidth-margin,y)};
+  const softRule=y=>{pdf.setDrawColor(...line);pdf.setLineWidth(.25);pdf.line(margin,y,pageWidth-margin,y)};
+  let y=18;
+  try{const response=await fetch('./assets/erics-designs-crm-logo.png');if(response.ok){const blob=await response.blob();const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});pdf.addImage(data,'PNG',margin,y+1,18,8)}}catch{}
+  text("ERIC'S",42,y+4,19,'bold');text('DESIGNS',42,y+12,19,'bold');
+  text(business.tagline||'Software Development & Digital Marketing Agency',42,y+19,8,'normal','left',muted);
+  text(business.address||'Mumbai, Maharashtra, India',42,y+25,8,'normal','left',muted);
+  text('QUOTATION',pageWidth-margin,y+7,17,'bold','right',ink);
+  const state=status(document),stateLabel=state==='Draft'?'DRAFT':state==='Cancelled'?'CANCELLED':'';
+  text(document.number+(stateLabel?' · '+stateLabel:''),pageWidth-margin,y+14,8.5,'normal','right',muted);
+  y=50;rule(y);y+=13;
+  text('PREPARED FOR',margin,y,8.5,'bold','left',gold);text('DETAILS',pageWidth-margin,y,8.5,'bold','right',gold);
+  const client=document.client||{};
+  text(client.name||'—',margin,y+12,11,'bold');
+  [client.contact,client.address,client.phone].filter(Boolean).forEach((value,index)=>text(value,margin,y+18+(index*5),9));
+  [['Issue date',document.date||'—'],['Valid until',document.due||'—'],['Project',document.project||'—'],['Currency',currency]].forEach(([label,value],index)=>text(label+': '+value,pageWidth-margin,y+12+(index*5),9,'normal','right'));
+  y+=48;
+  text('SERVICES QUOTED',margin,y,8.5,'bold','left',gold);y+=8;
+  const columns=[margin,35,125,150,171,192],tableRight=pageWidth-margin;
+  pdf.setFillColor(...tableInk);pdf.rect(margin,y,contentWidth,12,'F');
+  [['#',columns[0]+3,'left'],['SERVICE / DESCRIPTION',columns[1]+2,'left'],['QTY',columns[3]-2,'right'],['RATE',columns[4]-2,'right'],['AMOUNT',columns[5]-2,'right']].forEach(([label,pos,align])=>text(label,pos,y+7.4,7.5,'bold',align,[255,255,255]));
+  y+=17;
+  (document.items||[]).forEach((item,index)=>{
+    const nameLines=pdf.splitTextToSize(String(item.name||''),columns[2]-columns[1]-3),descLines=pdf.splitTextToSize(String(item.description||''),columns[2]-columns[1]-3);
+    const rowHeight=Math.max(15,Math.max(nameLines.length+descLines.length,1)*4.2+8);
+    text(String(index+1),columns[0]+3,y+4.5,8.8);text(nameLines[0]||'',columns[1]+2,y+4.5,8.8,'bold');
+    if(nameLines.length>1)text(nameLines.slice(1),columns[1]+2,y+8.4,8.3,'bold');
+    if(descLines.length)text(descLines,columns[1]+2,y+9+(nameLines.length>1?(nameLines.length-1)*3.8:0),7.3,'normal','left',muted);
+    text(num(item.qty),columns[3]-2,y+4.5,8.8,'normal','right');text(item.rateText||money(item.rate),columns[4]-2,y+4.5,8.8,'normal','right');text(money(num(item.qty)*num(item.rate)),columns[5]-2,y+4.5,8.8,'normal','right');
+    softRule(y+rowHeight);y+=rowHeight+4;
+  });
+  text('Tailored services are provided on request',tableRight,y+3,8.5,'italic','right',ink);y+=15;
+  if(!document.rateCard){const summary=totals(document),totalRows=[['Subtotal',money(summary.subtotal)],['Discount','−'+money(summary.discount)],['GST / tax ('+num(document.tax)+'%)',money(summary.tax)],['TOTAL',money(summary.total)]];totalRows.forEach(([label,value])=>{const bold=label==='TOTAL';text(label,145,y,8.2,bold?'bold':'normal','left',bold?ink:muted);text(value,tableRight,y,8.5,bold?'bold':'normal','right');y+=bold?7:5.5});y+=6}
+  rule(y);y+=9;text('TERMS & CONDITIONS',margin,y,8.5,'bold','left',gold);y+=7;softRule(y);y+=7;
+  const terms=(document.terms||'').split(/\n/).map(value=>value.trim()).filter(Boolean);
+  for(const term of terms){const lines=pdf.splitTextToSize(term.replace(/^[•-]\s*/,''),contentWidth-7);text('— '+(lines[0]||''),margin+3,y,8);if(lines.length>1)text(lines.slice(1),margin+7,y+4,8);y+=Math.max(5,lines.length*4+1)}
   y+=8;text('Thank you for considering Eric’s Designs.',margin,y,9,'italic');text('We look forward to bringing your brand to life.',margin,y+5,8);y+=18;
-  text(String(business.name||"Eric's Designs"),margin,y,8,'bold');text(business.address||'',margin,y+5,7.5);text(`${business.phone||''}  |  ${business.email||''}`,margin,y+10,7.5);rule(286);text(`${business.name||"Eric's Designs"} · ${business.address||''} · ${business.tagline||''}`,pageWidth/2,291,7,'normal','center',[80,80,80]);
-  return new File([pdf.output('blob')],`${document.number}.pdf`,{type:'application/pdf'});
+  text(String(business.name||"Eric's Designs"),margin,y,8,'bold');text(business.address||'',margin,y+5,7.5);text((business.phone||'')+'  |  '+(business.email||''),margin,y+10,7.5);
+  rule(286);text((business.name||"Eric's Designs")+' · '+(business.address||'')+' · '+(business.tagline||''),pageWidth/2,291,7,'normal','center',[80,80,80]);
+  return new File([pdf.output('blob')],String(document.number)+'.pdf',{type:'application/pdf'});
 }
 async function createDocumentPdf(document){
   if(document?.type==='Quotation')return createQuotationPdf(document);
