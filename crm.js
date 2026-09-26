@@ -1607,6 +1607,9 @@ async function createQuotationPdf(document){
   const softRule=y=>{pdf.setDrawColor(...line);pdf.setLineWidth(.25);pdf.line(margin,y,pageWidth-margin,y)};
   let y=18;
   try{const response=await fetch('./ed-icon-192.png');if(response.ok){const blob=await response.blob();const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});pdf.addImage(data,'PNG',margin+1,y+1,10,10)}}catch{}
+  // Keep the compact gold wordmark with the emblem so the header contains the full logo.
+  text("ERIC'S",margin+1,y+14,5.1,'bold','left',gold);
+  text('DESIGNS',margin+1,y+18.5,5.1,'bold','left',gold);
   pdf.setFont('times','bold');pdf.setFontSize(19);pdf.setTextColor(...ink);pdf.text("ERIC'S",42,y+4);pdf.text('DESIGNS',42,y+12);
   text(business.tagline||'Software Development & Digital Marketing Agency',42,y+19,8,'normal','left',muted);
   text(business.address||'Mumbai, Maharashtra, India',42,y+25,8,'normal','left',muted);
