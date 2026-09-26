@@ -1481,7 +1481,7 @@ function navbarFavorites(){try{return JSON.parse(localStorage.getItem(NAVBAR_FAV
 function navbarBadge(section){
   if(section==='Clients')return db.clients.filter(client=>client.stage==='New lead').length;
   if(section==='Projects')return db.projects.filter(project=>project.status!=='Completed').length;
-  if(section==='Accounts')return db.documents.filter(document=>document.type==='Invoice'&&num(documentTotals(document).balance)>0).length;
+  if(section==='Accounts')return db.documents.filter(document=>document.type==='Invoice'&&num(totals(document).balance)>0).length;
   if(section==='More')return notificationItems().length;
   return 0;
 }
