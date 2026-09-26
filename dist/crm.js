@@ -1606,19 +1606,8 @@ async function createQuotationPdf(document){
   const rule=y=>{pdf.setDrawColor(...gold);pdf.setLineWidth(.4);pdf.line(margin,y,pageWidth-margin,y)};
   const softRule=y=>{pdf.setDrawColor(...line);pdf.setLineWidth(.25);pdf.line(margin,y,pageWidth-margin,y)};
   let y=18;
-  // Use the brand icon as an image. Small wordmarks are not reliable in downloaded PDFs.
-  let logoUrl='';
-  try{
-    const response=await fetch('./ed-icon-192.png',{cache:'no-store'});
-    if(response.ok){
-      logoUrl=URL.createObjectURL(await response.blob());
-      const icon=await new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=reject;image.src=logoUrl;});
-      const canvas=window.document.createElement('canvas');canvas.width=384;canvas.height=384;
-      const context=canvas.getContext('2d');context.clearRect(0,0,canvas.width,canvas.height);context.drawImage(icon,0,0,384,384);
-      pdf.addImage(canvas.toDataURL('image/png'),'PNG',margin+1,y+1,10,10);
-    }
-  }catch{}finally{if(logoUrl)URL.revokeObjectURL(logoUrl);}
-  pdf.setFont('times','bold');pdf.setFontSize(21);pdf.setTextColor(...ink);pdf.text("ERIC'S",34,y+6);pdf.text('DESIGNS',34,y+15);
+  // The supplied landscape logo replaces the separate PDF title lettering.
+  try{const response=await fetch('./assets/pdf-quotation-logo.png',{cache:'no-store'});if(response.ok){const blob=await response.blob();const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});pdf.addImage(data,'PNG',margin,y+2,52,15)}}catch{}
   text(business.tagline||'Software Development & Digital Marketing Agency',margin,y+25,8,'normal','left',muted);
   text(business.address||'Mumbai, Maharashtra, India',margin,y+31,8,'normal','left',muted);
   text('QUOTATION',pageWidth-margin,y+10,17,'bold','right',ink);
