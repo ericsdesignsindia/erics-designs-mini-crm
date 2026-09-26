@@ -376,12 +376,16 @@ function loadInvoicePdfLibrary(){
   if(window.jspdf?.jsPDF)return Promise.resolve(window.jspdf.jsPDF);
   if(window.invoicePdfLibraryPromise)return window.invoicePdfLibraryPromise;
   window.invoicePdfLibraryPromise=new Promise((resolve,reject)=>{
-    const script=document.createElement('script');
-    script.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-    script.onload=()=>window.jspdf?.jsPDF?resolve(window.jspdf.jsPDF):reject(new Error('PDF library unavailable'));
-    script.onerror=()=>reject(new Error('PDF library could not load'));
-    document.head.appendChild(script);
-  });
+    const sources=['./assets/jspdf.umd.min.js','https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'];
+    const load=(index)=>{
+      const script=document.createElement('script');
+      script.src=sources[index];
+      script.onload=()=>window.jspdf?.jsPDF?resolve(window.jspdf.jsPDF):index+1<sources.length?load(index+1):reject(new Error('PDF library unavailable'));
+      script.onerror=()=>index+1<sources.length?load(index+1):reject(new Error('PDF library could not load'));
+      document.head.appendChild(script);
+    };
+    load(0);
+  }).catch(error=>{window.invoicePdfLibraryPromise=null;throw error});
   return window.invoicePdfLibraryPromise;
 }
 
