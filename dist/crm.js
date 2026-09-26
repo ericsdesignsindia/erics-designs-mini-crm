@@ -1600,42 +1600,44 @@ async function createDocumentPdf(document){
   const summary=totals(invoice);
   const documentTitle=docLabel(invoice.type).toUpperCase();
   const margin=16,pageWidth=210,contentWidth=178;
+  const pdfMoney=(amount)=>`${invoice.currency==='AED'?'AED':'INR'} ${Number(amount||0).toLocaleString(invoice.currency==='AED'?'en-AE':'en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
   let y=18;
   const text=(value,x,yPos,size=10,style='normal',align='left')=>{pdf.setFont('helvetica',style);pdf.setFontSize(size);pdf.text(String(value||''),x,yPos,{align});};
   const rule=(yPos)=>{pdf.setDrawColor(190,157,78);pdf.setLineWidth(.65);pdf.line(margin,yPos,pageWidth-margin,yPos)};
   const space=(required)=>{if(y+required<=280)return;pdf.addPage();y=18;};
-  text(String(business.name||"Eric's Designs").toUpperCase(),margin,y,20,'bold');
-  text(business.tagline||'',margin,y+6,8);
-  text(business.address||'',margin,y+11,8);
+  try{const response=await fetch('./assets/erics-designs-crm-logo.png');if(response.ok){const logo=await response.blob();const logoData=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(logo)});pdf.addImage(logoData,'PNG',margin,11,42,14);}}catch{}
+  text(String(business.name||"Eric's Designs").toUpperCase(),margin+48,y,17,'bold');
+  text(business.tagline||'',margin+48,y+5.5,8);
+  text(business.address||'',margin+48,y+10.5,8);
   text(documentTitle,pageWidth-margin,y,16,'bold','right');
   text(invoice.number,pageWidth-margin,y+7,9,'normal','right');
-  y+=22;rule(y);y+=11;
-  text(invoice.type==='Invoice'?'BILL TO':'PREPARED FOR',margin,y,9,'bold');
-  text('DETAILS',110,y,9,'bold');
+  y+=24;rule(y);y+=12;
+  text(invoice.type==='Invoice'?'BILL TO':'PREPARED FOR',margin,y,10,'bold');
+  text('DETAILS',110,y,10,'bold');
   const clientLines=[invoice.client?.name,invoice.client?.address,invoice.client?.phone,invoice.client?.email].filter(Boolean);
-  clientLines.forEach((line,index)=>text(line,margin,y+8+(index*5),9,index===0?'bold':'normal'));
-  [[invoice.type==='Invoice'?'Issue date':'Prepared date',invoice.date],[invoice.type==='Invoice'?'Due date':'Valid until',invoice.due],['Project',invoice.project||'—'],['Currency',invoice.currency||'INR']].forEach(([label,value],index)=>text(`${label}: ${value}`,110,y+8+(index*5),9));
+  clientLines.forEach((line,index)=>text(line,margin,y+8+(index*5),9.5,index===0?'bold':'normal'));
+  [[invoice.type==='Invoice'?'Issue date':'Prepared date',invoice.date],[invoice.type==='Invoice'?'Due date':'Valid until',invoice.due],['Project',invoice.project||'—'],['Currency',invoice.currency||'INR']].forEach(([label,value],index)=>text(`${label}: ${value}`,110,y+8+(index*5),9.5));
   y+=Math.max(clientLines.length,4)*5+16;
-  text(invoice.type==='Invoice'?'SERVICES PROVIDED':'SERVICES QUOTED',margin,y,9,'bold');y+=7;
+  text(invoice.type==='Invoice'?'SERVICES PROVIDED':'SERVICES QUOTED',margin,y,10,'bold');y+=8;
   const columns=[margin,28,117,136,158,194];
   pdf.setFillColor(245,247,242);pdf.rect(margin,y,contentWidth,8,'F');
-  ['#','SERVICE / DESCRIPTION','QTY','RATE','AMOUNT'].forEach((label,index)=>text(label,[columns[0]+3,columns[1]+2,columns[3]-3,columns[4]-3,columns[5]-1][index],y+5.2,7,'bold',index<2?'left':'right'));
+  ['#','SERVICE / DESCRIPTION','QTY','RATE','AMOUNT'].forEach((label,index)=>text(label,[columns[0]+3,columns[1]+2,columns[3]-3,columns[4]-3,columns[5]-1][index],y+5.4,7.5,'bold',index<2?'left':'right'));
   y+=12;
   (invoice.items||[]).forEach((item,index)=>{
     const description=[item.name,item.description].filter(Boolean).join('\n');
     const lines=pdf.splitTextToSize(description,84);
     const height=Math.max(12,lines.length*4.2+4);space(height+4);
-    text(index+1,columns[0]+3,y+4,8);pdf.setFont('helvetica','bold');pdf.setFontSize(8);pdf.text(lines[0]||'',columns[1]+2,y+4);
-    if(lines.length>1){pdf.setFont('helvetica','normal');pdf.setFontSize(7);pdf.text(lines.slice(1),columns[1]+2,y+8,{lineHeightFactor:1.15});}
-    text(item.qty,columns[3]-3,y+4,8,'normal','right');text(fmt(invoice,item.rate),columns[4]-3,y+4,8,'normal','right');text(fmt(invoice,num(item.qty)*num(item.rate)),columns[5]-1,y+4,8,'normal','right');
+    text(index+1,columns[0]+3,y+4.5,8.8);pdf.setFont('helvetica','bold');pdf.setFontSize(8);pdf.text(lines[0]||'',columns[1]+2,y+4);
+    if(lines.length>1){pdf.setFont('helvetica','normal');pdf.setFontSize(7.5);pdf.text(lines.slice(1),columns[1]+2,y+8.5,{lineHeightFactor:1.15});}
+    text(item.qty,columns[3]-3,y+4.5,8.8,'normal','right');text(pdfMoney(item.rate),columns[4]-3,y+4.5,8.8,'normal','right');text(pdfMoney(num(item.qty)*num(item.rate)),columns[5]-1,y+4.5,8.8,'normal','right');
     pdf.setDrawColor(225,228,220);pdf.setLineWidth(.2);pdf.line(margin,y+height,194,y+height);y+=height+4;
   });
   space(invoice.type==='Invoice'?48:34);const totalX=119;
-  const totalsRows=[['Subtotal',fmt(invoice,summary.subtotal)],['Discount',`−${fmt(invoice,summary.discount)}`],[`GST / tax (${num(invoice.tax)}%)`,fmt(invoice,summary.tax)],['TOTAL',fmt(invoice,summary.total)]];
-  if(invoice.type==='Invoice')totalsRows.push(['Paid',fmt(invoice,summary.paid)],['BALANCE DUE',fmt(invoice,summary.balance)]);
+  const totalsRows=[['Subtotal',pdfMoney(summary.subtotal)],['Discount',`−${pdfMoney(summary.discount)}`],[`GST / tax (${num(invoice.tax)}%)`,pdfMoney(summary.tax)],['TOTAL',pdfMoney(summary.total)]];
+  if(invoice.type==='Invoice')totalsRows.push(['Paid',pdfMoney(summary.paid)],['BALANCE DUE',pdfMoney(summary.balance)]);
   totalsRows.forEach(([label,value],index)=>{const bold=label==='TOTAL'||label==='BALANCE DUE';text(label,totalX,y,bold?11:8,bold?'bold':'normal');text(value,194,y,bold?11:8,bold?'bold':'normal','right');y+=bold?8:6;});
   if(invoice.type==='Invoice'&&invoice.currency==='INR'){
-    space(55);y+=4;try{const qr=await invoiceQrData();pdf.addImage(qr,'JPEG',margin,y,35,42);text('PAY WITH GOOGLE PAY',58,y+7,9,'bold');text(summary.balance>0?`Scan to pay ${fmt(invoice,summary.balance)}`:'Scan to pay with any UPI app',58,y+15,11,'bold');text('UPI ID: ericrodgers555@oksbi',58,y+23,8);text(`Reference: ${invoice.number}`,58,y+29,8);y+=50;}catch{}
+    space(55);y+=4;try{const qr=await invoiceQrData();pdf.addImage(qr,'JPEG',margin,y,35,42);text('PAY WITH GOOGLE PAY',58,y+7,9,'bold');text(summary.balance>0?`Scan to pay ${pdfMoney(summary.balance)}`:'Scan to pay with any UPI app',58,y+15,11,'bold');text('UPI ID: ericrodgers555@oksbi',58,y+23,8);text(`Reference: ${invoice.number}`,58,y+29,8);y+=50;}catch{}
   }
   if(invoice.terms){space(28);text(invoice.type==='Invoice'?'NOTES':'TERMS & CONDITIONS',margin,y,9,'bold');y+=6;pdf.setFont('helvetica','normal');pdf.setFontSize(8);const notes=pdf.splitTextToSize(invoice.terms,contentWidth);pdf.text(notes,margin,y,{lineHeightFactor:1.35});}
   pdf.setDrawColor(220,220,220);pdf.setLineWidth(.2);pdf.line(margin,286,pageWidth-margin,286);text(`Thank you for ${invoice.type==='Invoice'?'choosing':'considering'} ${business.name||"Eric's Designs"}.`,pageWidth/2,291,8,'normal','center');
