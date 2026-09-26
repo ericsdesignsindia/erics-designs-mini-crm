@@ -1607,7 +1607,7 @@ async function createQuotationPdf(document){
   const softRule=y=>{pdf.setDrawColor(...line);pdf.setLineWidth(.25);pdf.line(margin,y,pageWidth-margin,y)};
   let y=18;
   // One clean header-logo image prevents PDF readers from splitting brand lettering.
-  try{const response=await fetch('./assets/pdf-quotation-logo-clean.png',{cache:'no-store'});if(response.ok){const blob=await response.blob();const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});pdf.addImage(data,'PNG',margin,y+2,58,11.6)}}catch{}
+  try{const response=await fetch('./assets/pdf-quotation-logo-clean.png',{cache:'no-store'});if(response.ok){const blob=await response.blob();const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});pdf.addImage(data,'PNG',margin,y+2,78,15.6)}}catch{}
   text('QUOTATION',pageWidth-margin,y+10,17,'bold','right',ink);
   const state=status(document),stateLabel=state==='Draft'?'DRAFT':state==='Cancelled'?'CANCELLED':'';
   text(document.number+(stateLabel?' · '+stateLabel:''),pageWidth-margin,y+17,8.5,'normal','right',muted);

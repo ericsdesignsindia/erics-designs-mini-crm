@@ -1,5 +1,5 @@
-const CACHE='erics-crm-v20260926-48';
-const ASSETS=['./','./index.html','./style.css?v=20260920-67','./crm.css?v=20260926-22','./billing.js?v=20260920-67','./crm.js?v=20260926-48','./api-sync.js?v=20260926-48','./site.webmanifest','./ed-icon-192.png','./ed-icon-512.png','./assets/erics-designs-crm-logo.png','./assets/pdf-quotation-logo-clean.png','./assets/payment-received-seal.svg','./assets/quotation-accepted-seal.svg','./assets/jspdf.umd.min.js'];
+const CACHE='erics-crm-v20260926-49';
+const ASSETS=['./','./index.html','./style.css?v=20260920-67','./crm.css?v=20260926-22','./billing.js?v=20260920-67','./crm.js?v=20260926-49','./api-sync.js?v=20260926-49','./site.webmanifest','./ed-icon-192.png','./ed-icon-512.png','./assets/erics-designs-crm-logo.png','./assets/pdf-quotation-logo-clean.png','./assets/payment-received-seal.svg','./assets/quotation-accepted-seal.svg','./assets/jspdf.umd.min.js'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
