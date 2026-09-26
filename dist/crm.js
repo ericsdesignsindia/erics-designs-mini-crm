@@ -1647,7 +1647,9 @@ async function createQuotationPdf(document){
   text('Thank you for considering Eric’s Designs.',margin,footerY-13,9,'italic');text('We look forward to bringing your brand to life.',margin,footerY-8,8);
   text(String(business.name||"Eric's Designs"),margin,footerY,8,'bold');text(business.address||'',margin,footerY+5,7.5);text((business.phone||'')+'  |  '+(business.email||''),margin,footerY+10,7.5);
   rule(286);text((business.name||"Eric's Designs")+' · '+(business.address||'')+' · '+(business.tagline||''),pageWidth/2,291,7,'normal','center',[80,80,80]);
-  return new File([pdf.output('blob')],String(document.number)+'.pdf',{type:'application/pdf'});
+  // Give each browser-generated file a unique name so Acrobat never reopens a stale copy.
+  const generatedAt=new Date().toISOString().replace(/[-:.TZ]/g,'').slice(0,14);
+  return new File([pdf.output('blob')],String(document.number)+'-'+generatedAt+'.pdf',{type:'application/pdf'});
 }
 async function createDocumentPdf(document){
   if(document?.type==='Quotation')return createQuotationPdf(document);
