@@ -1544,18 +1544,18 @@ async function createQuotationPdf(document){
   [[isInvoice?'Issue date':'Prepared date',document.date||'—'],[isInvoice?'Due date':'Valid until',document.due||'—'],['Project',document.project||'—'],['Currency',currency]].forEach(([label,value],index)=>{const lines=pdf.splitTextToSize(cleanPdfText(label+': '+value),62);lines.forEach((line,lineIndex)=>text(line,pageWidth-margin,y+12+(index*5)+(lineIndex*3.8),9,'normal','right'))});
   y+=40;
   text(isInvoice?'SERVICES PROVIDED':'SERVICES QUOTED',margin,y,8.5,'bold','left',gold);y+=8;
-  const columns=[margin,margin+17,pageWidth-margin-64,pageWidth-margin-44,pageWidth-margin-22,pageWidth-margin],tableRight=pageWidth-margin;
+  const columns=[margin,margin+14,pageWidth-margin-82,pageWidth-margin-55,pageWidth-margin-28,pageWidth-margin],tableRight=pageWidth-margin;
   pdf.setFillColor(...tableInk);pdf.rect(margin,y,contentWidth,12,'F');
   [['#',columns[0]+3,'left'],['SERVICE / DESCRIPTION',columns[1]+2,'left'],['QTY',columns[3]-2,'right'],['RATE',columns[4]-2,'right'],['AMOUNT',columns[5]-2,'right']].forEach(([label,pos,align])=>text(label,pos,y+7.4,7.5,'bold',align,[255,255,255]));
   y+=17;
   (document.items||[]).forEach((item,index)=>{
-    const nameLines=pdf.splitTextToSize(cleanPdfText(item.name||''),columns[2]-columns[1]-3),descLines=pdf.splitTextToSize(cleanPdfText(item.description||''),columns[2]-columns[1]-3);
+    const descriptionWidth=columns[2]-columns[1]-4,nameLines=pdf.splitTextToSize(cleanPdfText(item.name||''),descriptionWidth),descLines=pdf.splitTextToSize(cleanPdfText(item.description||''),descriptionWidth);
     const rowHeight=Math.max(13,Math.max(nameLines.length+descLines.length,1)*3.6+6);
     text(String(index+1),columns[0]+3,y+4.5,8.8);text(nameLines[0]||'',columns[1]+2,y+4.5,8.8,'bold');
     if(nameLines.length>1)text(nameLines.slice(1),columns[1]+2,y+8.4,8.3,'bold');
-    if(descLines.length)text(descLines,columns[1]+2,y+9+(nameLines.length>1?(nameLines.length-1)*3.8:0),7.3,'normal','left',muted);
+    if(descLines.length)text(descLines,columns[1]+2,y+9+(nameLines.length>1?(nameLines.length-1)*3.8:0),6.6,'normal','left',muted);
     const rateText=item.rateText?String(item.rateText).replace(/₹/g,'INR '):tablePrice(item.rate);
-    text(num(item.qty),columns[3]-2,y+4.5,8.1,'normal','right');text(rateText,columns[4]-2,y+4.5,7,'normal','right');text(tablePrice(num(item.qty)*num(item.rate)),columns[5]-2,y+4.5,7,'normal','right');
+    text(num(item.qty),columns[3]-2,y+4.5,7.6,'normal','right');text(rateText,columns[4]-2,y+4.5,6.4,'normal','right');text(tablePrice(num(item.qty)*num(item.rate)),columns[5]-2,y+4.5,6.4,'normal','right');
     softRule(y+rowHeight);y+=rowHeight+3;
   });
   text('Tailored services are provided on request',tableRight,y+3,8.5,'italic','right',ink);y+=10;
