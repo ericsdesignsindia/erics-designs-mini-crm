@@ -1598,13 +1598,14 @@ async function createQuotationPdf(document){
   const business=document.business||db.settings,margin=18,pageWidth=210,contentWidth=174;
   const gold=[190,157,78],ink=[16,29,48],muted=[88,103,120],tableInk=[31,43,27],line=[205,207,199];
   const currency=document.currency==='AED'?'AED':'INR';
-  const money=value=>(currency==='AED'?'AED':'₹')+Number(value||0).toLocaleString(currency==='AED'?'en-AE':'en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  // jsPDF's built-in fonts do not reliably contain the Indian rupee glyph.
+  // Use explicit currency labels so PDF readers never split or corrupt prices.
+  const money=value=>(currency==='AED'?'AED ':'INR ')+Number(value||0).toLocaleString(currency==='AED'?'en-AE':'en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
   const text=(value,x,y,size=9,style='normal',align='left',color=ink)=>{pdf.setFont('helvetica',style);pdf.setFontSize(size);pdf.setTextColor(...color);pdf.text(String(value??''),x,y,{align});};
   const rule=y=>{pdf.setDrawColor(...gold);pdf.setLineWidth(.4);pdf.line(margin,y,pageWidth-margin,y)};
   const softRule=y=>{pdf.setDrawColor(...line);pdf.setLineWidth(.25);pdf.line(margin,y,pageWidth-margin,y)};
   let y=18;
   try{const response=await fetch('./ed-icon-192.png');if(response.ok){const blob=await response.blob();const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});pdf.addImage(data,'PNG',margin+1,y+1,10,10)}}catch{}
-  text("ERIC'S",margin+1,y+13,4.2,'bold','left',gold);text('DESIGNS',margin+1,y+17,4.2,'bold','left',gold);
   pdf.setFont('times','bold');pdf.setFontSize(19);pdf.setTextColor(...ink);pdf.text("ERIC'S",42,y+4);pdf.text('DESIGNS',42,y+12);
   text(business.tagline||'Software Development & Digital Marketing Agency',42,y+19,8,'normal','left',muted);
   text(business.address||'Mumbai, Maharashtra, India',42,y+25,8,'normal','left',muted);
@@ -1619,7 +1620,7 @@ async function createQuotationPdf(document){
   [['Issue date',document.date||'—'],['Valid until',document.due||'—'],['Project',document.project||'—'],['Currency',currency]].forEach(([label,value],index)=>text(label+': '+value,pageWidth-margin,y+12+(index*5),9,'normal','right'));
   y+=48;
   text('SERVICES QUOTED',margin,y,8.5,'bold','left',gold);y+=8;
-  const columns=[margin,35,125,146,166,192],tableRight=pageWidth-margin;
+  const columns=[margin,35,128,148,170,192],tableRight=pageWidth-margin;
   pdf.setFillColor(...tableInk);pdf.rect(margin,y,contentWidth,12,'F');
   [['#',columns[0]+3,'left'],['SERVICE / DESCRIPTION',columns[1]+2,'left'],['QTY',columns[3]-2,'right'],['RATE',columns[4]-2,'right'],['AMOUNT',columns[5]-2,'right']].forEach(([label,pos,align])=>text(label,pos,y+7.4,7.5,'bold',align,[255,255,255]));
   y+=17;
@@ -1629,7 +1630,7 @@ async function createQuotationPdf(document){
     text(String(index+1),columns[0]+3,y+4.5,8.8);text(nameLines[0]||'',columns[1]+2,y+4.5,8.8,'bold');
     if(nameLines.length>1)text(nameLines.slice(1),columns[1]+2,y+8.4,8.3,'bold');
     if(descLines.length)text(descLines,columns[1]+2,y+9+(nameLines.length>1?(nameLines.length-1)*3.8:0),7.3,'normal','left',muted);
-    text(num(item.qty),columns[3]-2,y+4.5,8.1,'normal','right');text(item.rateText||money(item.rate),columns[4]-2,y+4.5,7.6,'normal','right');text(money(num(item.qty)*num(item.rate)),columns[5]-2,y+4.5,7.6,'normal','right');
+    text(num(item.qty),columns[3]-2,y+4.5,8.1,'normal','right');text(item.rateText||money(item.rate),columns[4]-2,y+4.5,6.4,'normal','right');text(money(num(item.qty)*num(item.rate)),columns[5]-2,y+4.5,6.4,'normal','right');
     softRule(y+rowHeight);y+=rowHeight+4;
   });
   text('Tailored services are provided on request',tableRight,y+3,8.5,'italic','right',ink);y+=15;
