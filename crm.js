@@ -1614,14 +1614,14 @@ async function createQuotationPdf(document){
     if(response.ok){
       logoUrl=URL.createObjectURL(await response.blob());
       const icon=await new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=reject;image.src=logoUrl;});
-      const canvas=window.document.createElement('canvas');canvas.width=360;canvas.height=520;
+      const canvas=window.document.createElement('canvas');canvas.width=320;canvas.height=360;
       const context=canvas.getContext('2d');context.clearRect(0,0,canvas.width,canvas.height);
-      context.drawImage(icon,85,0,190,190);context.fillStyle='rgb(190,157,78)';context.textAlign='center';context.font='700 40px Arial';
-      context.fillText("ERIC'S",180,292);context.fillText('DESIGNS',180,342);
-      pdf.addImage(canvas.toDataURL('image/png'),'PNG',margin,y+1,10.5,18);
+      context.drawImage(icon,80,0,160,160);context.fillStyle='rgb(190,157,78)';context.textAlign='center';context.font='700 70px Arial';
+      context.fillText("ERIC'S",160,248);context.fillText('DESIGNS',160,318);
+      pdf.addImage(canvas.toDataURL('image/png'),'PNG',margin,y+1,11.5,20);
     }
   }catch{}finally{if(logoUrl)URL.revokeObjectURL(logoUrl);}
-  pdf.setFont('times','bold');pdf.setFontSize(21);pdf.setTextColor(...ink);pdf.text("ERIC'S",32,y+6);pdf.text('DESIGNS',32,y+15);
+  pdf.setFont('times','bold');pdf.setFontSize(21);pdf.setTextColor(...ink);pdf.text("ERIC'S",34,y+6);pdf.text('DESIGNS',34,y+15);
   text(business.tagline||'Software Development & Digital Marketing Agency',margin,y+25,8,'normal','left',muted);
   text(business.address||'Mumbai, Maharashtra, India',margin,y+31,8,'normal','left',muted);
   text('QUOTATION',pageWidth-margin,y+10,17,'bold','right',ink);
