@@ -1570,3 +1570,9 @@ nav=function(name){if(name==='Jarvis'){showJarvisAssistant();return}navWithJarvi
 
 /* Local-time greeting: keeps the dashboard in step with the device clock. */
 function crmGreeting(date=new Date()){const hour=date.getHours();if(hour>=22||hour<5)return 'Good night';if(hour<12)return 'Good morning';if(hour<18)return 'Good afternoon';return 'Good evening'}
+
+/* WhatsApp Business connection status in Settings. */
+async function refreshWhatsAppStatus(){const el=document.getElementById('whatsappStatus');if(!el)return;try{const status=await erpApi.whatsappStatus();el.textContent=status.configured?`Connected to WhatsApp Business phone ${status.phoneNumberId}. Invoice PDFs can be sent directly.`:'Setup needed. Add your WhatsApp Business API credentials in Render.'}catch(error){el.textContent='Sign in as the owner to check WhatsApp Business status.'}}
+function openWhatsAppSetup(){window.open('https://developers.facebook.com/docs/whatsapp/cloud-api/get-started','_blank','noopener')}
+const settingsWithWhatsAppConnection=settings;
+settings=function(){let markup=settingsWithWhatsAppConnection();setTimeout(refreshWhatsAppStatus,0);const metaEnd='<button class="primary" onclick="connectMetaLeadPage()">Connect Page</button></div></article></div></section>';const whatsappCard='<button class="primary" onclick="connectMetaLeadPage()">Connect Page</button></div></article><article class="connection-item"><div><b>WhatsApp Business</b><small id="whatsappStatus">Checking WhatsApp Business connection…</small></div><div class="connection-actions"><button class="smallbtn" onclick="refreshWhatsAppStatus()">Check status</button><button class="primary" onclick="openWhatsAppSetup()">Open Meta setup</button></div></article></div></section>';return markup.replace(metaEnd,whatsappCard)};
