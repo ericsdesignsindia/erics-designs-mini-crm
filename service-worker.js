@@ -1,5 +1,5 @@
-const CACHE='erics-crm-v20260927-66-pdfprint';
-const ASSETS=['./','./index.html','./style.css?v=20260920-67','./crm.css?v=20260927-66-pdfprint','./billing.js?v=20260920-67','./crm.js?v=20260927-66-pdfprint','./api-sync.js?v=20260927-66-pdfprint','./site.webmanifest','./ed-icon-192.png','./ed-icon-512.png','./assets/erics-designs-crm-logo.png','./assets/pdf-quotation-logo-clean.png','./assets/payment-received-seal.svg','./assets/quotation-accepted-seal.svg','./assets/jspdf.umd.min.js'];
+const CACHE='erics-crm-v20260927-67-directpreview';
+const ASSETS=['./','./index.html','./style.css?v=20260920-67','./crm.css?v=20260927-67-directpreview','./billing.js?v=20260920-67','./crm.js?v=20260927-67-directpreview','./api-sync.js?v=20260927-67-directpreview','./site.webmanifest','./ed-icon-192.png','./ed-icon-512.png','./assets/erics-designs-crm-logo.png','./assets/pdf-quotation-logo-clean.png','./assets/payment-received-seal.svg','./assets/quotation-accepted-seal.svg','./assets/jspdf.umd.min.js','./assets/html2pdf.bundle.min.js'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
