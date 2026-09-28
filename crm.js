@@ -1747,3 +1747,22 @@ function editDocument(id){
 }
 openDoc=editDocument;
 previewOpenDocument=function(){if(previewDoc?.id)editDocument(previewDoc.id);else toast('Open a document first.');};
+
+/* Capture every document Edit click before legacy inline actions can route away from the editor. */
+window.document.addEventListener('click',event=>{
+  const button=event.target.closest('button');
+  if(!button)return;
+  const action=button.getAttribute('onclick')||'';
+  const documentMatch=action.match(/openDoc\('([^']+)'\)/);
+  if(documentMatch&&button.textContent.trim()==='Edit'){
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    editDocument(documentMatch[1]);
+    return;
+  }
+  if(action.includes('previewOpenDocument')){
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if(previewDoc?.id)editDocument(previewDoc.id);
+  }
+},true);
