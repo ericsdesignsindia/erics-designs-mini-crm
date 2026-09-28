@@ -1514,13 +1514,13 @@ const settingsWithWhatsAppConnection=settings;
 settings=function(){let markup=settingsWithWhatsAppConnection();setTimeout(refreshWhatsAppStatus,0);const metaEnd='<button class="primary" onclick="connectMetaLeadPage()">Connect Page</button></div></article></div></section>';const whatsappCard='<button class="primary" onclick="connectMetaLeadPage()">Connect Page</button></div></article><article class="connection-item"><div><b>WhatsApp Business</b><small id="whatsappStatus">Checking WhatsApp Business connection…</small></div><div class="connection-actions"><button class="smallbtn" onclick="refreshWhatsAppStatus()">Check status</button><button class="primary" onclick="openWhatsAppSetup()">Open Meta setup</button></div></article></div></section>';return markup.replace(metaEnd,whatsappCard)};
 
 /* Client-ready PDFs and document delivery for quotations, proformas, and invoices. */
-async function createQuotationPdf(document){
+async function createNativeDocumentPdf(document,documentType=document.type){
   const jsPDF=await loadInvoicePdfLibrary();
   const pdf=new jsPDF({unit:'mm',format:'a4',compress:true});
-  const type=document.type||'Quotation',isInvoice=type==='Invoice',isProforma=type==='Proforma';
+  const type=documentType||'Quotation',isInvoice=type==='Invoice',isProforma=type==='Proforma';
   const profile=getPdfProfile(type),business=document.business||db.settings,margin=profile.margin,pageWidth=210,contentWidth=pageWidth-(margin*2);
   const gold=pdfColor(profile.accentColor,[190,157,78]),ink=[16,29,48],muted=[88,103,120],tableInk=pdfColor(profile.tableColor,[31,43,27]),line=[205,207,199];
-  const title=profile.title;
+  const title=profile.title,clientHeading=isInvoice?'BILL TO':isProforma?'CUSTOMER':'PREPARED FOR',serviceHeading=isInvoice?'SERVICES PROVIDED':isProforma?'SERVICES TO BE PROVIDED':'SERVICES QUOTED',primaryDateLabel=isInvoice?'Issue date':isProforma?'Proforma date':'Prepared date',dueDateLabel=isInvoice?'Due date':isProforma?'Payment due':'Valid until',termsHeading=isInvoice?'NOTES & PAYMENT TERMS':isProforma?'PROFORMA TERMS':'TERMS & CONDITIONS';
   const currency=document.currency==='AED'?'AED':'INR';
   // jsPDF's built-in fonts do not reliably contain the Indian rupee glyph.
   // Use explicit currency labels so PDF readers never split or corrupt prices.
@@ -1536,14 +1536,16 @@ async function createQuotationPdf(document){
   text(title,pageWidth-margin,y+10,17,'bold','right',ink);
   const state=status(document),stateLabel=state==='Draft'?'DRAFT':state==='Cancelled'?'CANCELLED':'';
   text(document.number+(stateLabel?' · '+stateLabel:''),pageWidth-margin,y+17,8.5,'normal','right',muted);
+  if(isProforma)text('NOT A FINAL TAX INVOICE',pageWidth-margin,y+23,7.3,'bold','right',gold);
+  if(isInvoice)text('PAYMENT STATUS · '+String(state||'Draft').toUpperCase(),pageWidth-margin,y+23,7.3,'bold','right',gold);
   y=55;rule(y);y+=13;
-  text(isInvoice?'BILL TO':'PREPARED FOR',margin,y,8.5,'bold','left',gold);text('DETAILS',pageWidth-margin,y,8.5,'bold','right',gold);
+  text(clientHeading,margin,y,8.5,'bold','left',gold);text(isProforma?'PAYMENT DETAILS':'DETAILS',pageWidth-margin,y,8.5,'bold','right',gold);
   const client=document.client||{};
   text(client.name||'—',margin,y+12,11,'bold');
   [client.contact,client.address,client.phone].filter(Boolean).forEach((value,index)=>text(value,margin,y+18+(index*5),9));
-  [[isInvoice?'Issue date':'Prepared date',document.date||'—'],[isInvoice?'Due date':'Valid until',document.due||'—'],['Project',document.project||'—'],['Currency',currency]].forEach(([label,value],index)=>{const lines=pdf.splitTextToSize(cleanPdfText(label+': '+value),62);lines.forEach((line,lineIndex)=>text(line,pageWidth-margin,y+12+(index*5)+(lineIndex*3.8),9,'normal','right'))});
+  [[primaryDateLabel,document.date||'—'],[dueDateLabel,document.due||'—'],[isProforma?'Reference project':'Project',document.project||'—'],['Currency',currency]].forEach(([label,value],index)=>{const lines=pdf.splitTextToSize(cleanPdfText(label+': '+value),62);lines.forEach((line,lineIndex)=>text(line,pageWidth-margin,y+12+(index*5)+(lineIndex*3.8),9,'normal','right'))});
   y+=40;
-  text(isInvoice?'SERVICES PROVIDED':'SERVICES QUOTED',margin,y,8.5,'bold','left',gold);y+=8;
+  text(serviceHeading,margin,y,8.5,'bold','left',gold);y+=8;
   const columns=[margin,margin+14,pageWidth-margin-82,pageWidth-margin-55,pageWidth-margin-28,pageWidth-margin],tableRight=pageWidth-margin;
   pdf.setFillColor(...tableInk);pdf.rect(margin,y,contentWidth,12,'F');
   [['#',columns[0]+3,'left'],['SERVICE / DESCRIPTION',columns[1]+2,'left'],['QTY',columns[3]-2,'right'],['RATE',columns[4]-2,'right'],['AMOUNT',columns[5]-2,'right']].forEach(([label,pos,align])=>text(label,pos,y+7.4,7.5,'bold',align,[255,255,255]));
@@ -1560,7 +1562,7 @@ async function createQuotationPdf(document){
   });
   text('Tailored services are provided on request',tableRight,y+3,8.5,'italic','right',ink);y+=10;
   if(!document.rateCard){const summary=totals(document),totalRows=[['Subtotal',money(summary.subtotal)],...(num(summary.discount)>0?[['Discount','−'+money(summary.discount)]]:[]),['GST / tax ('+num(document.tax)+'%)',money(summary.tax)],['TOTAL',money(summary.total)],...(isInvoice?[['Paid',money(summary.paid)],['BALANCE DUE',money(summary.balance)]]:[])];totalRows.forEach(([label,value])=>{const bold=label==='TOTAL'||label==='BALANCE DUE';text(label,145,y,8.2,bold?'bold':'normal','left',bold?ink:muted);text(value,tableRight,y,8.5,bold?'bold':'normal','right');y+=bold?7:5.5});y+=3}
-  const startTerms=(continued=false)=>{rule(y);y+=7;text(continued?'TERMS & CONDITIONS (CONTINUED)':'TERMS & CONDITIONS',margin,y,8.5,'bold','left',gold);y+=5;softRule(y);y+=5};
+  const startTerms=(continued=false)=>{rule(y);y+=7;text(continued?termsHeading+' (CONTINUED)':termsHeading,margin,y,8.5,'bold','left',gold);y+=5;softRule(y);y+=5};
   startTerms();
   const terms=cleanPdfText(document.terms||'').split(/\n/).map(value=>value.trim()).filter(Boolean);
   for(const term of terms){const lines=pdf.splitTextToSize(term.replace(/^[•-]\s*/,''),contentWidth-7),termHeight=Math.max(5,lines.length*4+1);if(y+termHeight>246){pdf.addPage();y=21;startTerms(true)}text('— '+(lines[0]||''),margin+3,y,8);if(lines.length>1)text(lines.slice(1),margin+7,y+4,8);y+=termHeight}
@@ -1573,8 +1575,10 @@ async function createQuotationPdf(document){
   const generatedAt=new Date().toISOString().replace(/[-:.TZ]/g,'').slice(0,14);
   return new File([pdf.output('blob')],String(document.number)+'-'+generatedAt+'.pdf',{type:'application/pdf'});
 }
-async function createDocumentPdf(document){return createQuotationPdf(document)}
-async function createInvoicePdf(invoice){return createDocumentPdf(invoice)}
+async function createQuotationPdf(document){return createNativeDocumentPdf(document,'Quotation')}
+async function createProformaPdf(document){return createNativeDocumentPdf(document,'Proforma')}
+async function createInvoicePdf(document){return createNativeDocumentPdf(document,'Invoice')}
+async function createDocumentPdf(document){if(document?.type==='Invoice')return createInvoicePdf(document);if(document?.type==='Proforma')return createProformaPdf(document);return createQuotationPdf(document)}
 function documentForDelivery(id){return db.documents.find(document=>document.id===id)}
 function documentClient(document){return db.clients.find(client=>client.id===document?.client?.id||client.name===document?.client?.name)}
 function downloadPdfFile(file){const url=URL.createObjectURL(file);const link=window.document.createElement('a');link.href=url;link.download=file.name;link.rel='noopener';link.style.display='none';window.document.body.appendChild(link);link.click();setTimeout(()=>{link.remove();URL.revokeObjectURL(url)},3000)}
