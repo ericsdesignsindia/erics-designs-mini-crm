@@ -1719,3 +1719,31 @@ function editDocument(id){
 }
 openDoc=editDocument;
 previewOpenDocument=function(){if(previewDoc?.id)editDocument(previewDoc.id);else toast('Open a document first.');};
+
+/* Keep Edit in the selected document editor even when older navigation extensions render afterward. */
+function editDocument(id){
+  const record=(db.documents||[]).find(item=>item&&item.id===id);
+  if(!record){toast('This document is no longer available. Refresh the document list and try again.');return false}
+  const selected=structuredClone(record);
+  selected.items=Array.isArray(selected.items)?selected.items.filter(item=>item&&typeof item==='object'):[];
+  selected.payments=Array.isArray(selected.payments)?selected.payments.filter(item=>item&&typeof item==='object'):[];
+  selected.client=selected.client&&typeof selected.client==='object'?selected.client:{name:'',contact:'',email:'',phone:'',address:'',gstin:''};
+  const preview=window.document.getElementById('preview');
+  if(preview?.open)preview.close();
+  draft=selected;
+  view=docView(selected.type);
+  render();
+  setTimeout(()=>{
+    if(!draft||draft.id!==selected.id){
+      draft=selected;
+      view=docView(selected.type);
+      const app=window.document.getElementById('app');
+      if(app)app.innerHTML=editor();
+      updateTotal();
+      applyNavbarEnhancements();
+    }
+  },0);
+  return true;
+}
+openDoc=editDocument;
+previewOpenDocument=function(){if(previewDoc?.id)editDocument(previewDoc.id);else toast('Open a document first.');};
