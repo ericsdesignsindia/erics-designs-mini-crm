@@ -1560,10 +1560,12 @@ async function createQuotationPdf(document){
   });
   text('Tailored services are provided on request',tableRight,y+3,8.5,'italic','right',ink);y+=10;
   if(!document.rateCard){const summary=totals(document),totalRows=[['Subtotal',money(summary.subtotal)],...(num(summary.discount)>0?[['Discount','−'+money(summary.discount)]]:[]),['GST / tax ('+num(document.tax)+'%)',money(summary.tax)],['TOTAL',money(summary.total)],...(isInvoice?[['Paid',money(summary.paid)],['BALANCE DUE',money(summary.balance)]]:[])];totalRows.forEach(([label,value])=>{const bold=label==='TOTAL'||label==='BALANCE DUE';text(label,145,y,8.2,bold?'bold':'normal','left',bold?ink:muted);text(value,tableRight,y,8.5,bold?'bold':'normal','right');y+=bold?7:5.5});y+=3}
-  rule(y);y+=7;text('TERMS & CONDITIONS',margin,y,8.5,'bold','left',gold);y+=5;softRule(y);y+=5;
+  const startTerms=(continued=false)=>{rule(y);y+=7;text(continued?'TERMS & CONDITIONS (CONTINUED)':'TERMS & CONDITIONS',margin,y,8.5,'bold','left',gold);y+=5;softRule(y);y+=5};
+  startTerms();
   const terms=cleanPdfText(document.terms||'').split(/\n/).map(value=>value.trim()).filter(Boolean);
-  for(const term of terms){const lines=pdf.splitTextToSize(term.replace(/^[•-]\s*/,''),contentWidth-7);text('— '+(lines[0]||''),margin+3,y,8);if(lines.length>1)text(lines.slice(1),margin+7,y+4,8);y+=Math.max(5,lines.length*4+1)}
-  const footerY=267;
+  for(const term of terms){const lines=pdf.splitTextToSize(term.replace(/^[•-]\s*/,''),contentWidth-7),termHeight=Math.max(5,lines.length*4+1);if(y+termHeight>246){pdf.addPage();y=21;startTerms(true)}text('— '+(lines[0]||''),margin+3,y,8);if(lines.length>1)text(lines.slice(1),margin+7,y+4,8);y+=termHeight}
+  if(y>246){pdf.addPage();y=21}
+  const footerY=Math.max(267,y+14);
   text(profile.footerNote,margin,footerY-13,9,'italic');text(profile.footerSubnote,margin,footerY-8,8);
   text(String(business.name||"Eric's Designs"),margin,footerY,8,'bold');text(business.address||'',margin,footerY+5,7.5);text((business.phone||'')+'  |  '+(business.email||''),margin,footerY+10,7.5);
   rule(286);text((business.name||"Eric's Designs")+' · '+(business.address||'')+' · '+(business.tagline||''),pageWidth/2,291,7,'normal','center',[80,80,80]);
