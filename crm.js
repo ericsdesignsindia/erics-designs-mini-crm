@@ -1638,5 +1638,6 @@ function resetPdfProfile(type){commitChange(()=>{db.pdfStudio=db.pdfStudio&&type
 HORIZONTAL_MORE_SECTIONS.push('PDF Studio');HORIZONTAL_MORE_GROUPS[1].items.push('PDF Studio');
 const renderWithPdfStudio=render;
 render=function(){renderWithPdfStudio();if(view==='PDF Studio')document.getElementById('app').innerHTML=pdfStudio();applyNavbarEnhancements()};
+try{if(new URLSearchParams(location.search).get('studio')==='pdf'){view='PDF Studio';render()}}catch{}
 const mobileSectionsWithPdfStudio=showMobileSections;
 showMobileSections=function(){mobileSectionsWithPdfStudio();const list=document.querySelector('#mobileSections .mobile-section-list');if(list&&![...list.querySelectorAll('button')].some(button=>button.textContent.includes('PDF Studio'))){const button=document.createElement('button');button.innerHTML='<span>▤</span>PDF Studio';button.onclick=()=>{document.getElementById('mobileSections').close();nav('PDF Studio')};list.append(button)}};
