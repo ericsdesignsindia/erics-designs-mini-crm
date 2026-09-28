@@ -1702,3 +1702,20 @@ documentHTML=function(d){const business=d.business||db.settings,quote=d.type==='
 
 /* Fixed approved templates: ignore any old PDF Studio layout settings. */
 getPdfProfile=function(type){const key=pdfProfileKey(type);return {...PDF_STUDIO_DEFAULTS[key]}};
+
+/* Direct document editor entry point. This bypasses older preview and navigation wrappers. */
+function editDocument(id){
+  const record=(db.documents||[]).find(item=>item&&item.id===id);
+  if(!record){toast('This document is no longer available. Refresh the document list and try again.');return false}
+  draft=structuredClone(record);
+  draft.items=Array.isArray(draft.items)?draft.items.filter(item=>item&&typeof item==='object'):[];
+  draft.payments=Array.isArray(draft.payments)?draft.payments.filter(item=>item&&typeof item==='object'):[];
+  draft.client=draft.client&&typeof draft.client==='object'?draft.client:{name:'',contact:'',email:'',phone:'',address:'',gstin:''};
+  const preview=window.document.getElementById('preview');
+  if(preview?.open)preview.close();
+  view=docView(draft.type);
+  render();
+  return true;
+}
+openDoc=editDocument;
+previewOpenDocument=function(){if(previewDoc?.id)editDocument(previewDoc.id);else toast('Open a document first.');};
