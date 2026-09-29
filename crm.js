@@ -1689,6 +1689,12 @@ documentHTML=function(d){const business=d.business||db.settings,quote=d.type==='
 
 
 /* PDF Studio has been retired. PDF downloads retain their approved fixed formats. */
+
+/* A proforma is an advance request. The quotation remains the source of the full project value. */
+const fullProformaPreview=documentHTML,fullProformaPdf=createProformaPdf;
+documentHTML=function(document){const html=fullProformaPreview(document);if(document?.type!=='Proforma')return html;const total=totals(document).total,advance=round(total/2),full=fmt(document,total),due=fmt(document,advance);return html.replace(`<div class="totalrow big"><span>TOTAL DUE</span><span>${full}</span></div>`,`<div class="totalrow"><span>Project value</span><span>${full}</span></div><div class="totalrow big"><span>50% ADVANCE DUE</span><span>${due}</span></div>`)};
+createProformaPdf=function(document){const advanceDocument={...document,items:(document.items||[]).map(item=>({...item,proformaAmount:round(num(item.proformaAmount??(num(item.qty)*num(item.rate)))/2)}))};return fullProformaPdf(advanceDocument)};
+createDocumentPdf=document=>document?.type==='Invoice'?createInvoicePdf(document):document?.type==='Proforma'?createProformaPdf(document):createQuotationPdf(document);
 (function retirePdfStudio(){
   for(const list of [HORIZONTAL_MORE_SECTIONS,HORIZONTAL_MORE_GROUPS[1].items]){
     let index=list.indexOf('PDF Studio');
