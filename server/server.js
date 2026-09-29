@@ -378,7 +378,9 @@ app.post('/api/public/portal/:token/approve', async (req, res, next) => {
     await updateWorkspaceState('erics-designs-default', state => {
       const target = state.documents.find(item => item.portalToken === token);
       if (!target || target.type !== 'Quotation' || target.status !== 'Sent') { const error = new Error('This quotation is no longer available for approval.'); error.status = 409; throw error; }
+      target.clientApprovedForProcess = true;
       target.status = 'Accepted'; target.acceptedAt = new Date().toISOString(); target.updated = new Date().toISOString();
+      require('../client-process-engine.js').prepare(state,target,randomUUID);
       state.activity.unshift({ id: randomUUID(), message: `Client approved quotation ${target.number}`, date: target.acceptedAt });
     });
     return res.json({ ok: true, message: 'Quotation approved.' });
