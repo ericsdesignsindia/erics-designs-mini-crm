@@ -1771,14 +1771,14 @@ window.document.addEventListener('click',event=>{
 (function enableFormatDesign(){
   const FORMAT_DESIGN_TYPES=['Quotation','Proforma','Invoice','Receipt'];
   const DEFAULT_FORMAT_DESIGN={
-    Quotation:{eyebrow:'PROPOSAL',title:'QUOTATION',accent:'#be9d4e',footer:'Thank you for considering Eric’s Designs.',logoWidth:68,showQr:false},
-    Proforma:{eyebrow:'ADVANCE PAYMENT REQUEST',title:'PROFORMA INVOICE',accent:'#be9d4e',footer:'Thank you for considering Eric’s Designs.',logoWidth:68,showQr:true},
-    Invoice:{eyebrow:'TAX INVOICE',title:'FINAL INVOICE',accent:'#be9d4e',footer:'Thank you for choosing Eric’s Designs.',logoWidth:68,showQr:true},
-    Receipt:{eyebrow:'PAYMENT CONFIRMATION',title:'PAYMENT RECEIPT',accent:'#be9d4e',footer:'Thank you for your payment.',logoWidth:68,showQr:false}
+    Quotation:{eyebrow:'CLIENT PROPOSAL',title:'QUOTATION',accent:'#244e70',footer:'Thank you for considering Eric’s Designs.',logoWidth:62,showQr:false},
+    Proforma:{eyebrow:'PAYMENT REQUEST',title:'PROFORMA INVOICE',accent:'#7a3e23',footer:'Please use the payment details below to confirm your booking.',logoWidth:62,showQr:true},
+    Invoice:{eyebrow:'SERVICE BILLING',title:'FINAL INVOICE',accent:'#1a5e54',footer:'Thank you for choosing Eric’s Designs.',logoWidth:62,showQr:true},
+    Receipt:{eyebrow:'PAYMENT CONFIRMED',title:'PAYMENT RECEIPT',accent:'#5a3d7a',footer:'Thank you for your payment.',logoWidth:62,showQr:false}
   };
   const formatLabel=type=>type==='Invoice'?'Final invoice':type==='Proforma'?'Proforma invoice':type==='Receipt'?'Payment receipt':'Quotation';
   function formatDesigns(){
-    if(!db.pdfTemplateDesign||typeof db.pdfTemplateDesign!=='object')db.pdfTemplateDesign={};
+    if(db.pdfTemplateDesignVersion!=='fresh-document-system-20260929'){db.pdfTemplateDesign={};db.pdfTemplateDesignVersion='fresh-document-system-20260929';setTimeout(()=>persist(),0)}if(!db.pdfTemplateDesign||typeof db.pdfTemplateDesign!=='object')db.pdfTemplateDesign={};
     FORMAT_DESIGN_TYPES.forEach(type=>{db.pdfTemplateDesign[type]={...DEFAULT_FORMAT_DESIGN[type],...(db.pdfTemplateDesign[type]||{})}});
     return db.pdfTemplateDesign;
   }
