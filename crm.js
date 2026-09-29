@@ -1170,7 +1170,7 @@ documentHTML=function(document){
 function accountLedger(){
   const manual=(db.accounts||[]).map(entry=>({...entry,source:'manual'}));
   const invoicePayments=[],proformaPayments=[];
-  for(const invoice of db.documents.filter(document=>document.type==='Invoice'&&document.status!=='Cancelled'))for(const payment of invoice.payments||[])if(!payment.sourceProformaId)invoicePayments.push({id:`invoice-payment-${invoice.id}-${payment.id||payment.date}-${payment.amount}`,date:payment.date||invoice.updated?.slice(0,10)||today(),type:'Income',category:'Invoice payment',amount:num(payment.amount),currency:invoice.currency||'INR',note:`${invoice.number} · ${invoice.client?.name||'Client'}${payment.reference?' · '+payment.reference:''}`,source:'invoice',invoiceId:invoice.id});
+  for(const invoice of db.documents.filter(document=>document.type==='Invoice'&&document.status!=='Cancelled'))for(const payment of invoice.payments||[])if(!payment.sourceProformaId||!(db.documents||[]).some(source=>source.id===payment.sourceProformaId&&source.type==='Proforma'&&source.status!=='Cancelled'&&(source.payments||[]).some(original=>payment.id&&original.id?original.id===payment.id:original.date===payment.date&&num(original.amount)===num(payment.amount)&&String(original.reference||'')===String(payment.reference||''))))invoicePayments.push({id:`invoice-payment-${invoice.id}-${payment.id||payment.date}-${payment.amount}`,date:payment.date||invoice.updated?.slice(0,10)||today(),type:'Income',category:'Invoice payment',amount:num(payment.amount),currency:invoice.currency||'INR',note:`${invoice.number} · ${invoice.client?.name||'Client'}${payment.reference?' · '+payment.reference:''}`,source:'invoice',invoiceId:invoice.id});
   for(const proforma of db.documents.filter(document=>document.type==='Proforma'&&document.status!=='Cancelled'))for(const payment of proforma.payments||[])proformaPayments.push({id:`proforma-advance-${proforma.id}-${payment.id||payment.date}-${payment.amount}`,date:payment.date||proforma.updated?.slice(0,10)||today(),type:'Income',category:'Proforma advance',amount:num(payment.amount),currency:proforma.currency||'INR',note:`${proforma.number} · ${proforma.client?.name||'Client'}${payment.reference?' · '+payment.reference:''}`,source:'proforma',proformaId:proforma.id});
   return [...manual,...invoicePayments,...proformaPayments].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
 }
@@ -1813,3 +1813,15 @@ window.document.addEventListener('click',event=>{
 (function(){
  window.formatDesignPage=function(){return pageHeader('Document formats','', 'Layouts matched to your supplied invoice and quotation references.')+`<div class="template-grid">${['Quotation','Proforma','Invoice','Receipt'].map(type=>`<section class="panel"><h2>${type==='Invoice'?'Invoice / Final invoice':type==='Receipt'?'Payment receipt':type}</h2><p>${type==='Quotation'?'Quotation reference: separate service and description columns, project summary, and full terms.':'Invoice reference: serif header, item table, totals, and payment information where applicable.'}</p><button onclick="nav('Documents')">Open documents</button></section>`).join('')}</div>`};
 })();
+
+/* Recording a payment commits the document immediately so Accounts sees it. */
+const recordPaymentBeforeImmediateSave=addPayment;
+addPayment=function(){
+ if(!draft)return;
+ const error=valid();if(error){toast('Payment not saved: '+error);return}
+ const before=structuredClone(draft),count=draft.payments.length;
+ recordPaymentBeforeImmediateSave();
+ if(!draft||draft.payments.length===count)return;
+ if(saveDoc(true)){render();toast('Payment saved and reflected in Accounts.');}
+ else{draft=before;render();toast('Payment could not be saved. Please try again.');}
+};
