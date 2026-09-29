@@ -1,6 +1,6 @@
 (function(root){
 function prepare(state,quote,uuid,now=new Date().toISOString()){
- if(quote.type!=='Quotation'||!quote.clientApprovedForProcess||quote.status!=='Accepted')return null;
+ if(quote.type!=='Quotation'||!quote.clientApprovedForProcess||!quote.contractConfirmedAt||quote.status!=='Accepted')return null;
  const existing=state.documents.find(d=>d.rootId===quote.id&&d.type==='Proforma'&&d.status!=='Cancelled');if(existing)return existing;
  const total=(quote.items||[]).reduce((a,i)=>a+Number(i.qty||0)*Number(i.rate||0),0)*(1-Number(quote.discount||0)/100)*(1+Number(quote.tax||0)/100);
  if(!(total>0)||(quote.items||[]).some(i=>!(Number(i.rate)>0)||i.rateText))return null;
