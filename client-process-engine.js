@@ -6,6 +6,7 @@ function prepare(state,quote,uuid,now=new Date().toISOString()){
  if(!(total>0)||(quote.items||[]).some(i=>!(Number(i.rate)>0)||i.rateText))return null;
  const number=Math.max(0,...state.documents.filter(d=>d.type==='Proforma').map(d=>Number(String(d.number).replace('ED-P-',''))||0))+1;
  const p={...JSON.parse(JSON.stringify(quote)),id:uuid(),type:'Proforma',number:'ED-P-'+String(number).padStart(4,'0'),rootId:quote.id,sourceId:quote.id,status:'Draft',date:now.slice(0,10),due:new Date(Date.parse(now)+7*86400000).toISOString().slice(0,10),payments:[],advancePercent:50,rateCard:false,updated:now};
+ p.items=p.items.map(item=>({...item,proformaAmount:Number(item.qty||0)*Number(item.rate||0)}));
  delete p.portalToken;delete p.acceptedAt;delete p.clientApprovedForProcess;delete p.workCompletedAt;
  p.terms='50% advance payment is required to commence work. The remaining balance is payable after completion.\n'+(quote.terms||'');state.documents.push(p);return p;
 }
