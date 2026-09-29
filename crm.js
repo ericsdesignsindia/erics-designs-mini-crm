@@ -1791,3 +1791,20 @@ window.document.addEventListener('click',event=>{
   if(!HORIZONTAL_MORE_GROUPS[1].items.includes('Format Design'))HORIZONTAL_MORE_GROUPS[1].items.push('Format Design');
   const renderBeforeFormatDesign=render;render=function(){renderBeforeFormatDesign();if(view==='Format Design')document.getElementById('app').innerHTML=window.formatDesignPage();applyNavbarEnhancements()};
 })();
+
+/* Make the format editor discoverable from the existing Template and Settings workspaces. */
+(function exposeFormatDesign(){
+  const templatePageBeforeFormatLink=documentTemplates;
+  documentTemplates=function(){
+    const html=templatePageBeforeFormatLink();
+    const card=`<section class="panel template-intro"><div><div class="eyebrow">PDF APPEARANCE</div><h2>Edit the document design.</h2><p class="sub">Change the title, header, accent colour, logo size, footer, and payment QR setting for every document type.</p></div><button class="primary" onclick="nav('Format Design')">Edit PDF format</button></section>`;
+    return html.replace('<div class="template-grid">',card+'<div class="template-grid">');
+  };
+  const settingsBeforeFormatLink=settings;
+  settings=function(){
+    const html=settingsBeforeFormatLink();
+    const card=`<section class="panel"><div class="dialog-title"><div><div class="eyebrow">DOCUMENT DESIGN</div><h2>PDF format editor</h2><p class="sub">Edit the design used for quotations, proformas, invoices, and receipts.</p></div><button class="primary" onclick="nav('Format Design')">Open format editor</button></div></section>`;
+    return html.replace('<div class="stack">','<div class="stack">'+card);
+  };
+  try{if(new URLSearchParams(location.search).get('designer')==='templates'){view='Format Design';render()}}catch{}
+})();
