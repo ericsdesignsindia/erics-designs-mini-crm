@@ -1766,3 +1766,28 @@ window.document.addEventListener('click',event=>{
     if(previewDoc?.id)editDocument(previewDoc.id);
   }
 },true);
+
+/* Editable PDF format controls. These settings apply to existing and new records when exported. */
+(function enableFormatDesign(){
+  const FORMAT_DESIGN_TYPES=['Quotation','Proforma','Invoice','Receipt'];
+  const DEFAULT_FORMAT_DESIGN={
+    Quotation:{eyebrow:'PROPOSAL',title:'QUOTATION',accent:'#be9d4e',footer:'Thank you for considering Eric’s Designs.',logoWidth:68,showQr:false},
+    Proforma:{eyebrow:'ADVANCE PAYMENT REQUEST',title:'PROFORMA INVOICE',accent:'#be9d4e',footer:'Thank you for considering Eric’s Designs.',logoWidth:68,showQr:true},
+    Invoice:{eyebrow:'TAX INVOICE',title:'FINAL INVOICE',accent:'#be9d4e',footer:'Thank you for choosing Eric’s Designs.',logoWidth:68,showQr:true},
+    Receipt:{eyebrow:'PAYMENT CONFIRMATION',title:'PAYMENT RECEIPT',accent:'#be9d4e',footer:'Thank you for your payment.',logoWidth:68,showQr:false}
+  };
+  const formatLabel=type=>type==='Invoice'?'Final invoice':type==='Proforma'?'Proforma invoice':type==='Receipt'?'Payment receipt':'Quotation';
+  function formatDesigns(){
+    if(!db.pdfTemplateDesign||typeof db.pdfTemplateDesign!=='object')db.pdfTemplateDesign={};
+    FORMAT_DESIGN_TYPES.forEach(type=>{db.pdfTemplateDesign[type]={...DEFAULT_FORMAT_DESIGN[type],...(db.pdfTemplateDesign[type]||{})}});
+    return db.pdfTemplateDesign;
+  }
+  window.getPdfTemplateDesign=type=>({...DEFAULT_FORMAT_DESIGN[type]||DEFAULT_FORMAT_DESIGN.Quotation,...(formatDesigns()[type]||{})});
+  window.formatDesignPage=function(){const designs=formatDesigns();return pageHeader('Format design', '', 'Edit the appearance used when any existing or new document is downloaded as a PDF.')+`<section class="panel template-intro"><div><div class="eyebrow">PDF DOCUMENT FORMATS</div><h2>Design each document type.</h2><p class="sub">Changes apply to all exports immediately. Client records, line items, totals, and saved documents are not changed.</p></div></section><div class="template-grid">${FORMAT_DESIGN_TYPES.map(type=>{const item=designs[type];return `<article class="panel template-card"><div class="dialog-title"><div><div class="eyebrow">${esc(formatLabel(type).toUpperCase())}</div><h2>${esc(item.title)}</h2></div><span class="badge" style="background:${esc(item.accent)};color:#fff">PDF</span></div><p>Header: ${esc(item.eyebrow)}<br>Logo width: ${Number(item.logoWidth)||68} mm${type==='Proforma'||type==='Invoice'?`<br>QR code: ${item.showQr?'Shown':'Hidden'}`:''}</p><div class="actions"><button class="primary" onclick="editPdfFormat('${type}')">Edit format</button><button class="smallbtn" onclick="resetPdfFormat('${type}')">Restore default</button></div></article>`}).join('')}</div>`};
+  window.editPdfFormat=function(type){const current=window.getPdfTemplateDesign(type);modal(`Edit ${formatLabel(type)} format`,field('Small heading','pdf-format-eyebrow',current.eyebrow,'text')+field('Main title','pdf-format-title',current.title,'text')+`<div><label for="pdf-format-accent">Accent colour</label><input id="pdf-format-accent" type="color" value="${esc(current.accent)}"></div>`+field('Logo width (mm)','pdf-format-logo-width',current.logoWidth,'number','min="35" max="95" step="1"')+field('Footer message','pdf-format-footer',current.footer,'text')+((type==='Proforma'||type==='Invoice')?`<label class="checkline"><input id="pdf-format-qr" type="checkbox" ${current.showQr?'checked':''}> Show payment QR code</label>`:'')+`<p class="hint full">This changes the downloaded PDF and its preview. It does not alter existing client, service, amount, or payment information.</p>`,()=>{const next={eyebrow:val('pdf-format-eyebrow').trim(),title:val('pdf-format-title').trim(),accent:val('pdf-format-accent'),logoWidth:Math.max(35,Math.min(95,num(val('pdf-format-logo-width'))||68)),footer:val('pdf-format-footer').trim(),showQr:(type==='Proforma'||type==='Invoice')?document.getElementById('pdf-format-qr').checked:false};if(!next.title||!next.eyebrow||!next.footer){document.getElementById('recordError').textContent='Complete the heading, title, and footer message.';return}if(commitChange(()=>{formatDesigns()[type]=next},`Updated ${formatLabel(type)} PDF format`))closeSaved()})};
+  window.resetPdfFormat=function(type){if(!confirm(`Restore the default ${formatLabel(type)} format?`))return;if(commitChange(()=>{formatDesigns()[type]={...DEFAULT_FORMAT_DESIGN[type]}},`Restored ${formatLabel(type)} PDF format`))render()};
+  const priorMigrate=migrate;migrate=function(data){const result=priorMigrate(data);if(!result.pdfTemplateDesign||typeof result.pdfTemplateDesign!=='object')result.pdfTemplateDesign={};FORMAT_DESIGN_TYPES.forEach(type=>result.pdfTemplateDesign[type]={...DEFAULT_FORMAT_DESIGN[type],...(result.pdfTemplateDesign[type]||{})});return result};
+  if(!HORIZONTAL_MORE_SECTIONS.includes('Format Design'))HORIZONTAL_MORE_SECTIONS.push('Format Design');
+  if(!HORIZONTAL_MORE_GROUPS[1].items.includes('Format Design'))HORIZONTAL_MORE_GROUPS[1].items.push('Format Design');
+  const renderBeforeFormatDesign=render;render=function(){renderBeforeFormatDesign();if(view==='Format Design')document.getElementById('app').innerHTML=window.formatDesignPage();applyNavbarEnhancements()};
+})();
