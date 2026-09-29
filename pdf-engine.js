@@ -33,14 +33,14 @@
     const notes=String(doc.terms||'').split(/\n/).map(item=>item.trim()).filter(Boolean);
     const noteLines=notes.flatMap(note=>wrap(note.replace(/^[•*-]\s*/,''),type==='Quotation'?PAGE.width-8:104));
     if(format.payment){
-      const compactNotes=noteLines.slice(0,4),paymentRows=[['Account holder',payment.account],['Account number',payment.accountNo],['IFSC',payment.ifsc],['Bank',payment.bank],['UPI',payment.upi]];
-      const blockH=Math.max(39,15+compactNotes.length*3.3+paymentRows.length*3.35);
-      if(y+blockH>258){pdf.addPage();brand(true);}
+      const compactNotes=noteLines.slice(0,3),paymentRows=[['Account holder',payment.account],['Account number',payment.accountNo],['IFSC',payment.ifsc],['Bank',payment.bank],['UPI',payment.upi]];
+      const blockH=Math.max(32,12+compactNotes.length*3+paymentRows.length*3.1);
+      if(y+blockH>270){pdf.addPage();brand(true);}
       rule(y,COLOR.gold,.4);y+=6;write('TERMS & CONDITIONS',PAGE.margin,y,7.5,'bold','left',COLOR.gold);write('PAYMENT DETAILS',126,y,7.5,'bold','left',COLOR.gold);write('SCAN TO PAY',PAGE.right,y,6.5,'bold','right',COLOR.gold);y+=5;rule(y);let noteY=y+5;compactNotes.forEach((line,index)=>write((index===0?'- ':'')+line,PAGE.margin+2,noteY+index*3.3,6.7));const payY=Math.max(noteY+compactNotes.length*3.3+4,y+8);paymentRows.forEach(([label,value],index)=>write(label+': '+value,126,payY+index*3.35,6.6));if(qr)try{pdf.addImage(qr,'JPEG',PAGE.right-18,payY-3,18,24)}catch{}y=Math.max(payY+paymentRows.length*3.35,payY+25)+4;
     }else if(notes.length){
       if(y+26>250){pdf.addPage();brand(true);}rule(y,COLOR.gold,.4);y+=7;write(type==='Receipt'?'RECEIPT NOTES':'TERMS & CONDITIONS',PAGE.margin,y,8,'bold','left',COLOR.gold);y+=5;rule(y);y+=6;for(const note of notes){const lines=wrap(note.replace(/^[•*-]\s*/,''),PAGE.width-8);if(y+lines.length*3.8>258){pdf.addPage();brand(true);}write('- '+lines[0],PAGE.margin+3,y,7.4);if(lines.length>1)write(lines.slice(1),PAGE.margin+7,y+3.8,7.4);y+=Math.max(5,lines.length*3.8)}
     }
-    const footerY=Math.max(267,Math.min(278,y+12));write(format.footer,PAGE.margin,footerY-9,8.1,'italic');write(business.name||"Eric's Designs",PAGE.margin,footerY,7.5,'bold');write([business.phone,business.email].filter(Boolean).join(' | '),PAGE.margin,footerY+4.4,6.9,'normal','left',COLOR.muted);pageFooter();return pdf;
+    const footerY=y > 254 ? 278 : Math.max(267,Math.min(278,y+10));write(format.footer,PAGE.margin,footerY-9,8.1,'italic');write(business.name||"Eric's Designs",PAGE.margin,footerY,7.5,'bold');write([business.phone,business.email].filter(Boolean).join(' | '),PAGE.margin,footerY+4.4,6.9,'normal','left',COLOR.muted);pageFooter();return pdf;
   }
   async function file(doc,type){const jsPDF=root.jspdf?.jsPDF||(await root.loadInvoicePdfLibrary()),[logo,qr]=await Promise.all([asset('./assets/pdf-quotation-logo-clean.png'),asset('./assets/eric-rodgers-google-pay-qr.jpeg')]),pdf=buildPdf(doc,type,jsPDF,logo,qr),stamp=new Date().toISOString().replace(/[-:.TZ]/g,'').slice(0,14);return new File([pdf.output('blob')],`${doc.number||'document'}-${stamp}.pdf`,{type:'application/pdf'})}
   if(typeof module!=='undefined'&&module.exports)module.exports={buildPdf,FORMAT};
