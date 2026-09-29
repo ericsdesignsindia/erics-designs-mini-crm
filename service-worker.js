@@ -1,4 +1,5 @@
-const CACHE='erics-crm-v20260928-26-clean-core';
+const CACHE='erics-crm-v20260929-01-template-refresh';
 self.addEventListener('install',event=>event.waitUntil(self.skipWaiting()));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('erics-crm-')).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{ if(event.request.method==='GET') event.respondWith(fetch(event.request)); });
+
