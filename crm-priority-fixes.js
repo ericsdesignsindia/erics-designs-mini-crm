@@ -68,3 +68,30 @@
   document.addEventListener('click',()=>setTimeout(addCalendarToMobile,0),true);
   window.__crmPriorityFixes='ready';
 })();
+
+/* Cash position correction: calculate the displayed balances directly from the complete ledger. */
+(function(){
+  const moneySummary=values=>['INR','AED'].filter(currency=>Number(values[currency]||0)!==0).map(currency=>`${currencySymbol(currency)}${Number(values[currency]||0).toLocaleString(currency==='AED'?'en-AE':'en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`).join(' · ')||`${currencySymbol('INR')}0.00`;
+  const ledgerBalance=()=>{
+    const opening={INR:Number(db.openingBalances?.INR||0),AED:Number(db.openingBalances?.AED||0)}, income={INR:0,AED:0},spent={INR:0,AED:0},openingSpent={INR:0,AED:0};
+    for(const row of accountLedger()){
+      if(row.externalPayment)continue;
+      const currency=row.currency==='AED'?'AED':'INR',amount=Number(row.amount||0);
+      if(row.type==='Income')income[currency]+=amount;
+      else if(row.paymentSource==='Opening balance')openingSpent[currency]+=amount;
+      else spent[currency]+=amount;
+    }
+    const available={},openingAvailable={},operatingAvailable={};
+    for(const currency of ['INR','AED']){openingAvailable[currency]=opening[currency]-openingSpent[currency];operatingAvailable[currency]=income[currency]-spent[currency];available[currency]=openingAvailable[currency]+operatingAvailable[currency];}
+    return {available,openingAvailable,operatingAvailable};
+  };
+  const accountsWithCashTruth=accounts;
+  accounts=function(){
+    const figures=ledgerBalance();let page=accountsWithCashTruth();
+    page=page.replace(/(<div class="eyebrow">AVAILABLE BUSINESS FUNDS<\/div><h2>)[\s\S]*?(<\/h2>)/,`$1${moneySummary(figures.available)}$2`);
+    page=page.replace(/(<span>Opening balance available<\/span><strong>)[\s\S]*?(<\/strong>)/,`$1${moneySummary(figures.openingAvailable)}$2`);
+    page=page.replace(/(<span>Operating balance<\/span><strong>)[\s\S]*?(<\/strong>)/,`$1${moneySummary(figures.operatingAvailable)}$2`);
+    return page;
+  };
+  window.__crmCashTruth='ready';
+})();
