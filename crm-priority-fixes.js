@@ -95,3 +95,33 @@
   };
   window.__crmCashTruth='ready';
 })();
+
+/* Apply the verified cash calculation directly to the Accounts screen after every render. */
+(function(){
+  const cashMap=()=>{
+    const result={available:{INR:0,AED:0},opening:{INR:Number(db.openingBalances?.INR||0),AED:Number(db.openingBalances?.AED||0)},income:{INR:0,AED:0},openingSpent:{INR:0,AED:0},operatingSpent:{INR:0,AED:0}};
+    for(const item of accountLedger()){
+      if(item.externalPayment)continue;const currency=item.currency==='AED'?'AED':'INR',amount=Number(item.amount||0);
+      if(item.type==='Income')result.income[currency]+=amount;else if(item.paymentSource==='Opening balance')result.openingSpent[currency]+=amount;else result.operatingSpent[currency]+=amount;
+    }
+    result.openingAvailable={INR:result.opening.INR-result.openingSpent.INR,AED:result.opening.AED-result.openingSpent.AED};
+    result.operatingAvailable={INR:result.income.INR-result.operatingSpent.INR,AED:result.income.AED-result.operatingSpent.AED};
+    for(const currency of ['INR','AED'])result.available[currency]=result.openingAvailable[currency]+result.operatingAvailable[currency];
+    return result;
+  };
+  const display=values=>['INR','AED'].filter(currency=>values[currency]!==0).map(currency=>`${currencySymbol(currency)}${Number(values[currency]).toLocaleString(currency==='AED'?'en-AE':'en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`).join(' · ')||'₹0.00';
+  const patchAccountsCash=()=>{
+    if(view!=='Accounts')return;const values=cashMap();
+    for(const eyebrow of document.querySelectorAll('.eyebrow')){
+      const panel=eyebrow.closest('.panel');if(!panel)continue;
+      if(eyebrow.textContent.trim()==='AVAILABLE BUSINESS FUNDS'){const amount=panel.querySelector('h2');if(amount)amount.textContent=display(values.available);}
+    }
+    for(const stat of document.querySelectorAll('.stat')){
+      const label=stat.querySelector('span')?.textContent.trim(),amount=stat.querySelector('strong');if(!amount)continue;
+      if(label==='Opening balance available')amount.textContent=display(values.openingAvailable);
+      if(label==='Operating balance')amount.textContent=display(values.operatingAvailable);
+    }
+  };
+  const renderWithCashTruth=render;render=function(){const response=renderWithCashTruth();patchAccountsCash();return response;};
+  setTimeout(patchAccountsCash,0);window.__crmCashTruthPatch='ready';
+})();
