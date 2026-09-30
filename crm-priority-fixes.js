@@ -78,7 +78,7 @@
     return table.replace(/<td>(.*?)<\/td>(<\/tr>)/gs, (cell, content, end) => {
       if (!/smallbtn|Receipt PDF|Edit receipt|Edit transaction/.test(content)) return cell;
       if (content.trim() === '—') return cell;
-      return `<td><div class="ledger-actions">${content}</div>${end}`;
+      return `<td><details class="ledger-menu"><summary>Actions</summary><div class="ledger-actions">${content}</div></details>${end}`;
     });
   };
 
@@ -89,4 +89,5 @@
   setTimeout(patchCashSummary, 80);
   window.__crmPriorityFixes = 'ready';
 })();
+
 
