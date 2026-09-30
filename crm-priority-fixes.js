@@ -9,7 +9,8 @@
       const funds=row.externalPayment?'External payment':row.paymentSource||'Operating balance';
       const mode=row.paymentMode||'—';
       const matched=isReconciled(row);
-      const actionMarkup=accountLedgerRow(row).match(/<td>([\s\S]*?)<\/td><\/tr>$/)?.[1]||'—';
+      const renderedRow=accountLedgerRow(row),actionStart=renderedRow.lastIndexOf('<td>'),actionEnd=renderedRow.lastIndexOf('</td></tr>');
+      const actionMarkup=actionStart>=0&&actionEnd>actionStart?renderedRow.slice(actionStart+4,actionEnd):'—';
       return `<tr><td>${esc(row.date)}</td><td><span class="badge ${row.type==='Income'?'Paid':'Overdue'}">${esc(row.type)}</span></td><td><b>${esc(row.category)}</b></td><td>${esc(row.note||'—')}</td><td class="right"><b>${amount}</b></td><td><span class="badge ${row.source==='manual'?'Draft':'Sent'}">${sourceLabel}</span></td><td>${esc(funds)}</td><td>${esc(mode)}</td><td><button class="smallbtn ${matched?'reconciled-button':''}" onclick="toggleReconciliation('${esc(row.id)}')">${matched?'Matched ✓':'Match'}</button></td><td>${actionMarkup}</td></tr>`;
     }).join('');
     return `<div class="tablewrap"><table><thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Reference / note</th><th class="right">Amount</th><th>Record</th><th>Funding source</th><th>Payment method</th><th>Bank</th><th>Actions</th></tr></thead><tbody>${body}</tbody></table></div>`;
