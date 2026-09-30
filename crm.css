@@ -467,12 +467,3 @@ body[data-theme="dark"] .quick-create-menu,body[data-theme="dark"] .command-pale
 /* Compact transaction actions without hiding receipt or edit controls. */
 .ledger-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:210px}.ledger-actions .smallbtn{margin:0;white-space:nowrap}.ledger-empty{color:var(--muted,#a7aa9c)}
 @media (max-width:900px){.ledger-actions{min-width:180px}.ledger-actions .smallbtn{font-size:12px;padding:7px 9px}}
-
-.ledger-menu{position:relative;display:inline-block;min-width:112px}
-.ledger-menu summary{list-style:none;cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:9px 12px;font-weight:700;color:var(--text);background:var(--panel);white-space:nowrap}
-.ledger-menu summary::-webkit-details-marker{display:none}
-.ledger-menu summary::after{content:'⌄';margin-left:8px;color:var(--gold)}
-.ledger-menu[open] summary{border-color:var(--gold)}
-.ledger-menu .ledger-actions{position:absolute;z-index:20;right:0;top:calc(100% + 6px);display:grid;min-width:176px;padding:7px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 28px rgba(0,0,0,.28)}
-.ledger-menu .ledger-actions .smallbtn{width:100%;text-align:left}
-@media (max-width:900px){.ledger-menu{min-width:auto}.ledger-menu summary{padding:8px 10px}.ledger-menu .ledger-actions{right:auto;left:0}}
