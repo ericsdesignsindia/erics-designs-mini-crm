@@ -71,17 +71,15 @@
     if (description) description.textContent = 'Opening balance plus recorded income, less payments made from those funds.';
   }
 
+  const baseLedgerRows = accountLedgerRows;
   accountLedgerRows = function (rows) {
-    if (!rows.length) return '<tr><td class="ledger-empty" colspan="10">No transactions match your search.</td></tr>';
-    return rows.map((row) => {
-      const renderedRow = accountLedgerRow(row);
-      const actionStart = renderedRow.lastIndexOf('<td>');
-      if (actionStart < 0) return renderedRow;
-      const beforeActions = renderedRow.slice(0, actionStart);
-      const rawActions = renderedRow.slice(actionStart + 4, -5).trim();
-      const actions = rawActions === '—' ? '—' : `<div class="ledger-actions">${rawActions}</div>`;
-      return `${beforeActions}<td>${actions}</td></tr>`;
-    }).join('');
+    const table = baseLedgerRows(rows);
+    if (!rows.length) return table;
+    return table.replace(/<td>(.*?)<\/td>(<\/tr>)/gs, (cell, content, end) => {
+      if (!/smallbtn|Receipt PDF|Edit receipt|Edit transaction/.test(content)) return cell;
+      if (content.trim() === '—') return cell;
+      return `<td><div class="ledger-actions">${content}</div>${end}`;
+    });
   };
 
   const app = document.getElementById('app');
@@ -91,3 +89,4 @@
   setTimeout(patchCashSummary, 80);
   window.__crmPriorityFixes = 'ready';
 })();
+
