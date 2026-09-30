@@ -2,7 +2,7 @@
 /* Loaded after the main CRM so these safeguards remain active if an older extension stops early. */
 (()=>{
   if(!document.querySelector('link[data-ui-refresh]')){const link=document.createElement('link');link.rel='stylesheet';link.href='./ui-refresh.css?v=20260930-21-workspace-ui';link.dataset.uiRefresh='true';document.head.appendChild(link)}
-  if(!document.querySelector('link[data-ui-alternative]')){const link=document.createElement('link');link.rel='stylesheet';link.href='./ui-alternative.css?v=20260930-28-paper-dashboard';link.dataset.uiAlternative='true';document.head.appendChild(link)}
+  if(!document.querySelector('link[data-ui-alternative]')){const link=document.createElement('link');link.rel='stylesheet';link.href='./ui-alternative.css?v=20260930-30-paper-mobile-fix';link.dataset.uiAlternative='true';document.head.appendChild(link)}
   document.body.classList.add('ui-alternative');
   window.__crmStability='ready';
   if(!db.openingBalances||typeof db.openingBalances!=='object')db.openingBalances={};

@@ -36,5 +36,8 @@
   clientDetail=function(){const markup=clientDetailBase();const client=db.clients.find(item=>item.id===selectedClient);return client?markup+workflowTracker(client):markup};
   const renderOperations=render;
   render=function(){const result=renderOperations();const app=document.getElementById('app');if(view==='Today'&&app)app.innerHTML=todayWorkspace();if(app){if(view==='Today')app.className='ui-workspace ui-command ui-today';const actions=document.querySelector('#commandBar .command-actions');if(actions&&!actions.querySelector('[data-today-workspace]')){const button=document.createElement('button');button.dataset.todayWorkspace='1';button.className='command-icon';button.title='Today';button.setAttribute('aria-label','Today workspace');button.textContent='✓';actions.prepend(button)}}return result};
+  const applyPaperDashboardFixes=()=>{if(!document.body.classList.contains('ui-alternative'))return;document.querySelectorAll('.command-hero h1').forEach(heading=>heading.style.setProperty('color','#172536','important'));document.querySelectorAll('.command-kpi').forEach(card=>{card.style.setProperty('background','#fff','important');card.style.setProperty('color','#172536','important')})};
+  new MutationObserver(applyPaperDashboardFixes).observe(document.getElementById('app'),{childList:true,subtree:true});
+  applyPaperDashboardFixes();
   document.addEventListener('click',event=>{if(!event.target.closest('[data-today-workspace]'))return;event.preventDefault();event.stopImmediatePropagation();draft=null;view='Today';query='';filter='';selectedClient=null;render()},true);
 })();
