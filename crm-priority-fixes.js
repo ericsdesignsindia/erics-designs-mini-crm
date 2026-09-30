@@ -1,149 +1,93 @@
-/* Priority CRM guardrails: clear ledger columns, receipt identity, audit visibility, and mobile access. */
-(function(){
-  accountLedgerRows=function(rows){
-    if(!rows?.length)return '<p class="sub">No transactions found.</p>';
-    const body=rows.map(row=>{
-      const currency=row.currency||'INR';
-      const amount=currencySymbol(currency)+Number(row.amount||0).toLocaleString(currency==='AED'?'en-AE':'en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
-      const sourceLabel=row.source==='invoice'?'Invoice payment':row.source==='proforma'?'Proforma advance':row.source==='vendor'?'Vendor bill':row.employeeId?'Employee payment':'Manual entry';
-      const funds=row.externalPayment?'External payment':row.paymentSource||'Operating balance';
-      const mode=row.paymentMode||'—';
-      const matched=isReconciled(row);
-      const renderedRow=accountLedgerRow(row),actionStart=renderedRow.lastIndexOf('<td>'),actionEnd=renderedRow.lastIndexOf('</td></tr>');
-      const rawActions=actionStart>=0&&actionEnd>actionStart?renderedRow.slice(actionStart+4,actionEnd):'';
-      const actionMarkup=rawActions.replace(/^\s*—\s*/,'').trim()||'<span class="ledger-empty">—</span>';
-      return `<tr><td>${esc(row.date)}</td><td><span class="badge ${row.type==='Income'?'Paid':'Overdue'}">${esc(row.type)}</span></td><td><b>${esc(row.category)}</b></td><td>${esc(row.note||'—')}</td><td class="right"><b>${amount}</b></td><td><span class="badge ${row.source==='manual'?'Draft':'Sent'}">${sourceLabel}</span></td><td>${esc(funds)}</td><td>${esc(mode)}</td><td><button class="smallbtn ${matched?'reconciled-button':''}" onclick="toggleReconciliation('${esc(row.id)}')">${matched?'Matched ✓':'Match'}</button></td><td><div class="ledger-actions">${actionMarkup}</div></td></tr>`;
+/* Stable Accounts ledger and balance display. */
+(function () {
+  function amountText(value, currency) {
+    const number = Number(value || 0);
+    const sign = number < 0 ? '-' : '';
+    const formatted = Math.abs(number).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return currency === 'AED' ? `${sign}AED ${formatted}` : `${sign}₹${formatted}`;
+  }
+
+  function cashFromVisibleLedger() {
+    const totals = { INR: { opening: 0, income: 0, expense: 0 }, AED: { opening: 0, income: 0, expense: 0 } };
+    try {
+      if (typeof db !== 'undefined' && db && db.openingBalances) {
+        Object.keys(totals).forEach((currency) => {
+          totals[currency].opening = Number(db.openingBalances[currency] || 0);
+        });
+      }
+    } catch (_) {}
+
+    const rows = document.querySelectorAll('#accountRows tbody tr');
+    rows.forEach((row) => {
+      const cells = row.querySelectorAll('td');
+      if (cells.length < 7) return;
+      const type = (cells[1].textContent || '').trim().toLowerCase();
+      const amount = (cells[4].textContent || '').trim();
+      const source = (cells[6].textContent || '').trim().toLowerCase();
+      const currency = /aed/i.test(amount) ? 'AED' : 'INR';
+      const value = Number((amount.replace(/[^0-9.\-]/g, '') || '0'));
+      if (!value || source === 'external payment') return;
+      if (type === 'income') totals[currency].income += value;
+      if (type === 'expense') totals[currency].expense += value;
+    });
+    return totals;
+  }
+
+  function totalDisplay(totals, field) {
+    const values = ['INR', 'AED'].map((currency) => {
+      const data = totals[currency];
+      const value = field === 'available'
+        ? data.opening + data.income - data.expense
+        : field === 'opening'
+          ? data.opening
+          : data.income - data.expense;
+      return { currency, value };
+    });
+    const active = values.filter(({ value }) => Math.abs(value) > 0.0001);
+    return (active.length ? active : [values[0]]).map(({ currency, value }) => amountText(value, currency)).join(' · ');
+  }
+
+  function setPanelValue(label, text) {
+    const labels = Array.from(document.querySelectorAll('.stat span, .stat .muted, .stat p, .stat h3'));
+    const labelNode = labels.find((node) => node.textContent.trim() === label);
+    if (!labelNode) return;
+    const panel = labelNode.closest('.stat');
+    if (!panel) return;
+    const valueNode = panel.querySelector('strong, h2, h3');
+    if (valueNode) valueNode.textContent = text;
+  }
+
+  function patchCashSummary() {
+    if (!document.querySelector('#accountRows tbody')) return;
+    const totals = cashFromVisibleLedger();
+    setPanelValue('Opening balance available', totalDisplay(totals, 'opening'));
+    setPanelValue('Operating balance', totalDisplay(totals, 'operating'));
+
+    const heading = Array.from(document.querySelectorAll('.eyebrow')).find((node) => node.textContent.trim() === 'AVAILABLE BUSINESS FUNDS');
+    const panel = heading && heading.closest('.panel');
+    const valueNode = panel && panel.querySelector('h2, strong');
+    if (valueNode) valueNode.textContent = totalDisplay(totals, 'available');
+    const description = panel && Array.from(panel.querySelectorAll('p, .muted')).find((node) => /Opening balance plus business income/i.test(node.textContent));
+    if (description) description.textContent = 'Opening balance plus recorded income, less payments made from those funds.';
+  }
+
+  accountLedgerRows = function (rows) {
+    if (!rows.length) return '<tr><td class="ledger-empty" colspan="10">No transactions match your search.</td></tr>';
+    return rows.map((row) => {
+      const renderedRow = accountLedgerRow(row);
+      const actionStart = renderedRow.lastIndexOf('<td>');
+      if (actionStart < 0) return renderedRow;
+      const beforeActions = renderedRow.slice(0, actionStart);
+      const rawActions = renderedRow.slice(actionStart + 4, -5).trim();
+      const actions = rawActions === '—' ? '—' : `<div class="ledger-actions">${rawActions}</div>`;
+      return `${beforeActions}<td>${actions}</td></tr>`;
     }).join('');
-    return `<div class="tablewrap"><table><thead><tr><th>Date</th><th>Type</th><th>Category</th><th>Reference / note</th><th class="right">Amount</th><th>Record</th><th>Funding source</th><th>Payment method</th><th>Bank</th><th>Actions</th></tr></thead><tbody>${body}</tbody></table></div>`;
   };
 
-  const originalReports=reports;
-  reports=function(){
-    const page=originalReports();
-    const note='<section class="panel currency-note"><div class="eyebrow">CURRENCY POLICY</div><h2>Figures stay in their recorded currency.</h2><p class="sub">INR and AED are shown separately. The CRM does not combine them into one total unless you record an exchange rate.</p></section>';
-    return page+note;
-  };
-
-  const originalAccounts=accounts;
-  accounts=function(){
-    const page=originalAccounts();
-    const activity=(db.activity||[]).slice(0,12);
-    const audit=`<section class="panel audit-panel"><div class="dialog-title"><div><div class="eyebrow">ACTIVITY LOG</div><h2>Recent CRM changes</h2><p class="sub">Changes to documents, payments, receipts, projects, and accounts are recorded here.</p></div></div><div class="audit-list">${activity.length?activity.map(item=>`<div><span>${esc(new Date(item.date).toLocaleString('en-IN'))}</span><b>${esc(item.message)}</b></div>`).join(''):'<p class="sub">No changes recorded yet.</p>'}</div></section>`;
-    return page+audit;
-  };
-
-  const immediatePayment=addPayment;
-  addPayment=function(){
-    if(!draft)return;
-    const amount=num(document.getElementById('payAmount')?.value),date=document.getElementById('payDate')?.value,reference=(document.getElementById('payRef')?.value||'').trim();
-    const duplicate=(draft.payments||[]).some(payment=>String(payment.date)===String(date)&&Number(payment.amount)===Number(amount)&&String(payment.reference||'').trim()===reference);
-    if(duplicate){toast('This payment is already recorded. Edit the existing payment instead.');return;}
-    return immediatePayment();
-  };
-
-  const existingReceiptSave=window.saveTransactionReceipt;
-  window.saveTransactionReceipt=async function(id,download){
-    const enteredNumber=val('transaction-receipt-number')?.trim();
-    const receiptNumbers=[],row=accountLedger().find(item=>item.id===id),ownIds=new Set([id]);
-    if(row?.vendorBillId)ownIds.add(row.vendorBillId);
-    if(row&&(row.source==='invoice'||row.source==='proforma')){
-      const document=(db.documents||[]).find(item=>item.id===(row.invoiceId||row.proformaId));
-      const payment=(document?.payments||[]).find(item=>String(item.date)===String(row.date)&&Number(item.amount)===Number(row.amount));
-      if(payment?.id)ownIds.add(payment.id);
-    }
-    for(const document of db.documents||[])for(const payment of document.payments||[])if(payment.receipt?.number)receiptNumbers.push({number:payment.receipt.number,id:payment.id});
-    for(const entry of db.accounts||[])if(entry.receipt?.number)receiptNumbers.push({number:entry.receipt.number,id:entry.id});
-    for(const bill of db.vendorBills||[])if(bill.receipt?.number)receiptNumbers.push({number:bill.receipt.number,id:bill.id});
-    if(enteredNumber&&receiptNumbers.some(item=>item.number===enteredNumber&&!ownIds.has(item.id))){document.getElementById('recordError').textContent='This receipt number is already used. Use a unique receipt number.';return;}
-    return existingReceiptSave(id,download);
-  };
-
-  const addCalendarToMobile=()=>{
-    const list=document.querySelector('#stableMobileMenu .section-menu');
-    if(list&&!list.querySelector('[data-view="Calendar"]')){
-      const button=document.createElement('button');button.dataset.view='Calendar';button.textContent='Calendar';
-      const reportsButton=list.querySelector('[data-view="Reports"]');reportsButton?list.insertBefore(button,reportsButton):list.append(button);
-    }
-  };
-  document.addEventListener('click',()=>setTimeout(addCalendarToMobile,0),true);
-  window.__crmPriorityFixes='ready';
-})();
-
-/* Cash position correction: calculate the displayed balances directly from the complete ledger. */
-(function(){
-  const moneySummary=values=>['INR','AED'].filter(currency=>Number(values[currency]||0)!==0).map(currency=>`${currencySymbol(currency)}${Number(values[currency]||0).toLocaleString(currency==='AED'?'en-AE':'en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`).join(' · ')||`${currencySymbol('INR')}0.00`;
-  const ledgerBalance=()=>{
-    const opening={INR:Number(db.openingBalances?.INR||0),AED:Number(db.openingBalances?.AED||0)}, income={INR:0,AED:0},spent={INR:0,AED:0},openingSpent={INR:0,AED:0};
-    for(const row of accountLedger()){
-      if(row.externalPayment)continue;
-      const currency=row.currency==='AED'?'AED':'INR',amount=Number(row.amount||0);
-      if(row.type==='Income')income[currency]+=amount;
-      else if(row.paymentSource==='Opening balance')openingSpent[currency]+=amount;
-      else spent[currency]+=amount;
-    }
-    const available={},openingAvailable={},operatingAvailable={};
-    for(const currency of ['INR','AED']){openingAvailable[currency]=opening[currency]-openingSpent[currency];operatingAvailable[currency]=income[currency]-spent[currency];available[currency]=openingAvailable[currency]+operatingAvailable[currency];}
-    return {available,openingAvailable,operatingAvailable};
-  };
-  const accountsWithCashTruth=accounts;
-  accounts=function(){
-    const figures=ledgerBalance();let page=accountsWithCashTruth();
-    page=page.replace(/(<div class="eyebrow">AVAILABLE BUSINESS FUNDS<\/div><h2>)[\s\S]*?(<\/h2>)/,`$1${moneySummary(figures.available)}$2`);
-    page=page.replace(/(<span>Opening balance available<\/span><strong>)[\s\S]*?(<\/strong>)/,`$1${moneySummary(figures.openingAvailable)}$2`);
-    page=page.replace(/(<span>Operating balance<\/span><strong>)[\s\S]*?(<\/strong>)/,`$1${moneySummary(figures.operatingAvailable)}$2`);
-    return page;
-  };
-  window.__crmCashTruth='ready';
-})();
-
-/* Apply the verified cash calculation directly to the Accounts screen after every render. */
-(function(){
-  const cashMap=()=>{
-    const result={available:{INR:0,AED:0},opening:{INR:Number(db.openingBalances?.INR||0),AED:Number(db.openingBalances?.AED||0)},income:{INR:0,AED:0},openingSpent:{INR:0,AED:0},operatingSpent:{INR:0,AED:0}};
-    for(const item of accountLedger()){
-      if(item.externalPayment)continue;const currency=item.currency==='AED'?'AED':'INR',amount=Number(item.amount||0);
-      if(item.type==='Income')result.income[currency]+=amount;else if(item.paymentSource==='Opening balance')result.openingSpent[currency]+=amount;else result.operatingSpent[currency]+=amount;
-    }
-    result.openingAvailable={INR:result.opening.INR-result.openingSpent.INR,AED:result.opening.AED-result.openingSpent.AED};
-    result.operatingAvailable={INR:result.income.INR-result.operatingSpent.INR,AED:result.income.AED-result.operatingSpent.AED};
-    for(const currency of ['INR','AED'])result.available[currency]=result.openingAvailable[currency]+result.operatingAvailable[currency];
-    return result;
-  };
-  const display=values=>['INR','AED'].filter(currency=>values[currency]!==0).map(currency=>`${currencySymbol(currency)}${Number(values[currency]).toLocaleString(currency==='AED'?'en-AE':'en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`).join(' · ')||'₹0.00';
-  const patchAccountsCash=()=>{
-    if(view!=='Accounts')return;const values=cashMap();
-    for(const eyebrow of document.querySelectorAll('.eyebrow')){
-      const panel=eyebrow.closest('.panel');if(!panel)continue;
-      if(eyebrow.textContent.trim()==='AVAILABLE BUSINESS FUNDS'){const amount=panel.querySelector('h2');if(amount)amount.textContent=display(values.available);}
-    }
-    for(const stat of document.querySelectorAll('.stat')){
-      const label=stat.querySelector('span')?.textContent.trim(),amount=stat.querySelector('strong');if(!amount)continue;
-      if(label==='Opening balance available')amount.textContent=display(values.openingAvailable);
-      if(label==='Operating balance')amount.textContent=display(values.operatingAvailable);
-    }
-  };
-  const renderWithCashTruth=render;render=function(){const response=renderWithCashTruth();patchAccountsCash();return response;};
-  setTimeout(patchAccountsCash,0);window.__crmCashTruthPatch='ready';
-})();
-
-/* Final display safeguard: Accounts cards total the same transaction rows the user sees. */
-(function(){
-  const parseAmount=text=>Number(String(text||'').replace(/[^0-9.-]/g,''))||0;
-  const patchVisibleLedgerCash=()=>{
-    if(view!=='Accounts')return;
-    const values={INR:{income:0,operating:0,opening:0},AED:{income:0,operating:0,opening:0}};
-    for(const row of document.querySelectorAll('#accountRows tbody tr')){
-      const cells=row.querySelectorAll('td');if(cells.length<8)continue;
-      const amountText=cells[4].textContent||'',currency=/AED/.test(amountText)?'AED':'INR',amount=parseAmount(amountText),type=cells[1].textContent||'',funding=cells[6].textContent||'';
-      if(/Income/i.test(type))values[currency].income+=amount;else if(/Opening balance/i.test(funding))values[currency].opening+=amount;else if(!/External payment/i.test(funding))values[currency].operating+=amount;
-    }
-    const opening=(currency)=>Number(db.openingBalances?.[currency]||0)-values[currency].opening;
-    const operating=(currency)=>values[currency].income-values[currency].operating;
-    const total=(currency)=>opening(currency)+operating(currency);
-    const format=getter=>['INR','AED'].filter(currency=>getter(currency)!==0).map(currency=>`${currencySymbol(currency)}${getter(currency).toLocaleString(currency==='AED'?'en-AE':'en-IN',{minimumFractionDigits:2,maximumFractionDigits:2})}`).join(' · ')||'₹0.00';
-    for(const eyebrow of document.querySelectorAll('.eyebrow')){if(eyebrow.textContent.trim()==='AVAILABLE BUSINESS FUNDS'){const heading=eyebrow.closest('.panel')?.querySelector('h2');if(heading)heading.textContent=format(total);}}
-    for(const stat of document.querySelectorAll('.stat')){const label=stat.querySelector('span')?.textContent.trim(),value=stat.querySelector('strong');if(!value)continue;if(label==='Opening balance available')value.textContent=format(opening);if(label==='Operating balance')value.textContent=format(operating);}
-  };
-  const renderWithVisibleLedgerCash=render;render=function(){const result=renderWithVisibleLedgerCash();setTimeout(patchVisibleLedgerCash,0);return result;};
-  setTimeout(patchVisibleLedgerCash,120);window.__crmVisibleLedgerCash='ready';
+  const app = document.getElementById('app');
+  if (app && window.MutationObserver) {
+    new MutationObserver(() => setTimeout(patchCashSummary, 0)).observe(app, { childList: true, subtree: true });
+  }
+  setTimeout(patchCashSummary, 80);
+  window.__crmPriorityFixes = 'ready';
 })();
