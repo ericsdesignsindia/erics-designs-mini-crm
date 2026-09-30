@@ -1861,6 +1861,7 @@ accounts=function(){const month=today().slice(0,7),ledger=accountLedger(),totals
 
 /* Final stability layer: one source of truth for navigation and cash balances. */
 (()=>{
+  window.__crmStability='started';
   const migrateBeforeStability=migrate;
   migrate=function(data){
     const result=migrateBeforeStability(data);
@@ -1920,4 +1921,5 @@ accounts=function(){const month=today().slice(0,7),ledger=accountLedger(),totals
     if(event.target.closest('#stableMobileMenu [data-close-menu]')){event.preventDefault();document.getElementById('stableMobileMenu')?.remove();return;}
     if(event.target.closest('#commandBar .command-new')){event.preventDefault();event.stopImmediatePropagation();showQuickCreateMenu();}
   },true);
+  window.__crmStability='ready';
 })();
