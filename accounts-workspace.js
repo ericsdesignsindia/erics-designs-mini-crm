@@ -13,8 +13,10 @@
     }else{
       page = page.replace('Opening balance plus business income, less payments made from those funds.', 'Opening balance plus recorded income, less payments made from CRM funds.');
     }
-    const duplicateActionsStart=page.indexOf('<div class="dashboard-columns"><section class="panel"><div class="eyebrow">RECORD A PAYMENT</div>');
-    const collectionsStart=page.indexOf('<section class="panel"><div class="dialog-title"><div><div class="eyebrow">PAYMENT COLLECTIONS</div>');
+    const duplicateLabel=page.indexOf('<div class="eyebrow">RECORD A PAYMENT</div>');
+    const duplicateActionsStart=duplicateLabel===-1?-1:page.lastIndexOf('<div class="dashboard-columns">',duplicateLabel);
+    const collectionsLabel=page.indexOf('<div class="eyebrow">PAYMENT COLLECTIONS</div>',duplicateLabel);
+    const collectionsStart=collectionsLabel===-1?-1:page.lastIndexOf('<section class="panel">',collectionsLabel);
     if(duplicateActionsStart!==-1&&collectionsStart>duplicateActionsStart)page=page.slice(0,duplicateActionsStart)+page.slice(collectionsStart);
     return page.replace('</section><div class="stats three">', `</section>${financeActions}<div class="stats three">`);
   };
