@@ -467,3 +467,5 @@ body[data-theme="dark"] .quick-create-menu,body[data-theme="dark"] .command-pale
 /* Compact transaction actions without hiding receipt or edit controls. */
 .ledger-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:210px}.ledger-actions .smallbtn{margin:0;white-space:nowrap}.ledger-empty{color:var(--muted,#a7aa9c)}
 @media (max-width:900px){.ledger-actions{min-width:180px}.ledger-actions .smallbtn{font-size:12px;padding:7px 9px}}
+
+.finance-actions-panel{display:grid;grid-template-columns:minmax(220px,.7fr) minmax(420px,1.3fr);gap:24px;align-items:start}.finance-action-groups{display:grid;gap:14px}.finance-action-groups>div{display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:center}.finance-action-groups>div>span{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}.finance-action-groups .actions{gap:8px}.finance-action-groups .actions button{margin:0}@media(max-width:900px){.finance-actions-panel{grid-template-columns:1fr;gap:16px}.finance-action-groups>div{grid-template-columns:1fr;gap:8px}.finance-action-groups .actions button{flex:1 1 145px}}
