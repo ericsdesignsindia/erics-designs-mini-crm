@@ -15,11 +15,11 @@
     return {kind:'account',target:entry,counterparty:employee?.name||entry?.counterparty||entry?.note||'Business transaction'};
   };
   const defaultReceipt=(row,source)=>({
-    number:`ED-R-${String(row.date||today()).replace(/-/g,'')}-${String(row.id||uid()).replace(/[^a-z0-9]/gi,'').slice(-5).toUpperCase()}`,
-    date:row.date||today(),counterparty:source.counterparty||'Counterparty',reference:row.paymentMode||row.note||row.category||'Transaction',notes:row.type==='Income'?'Payment received and recorded in the Eric’s Designs Accounts ledger.':'Payment made and recorded in the Eric’s Designs Accounts ledger.'
+    number:`${row.type==='Income'?'ED-R':'ED-PV'}-${String(row.date||today()).replace(/-/g,'')}-${String(row.id||uid()).replace(/[^a-z0-9]/gi,'').slice(-5).toUpperCase()}`,
+    date:row.date||today(),kind:row.type==='Income'?'Payment receipt':'Payment voucher',counterparty:source.counterparty||'Counterparty',reference:row.paymentMode||row.note||row.category||'Transaction',notes:row.type==='Income'?'Payment received and recorded in the Eric’s Designs Accounts ledger.':'Payment made and recorded in the Eric’s Designs Accounts ledger.'
   });
   const receiptDocument=(row,receipt)=>({
-    type:'Receipt',number:receipt.number,date:receipt.date,due:receipt.date,currency:row.currency||'INR',business:db.settings,
+    type:'Receipt',receiptKind:row.type==='Income'?'Payment receipt':'Payment voucher',number:receipt.number,date:receipt.date,due:receipt.date,currency:row.currency||'INR',business:db.settings,
     client:{name:receipt.counterparty||'Counterparty'},payments:[{date:receipt.date,amount:Number(row.amount||0),reference:receipt.reference||row.note||'Transaction'}],
     receiptNotes:receipt.notes||'',terms:receipt.notes||''
   });
@@ -30,12 +30,13 @@
   window.downloadTransactionReceipt=async function(id){
     const row=latestRow(id);if(!row)return toast('Transaction not found. Refresh Accounts and try again.');
     const source=sourceFor(row),receipt=source.target?.receipt||defaultReceipt(row,source);
-    try{toast('Creating receipt PDF…');downloadPdfFile(await createPaymentReceiptPdf(receiptDocument(row,receipt)));toast('Receipt PDF downloaded.');}catch(error){toast(error?.message||'Could not create the receipt PDF.');}
+    try{const label=row.type==='Income'?'Payment receipt':'Payment voucher';toast('Creating '+label.toLowerCase()+'…');downloadPdfFile(await createPaymentReceiptPdf(receiptDocument(row,receipt)));toast(label+' downloaded.');}catch(error){toast(error?.message||'Could not create the receipt PDF.');}
   };
   window.editTransactionReceipt=function(id){
     const row=latestRow(id);if(!row)return toast('Transaction not found. Refresh Accounts and try again.');
     const source=sourceFor(row),receipt=structuredClone(source.target?.receipt||defaultReceipt(row,source));
-    modal('Edit transaction receipt',`<p class="sub">Receipt details are stored with this transaction. Editing the transaction itself remains available from Accounts.</p>${field('Receipt number *','transaction-receipt-number',receipt.number,'text','required')}${field('Receipt date *','transaction-receipt-date',receipt.date,'date','required')}${field('Received from / paid to *','transaction-receipt-party',receipt.counterparty,'text','required')}<div class="full"><label for="transaction-receipt-reference">Reference / payment method</label><input id="transaction-receipt-reference" value="${esc(receipt.reference||'')}"></div><div class="full"><label for="transaction-receipt-notes">Receipt notes</label><textarea id="transaction-receipt-notes">${esc(receipt.notes||'')}</textarea></div>`,()=>window.saveTransactionReceipt(id,false));
+    const voucher=row.type!=='Income',label=voucher?'Payment voucher':'Payment receipt',partyLabel=voucher?'Paid to *':'Received from *';
+    modal('Edit '+label,`<p class="sub">${label} details are stored with this transaction. Editing the transaction itself remains available from Accounts.</p>${field((voucher?'Voucher':'Receipt')+' number *','transaction-receipt-number',receipt.number,'text','required')}${field('Receipt date *','transaction-receipt-date',receipt.date,'date','required')}${field(partyLabel,'transaction-receipt-party',receipt.counterparty,'text','required')}<div class="full"><label for="transaction-receipt-reference">Reference / payment method</label><input id="transaction-receipt-reference" value="${esc(receipt.reference||'')}"></div><div class="full"><label for="transaction-receipt-notes">Receipt notes</label><textarea id="transaction-receipt-notes">${esc(receipt.notes||'')}</textarea></div>`,()=>window.saveTransactionReceipt(id,false));
     const actions=document.querySelector('#recordForm .actions');if(actions)actions.insertAdjacentHTML('beforeend',`<button type="button" class="primary" onclick="saveTransactionReceipt('${esc(id)}',true)">Save & download PDF</button>`);
   };
   window.saveTransactionReceipt=async function(id,download){
@@ -44,7 +45,7 @@
     if(!receipt.number||!receipt.date||!receipt.counterparty){document.getElementById('recordError').textContent='Add a receipt number, date, and counterparty.';return;}
     if(!commitChange(()=>{if(!writeReceipt(row,receipt))throw new Error('The linked transaction was not found.');},'Saved receipt details'))return;
     closeSaved();
-    if(download){try{toast('Creating receipt PDF…');downloadPdfFile(await createPaymentReceiptPdf(receiptDocument(row,receipt)));toast('Receipt PDF downloaded.');}catch(error){toast(error?.message||'Receipt details were saved, but the PDF could not be created.');}}
+    if(download){try{const label=row.type==='Income'?'Payment receipt':'Payment voucher';toast('Creating '+label.toLowerCase()+'…');downloadPdfFile(await createPaymentReceiptPdf(receiptDocument(row,receipt)));toast(label+' downloaded.');}catch(error){toast(error?.message||'Receipt details were saved, but the PDF could not be created.');}}
   };
   window.editReceiptTransaction=function(id){
     const row=latestRow(id);if(!row)return;const source=sourceFor(row);
@@ -60,7 +61,7 @@
   };
   const originalLedgerRow=accountLedgerRow;
   accountLedgerRow=function(row){
-    const controls=`<button class="smallbtn" onclick="downloadTransactionReceipt('${esc(row.id)}')">Receipt PDF</button><button class="smallbtn" onclick="editTransactionReceipt('${esc(row.id)}')">Edit receipt</button><button class="smallbtn" onclick="editReceiptTransaction('${esc(row.id)}')">Edit transaction</button>`;
+    const controls=`<button class="smallbtn" onclick="downloadTransactionReceipt('${esc(row.id)}')">${row.type==='Income'?'Receipt PDF':'Voucher PDF'}</button><button class="smallbtn" onclick="editTransactionReceipt('${esc(row.id)}')">${row.type==='Income'?'Edit receipt':'Edit voucher'}</button><button class="smallbtn" onclick="editReceiptTransaction('${esc(row.id)}')">Edit transaction</button>`;
     const markup=originalLedgerRow(row);
     return markup.replace(/<\/td><\/tr>$/,controls+'</td></tr>');
   };
