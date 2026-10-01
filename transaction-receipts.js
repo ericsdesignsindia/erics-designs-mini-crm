@@ -14,13 +14,18 @@
     const employee=entry?.employeeId?(db.employees||[]).find(item=>item.id===entry.employeeId):null;
     return {kind:'account',target:entry,counterparty:employee?.name||entry?.counterparty||entry?.note||'Business transaction'};
   };
+  const paymentInfoFor=(row,source)=>{
+    const excluded=new Set(['employee payment',String(source.counterparty||'').toLowerCase(),String(row.paymentSource||'').toLowerCase(),String(row.paymentMode||'').toLowerCase(),'operating balance','opening balance','external payment','cash','upi','bank transfer','card']);
+    const parts=String(row.note||'').split(' · ').map(part=>part.trim()).filter(part=>part&&!excluded.has(part.toLowerCase()));
+    return parts.join(' · ')||row.category||'Payment';
+  };
   const defaultReceipt=(row,source)=>({
     number:`${row.type==='Income'?'ED-R':'ED-PV'}-${String(row.date||today()).replace(/-/g,'')}-${String(row.id||uid()).replace(/[^a-z0-9]/gi,'').slice(-5).toUpperCase()}`,
     date:row.date||today(),kind:row.type==='Income'?'Payment receipt':'Payment voucher',counterparty:source.counterparty||'Counterparty',reference:row.paymentMode||row.note||row.category||'Transaction',notes:row.type==='Income'?'Payment received and recorded in the Eric’s Designs Accounts ledger.':'Payment made and recorded in the Eric’s Designs Accounts ledger.'
   });
   const receiptDocument=(row,receipt)=>({
     type:'Receipt',receiptKind:row.type==='Income'?'Payment receipt':'Payment voucher',number:receipt.number,date:receipt.date,due:receipt.date,currency:row.currency||'INR',business:db.settings,
-    client:{name:receipt.counterparty||'Counterparty'},payments:[{date:receipt.date,amount:Number(row.amount||0),info:row.note||row.category||'Transaction',method:receipt.reference||row.paymentMode||'—',reference:receipt.reference||row.paymentMode||row.note||'Transaction'}],
+    client:{name:receipt.counterparty||'Counterparty'},payments:[{date:receipt.date,amount:Number(row.amount||0),info:paymentInfoFor(row,sourceFor(row)),method:row.paymentMode||receipt.reference||'—',reference:receipt.reference||row.paymentMode||row.note||'Transaction'}],
     receiptNotes:receipt.notes||'',terms:receipt.notes||''
   });
   const writeReceipt=(row,receipt)=>{
