@@ -65,3 +65,33 @@
     return markup.replace(/<\/td><\/tr>$/,controls+'</td></tr>');
   };
 })();
+
+/* Allow payment receipts for proforma advances and final-invoice payments. */
+(function () {
+  window.downloadPaymentReceiptPdf = async function () {
+    if (!previewDoc || !Array.isArray(previewDoc.payments) || !previewDoc.payments.length) {
+      toast('Record a payment before creating a receipt.');
+      return;
+    }
+    try {
+      toast('Creating payment receipt…');
+      const receipt = { ...previewDoc, receiptNotes: previewDoc.type === 'Proforma' ? 'This receipt confirms the advance payment received against the proforma invoice.' : 'This receipt confirms the payment received.' };
+      downloadPdfFile(await createPaymentReceiptPdf(receipt));
+      toast('Payment receipt downloaded.');
+    } catch (error) {
+      toast(error?.message || 'Could not create the payment receipt.');
+    }
+  };
+
+  showPaymentReceipt = function () {
+    if (!draft || !Array.isArray(draft.payments) || !draft.payments.length) {
+      toast('Record a payment before creating a receipt.');
+      return;
+    }
+    previewDoc = structuredClone(draft);
+    const label = draft.type === 'Proforma' ? 'Advance payment receipt' : 'Payment receipt';
+    const dialog = document.getElementById('preview');
+    dialog.innerHTML = `<div class="modalbar"><div><strong>${label}</strong><small>${esc(previewDoc.number)}</small></div><div class="actions"><button class="primary" onclick="downloadPaymentReceiptPdf()">Download receipt PDF</button><button onclick="document.getElementById('preview').close()">Close</button></div></div><div id="previewBody"><article class="document receipt"><h2>${label} ready</h2><p>${esc(previewDoc.client?.name || 'Client')} · ${esc(previewDoc.number)}</p><p>Payment recorded: <b>${esc(fmt(previewDoc, totals(previewDoc).paid))}</b></p></article></div>`;
+    dialog.showModal();
+  };
+})();
