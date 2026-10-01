@@ -20,7 +20,7 @@
   });
   const receiptDocument=(row,receipt)=>({
     type:'Receipt',receiptKind:row.type==='Income'?'Payment receipt':'Payment voucher',number:receipt.number,date:receipt.date,due:receipt.date,currency:row.currency||'INR',business:db.settings,
-    client:{name:receipt.counterparty||'Counterparty'},payments:[{date:receipt.date,amount:Number(row.amount||0),reference:receipt.reference||row.note||'Transaction'}],
+    client:{name:receipt.counterparty||'Counterparty'},payments:[{date:receipt.date,amount:Number(row.amount||0),info:row.note||row.category||'Transaction',method:receipt.reference||row.paymentMode||'—',reference:receipt.reference||row.paymentMode||row.note||'Transaction'}],
     receiptNotes:receipt.notes||'',terms:receipt.notes||''
   });
   const writeReceipt=(row,receipt)=>{
