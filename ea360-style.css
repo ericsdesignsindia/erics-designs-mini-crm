@@ -52,3 +52,16 @@
   body.ea360-interface .badge.Overdue{background:#fde8eb!important;color:#b53448!important}
   body.ea360-interface .badge.Sent{background:#e5f0ff!important;color:#2766aa!important}
 }
+
+/* Scroll ownership: desktop workspace scrolls once, the sidebar scrolls only for its own long menu. */
+@media(min-width:1024px){
+  html,body{height:100%;overflow:hidden}
+  body.ea360-interface .shell,body.ea360-interface .shell.sidebar-collapsed{height:100dvh;min-height:0}
+  body.ea360-interface .shell main{height:100dvh;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-gutter:stable}
+  body.ea360-interface .shell aside{height:100dvh;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain}
+  body.ea360-interface .shell aside nav{min-height:min-content}
+}
+@media(max-width:1023px){
+  html,body{height:auto;min-height:100%;overflow-x:clip;overflow-y:auto}
+  body.ea360-interface .shell,body.ea360-interface .shell main{height:auto;min-height:0;overflow:visible}
+}
