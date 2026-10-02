@@ -74,3 +74,14 @@
   body.ea360-interface .shell aside nav::-webkit-scrollbar-thumb{background:#42617f;border-radius:99px}
   body.ea360-interface .shell aside footer{flex:0 0 auto}
 }
+
+/* Fixed workspace frame: the logo/header remain visible; only content and the department list scroll. */
+@media(min-width:1024px){
+  body.ea360-interface .shell,body.ea360-interface .shell.sidebar-collapsed{display:block;height:auto;min-height:100dvh}
+  body.ea360-interface .shell aside{position:fixed!important;inset:0 auto 0 0;width:252px;height:100dvh;z-index:70;display:flex!important;overflow:hidden!important}
+  body.ea360-interface .shell main{margin-left:252px;width:auto;height:100dvh;min-height:0;overflow-y:auto!important;overflow-x:hidden!important;scroll-behavior:smooth}
+  body.ea360-interface .shell aside .sidehead{flex:0 0 auto}
+  body.ea360-interface .shell aside nav{display:flex!important;flex:0 0 auto!important;height:calc(100dvh - 166px);min-height:0!important;overflow-y:scroll!important;overflow-x:hidden!important;touch-action:pan-y;overscroll-behavior:contain}
+  body.ea360-interface .shell aside footer{display:none!important}
+  body.ea360-interface .commandbar{position:sticky!important;top:14px;z-index:60}
+}
