@@ -29,3 +29,26 @@
   body.ea360-interface .pipeline .lane{background:#f5f8fb!important;border-color:#e0e8f1!important}body.ea360-interface .lead-card{background:#fff!important;border-color:#dee7f0!important;box-shadow:0 3px 10px #253d590c}body.ea360-interface .lead-card strong{color:#1c3049!important}
 }
 @media(max-width:1023px){body.ea360-interface .commandbar{background:#fff;border:1px solid #dce5f0;box-shadow:0 5px 16px #2138560d}body.ea360-interface #mobileNav{background:#10223a;border-top-color:#234666}body.ea360-interface #mobileNav button.active{color:#a9d0ff}body.ea360-interface .mobile-fab{background:#1c5da9!important}}
+
+/* Colour correction: remove the legacy olive and gold dashboard palette from the EA workspace. */
+@media(min-width:1024px){
+  body.ea360-interface{--accent:#2167b6;--bg:#f3f6fa;--paper:#fff;--ink:#182a42;--muted:#6d7f96;--line:#dce6f1}
+  body.ea360-interface .command-dashboard .command-hero{background:linear-gradient(118deg,#102b4d 0%,#1c548b 58%,#276fb5 100%)!important;box-shadow:0 14px 30px #1e579426!important}
+  body.ea360-interface .command-hero .eyebrow{color:#b8d8ff!important}body.ea360-interface .command-hero h1{color:#fff!important}body.ea360-interface .command-hero p{color:#e4f0ff!important}
+  body.ea360-interface .command-actions button{background:#fff!important;border:1px solid #d5e2f2!important;color:#174b86!important}
+  body.ea360-interface .command-actions .primary{background:#67a9e8!important;border-color:#67a9e8!important;color:#082440!important}
+  body.ea360-interface .stats .stat::after{background:#4f8eea18!important}
+  body.ea360-interface .command-kpi::after{background:#2d75c619!important}
+  body.ea360-interface .pipeline-step{background:#f3f7fc!important}
+  body.ea360-interface .pipeline-step i{background:#4c8bdd!important}
+  body.ea360-interface .pipeline-step:nth-child(2) i{background:#8568d9!important}body.ea360-interface .pipeline-step:nth-child(3) i{background:#4f9dca!important}body.ea360-interface .pipeline-step:nth-child(4) i{background:#42a780!important}body.ea360-interface .pipeline-step:nth-child(5) i{background:#dc7081!important}
+  body.ea360-interface .focus-dot{background:#efb03d!important}
+  body.ea360-interface .command-card,.ea360-interface .command-kpi{border-color:#dbe6f2!important}
+  body.ea360-interface .command-card h2,.ea360-interface .command-kpi b{color:#183454!important}
+  body.ea360-interface button.primary,body.ea360-interface .primary{background:#1e63ae!important;border-color:#1e63ae!important;color:#fff!important}
+  body.ea360-interface .smallbtn{background:#fff!important;border-color:#cad9e9!important;color:#234e7c!important}
+  body.ea360-interface .smallbtn:hover{background:#edf5ff!important;border-color:#8db6e2!important}
+  body.ea360-interface .badge.Paid,body.ea360-interface .badge.Accepted{background:#e2f5ec!important;color:#16734c!important}
+  body.ea360-interface .badge.Overdue{background:#fde8eb!important;color:#b53448!important}
+  body.ea360-interface .badge.Sent{background:#e5f0ff!important;color:#2766aa!important}
+}
