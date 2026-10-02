@@ -1,0 +1,31 @@
+/* EA 360-inspired operations shell: visual upgrade only; CRM data and flows stay unchanged. */
+@media(min-width:1024px){
+  body.ea360-interface{background:#f3f6fa;color:#18253a}
+  body.ea360-interface .shell,body.ea360-interface .shell.sidebar-collapsed{display:grid;grid-template-columns:252px minmax(0,1fr);min-height:100vh;background:#f3f6fa}
+  body.ea360-interface .shell aside{position:sticky;top:0;display:flex!important;align-self:start;flex-direction:column!important;align-items:stretch!important;gap:0;height:100vh;min-height:100vh;padding:22px 13px;background:linear-gradient(180deg,#11233b 0%,#0b182b 100%);border:0;box-shadow:8px 0 28px #09162618;overflow:auto}
+  body.ea360-interface .shell aside .sidehead{display:block;padding:8px 12px 25px;border-bottom:1px solid #ffffff1a;min-height:auto}
+  body.ea360-interface .shell aside .brand.brand-logo img{width:156px;max-width:100%;height:42px;object-fit:contain;object-position:left center;filter:brightness(0) invert(1)}
+  body.ea360-interface .shell aside .sidebar-toggle,body.ea360-interface .shell aside .navbar-compact-toggle,body.ea360-interface .shell aside #navbarStatus{display:none!important}
+  body.ea360-interface .shell aside nav{display:flex!important;flex:0 0 auto;flex-direction:column!important;align-items:stretch!important;gap:3px;overflow:visible!important;padding:16px 0 28px;order:0}
+  body.ea360-interface .shell aside nav button,body.ea360-interface .shell.sidebar-collapsed aside nav button{display:flex!important;justify-content:flex-start!important;align-items:center;min-height:42px;margin:0;padding:9px 13px;border:0!important;border-radius:8px!important;background:transparent!important;color:#bac7d8!important;font-size:13px;font-weight:650;text-align:left}
+  body.ea360-interface .shell aside nav button .nav-icon{color:#91aac7}
+  body.ea360-interface .shell aside nav button.active{background:#1c385c!important;color:#fff!important;box-shadow:inset 3px 0 #6ba6e9!important}
+  body.ea360-interface .shell aside nav button.active .nav-icon,body.ea360-interface .shell aside nav button:hover .nav-icon{color:#9dcaff}
+  body.ea360-interface .shell aside nav button:hover{background:#193250!important;color:#fff!important}
+  body.ea360-interface .shell aside nav .ea-nav-heading{display:block;margin:19px 13px 7px;color:#7f9aba;font-size:10px;font-weight:800;letter-spacing:.13em}
+  body.ea360-interface .shell aside footer{display:block!important;margin-top:auto;padding:16px 13px;border-top:1px solid #ffffff1a;color:#91a4ba;font-size:11px;line-height:1.6}
+  body.ea360-interface .shell main{max-width:none;margin:0;padding:18px 30px 40px;background:#f3f6fa}
+  body.ea360-interface .commandbar{position:sticky;top:14px;margin:0 0 25px;padding:11px 14px;border:1px solid #dce5f1;border-radius:12px;background:#fffffff5;box-shadow:0 5px 20px #223d6410;z-index:40}
+  body.ea360-interface .command-search{height:40px;width:min(520px,50vw);background:#f5f8fc;border-color:#e2e9f2;border-radius:8px;color:#6680a0}
+  body.ea360-interface .command-search input{color:#1d2b40;font-size:14px}
+  body.ea360-interface .command-new{background:#1c5da9!important;border-color:#1c5da9!important;color:#fff!important;box-shadow:none}
+  body.ea360-interface .command-ai{background:#eef5ff!important;border-color:#cbdcf4!important;color:#1d5fae!important}
+  body.ea360-interface .command-icon,body.ea360-interface .profile-menu{background:#f7f9fc!important;border-color:#dce5f0!important;color:#39536f!important}
+  body.ea360-interface header{margin:20px 0 22px}body.ea360-interface h1{color:#152a44!important;font-size:31px}body.ea360-interface header p{color:#6d7e94}
+  body.ea360-interface .panel,body.ea360-interface .stat,body.ea360-interface .document-card,body.ea360-interface .client-card{background:#fff!important;border-color:#dfe7f0!important;box-shadow:0 4px 15px #2138560b}
+  body.ea360-interface .panel{border-radius:12px}body.ea360-interface .eyebrow{color:#2368ba}body.ea360-interface .stats .stat strong{color:#17395f!important}
+  body.ea360-interface .badge{border:0!important}body.ea360-interface .workspace-breadcrumb{color:#667b95}
+  body.ea360-interface table th{background:#eff4fa!important;color:#58708d!important;border-bottom-color:#dce6f0!important}body.ea360-interface table td{border-bottom-color:#e7edf4!important}
+  body.ea360-interface .pipeline .lane{background:#f5f8fb!important;border-color:#e0e8f1!important}body.ea360-interface .lead-card{background:#fff!important;border-color:#dee7f0!important;box-shadow:0 3px 10px #253d590c}body.ea360-interface .lead-card strong{color:#1c3049!important}
+}
+@media(max-width:1023px){body.ea360-interface .commandbar{background:#fff;border:1px solid #dce5f0;box-shadow:0 5px 16px #2138560d}body.ea360-interface #mobileNav{background:#10223a;border-top-color:#234666}body.ea360-interface #mobileNav button.active{color:#a9d0ff}body.ea360-interface .mobile-fab{background:#1c5da9!important}}
