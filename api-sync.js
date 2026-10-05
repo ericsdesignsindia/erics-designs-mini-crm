@@ -4,9 +4,14 @@
 const ERP_API = window.ERP_API_URL || 'http://localhost:4000/api';
 const ERP_WORKSPACE = 'erics-designs-default';
 const ERP_TOKEN_KEY = 'erics-designs-erp-token';
-let erpRevision = null;
+const ERP_DIRTY_KEY = 'erics-designs-erp-unsynced';
+const ERP_REVISION_KEY = 'erics-designs-erp-revision';
+const savedRevision = localStorage.getItem(ERP_REVISION_KEY);
+let erpRevision = /^\d+$/.test(savedRevision || '') ? Number(savedRevision) : null;
 let erpSyncTimer;
 let erpOnline = false;
+let erpDirty = localStorage.getItem(ERP_DIRTY_KEY) === '1';
+let erpConflict = false;
 // A remembered device keeps only the expiring access token; the password is never stored by the CRM.
 let erpToken = localStorage.getItem(ERP_TOKEN_KEY) || '';
 
@@ -93,23 +98,32 @@ window.erpApi = {
   disconnectGmail: () => api('/integrations/gmail', { method: 'DELETE' }),
   googleDriveStatus: () => api('/integrations/google-drive/status'),
   backups: () => api(`/workspaces/${ERP_WORKSPACE}/backups`),
+  restoreBackup: id => api(`/workspaces/${ERP_WORKSPACE}/backups/${encodeURIComponent(id)}/restore`, { method: 'POST' }),
   uploadDriveAttachment: payload => api('/integrations/google-drive/attachments', { method: 'POST', body: JSON.stringify(payload) }),
   connectGoogleDrive: () => api('/integrations/google-drive/connect', { method: 'POST' }),
   disconnectGoogleDrive: () => api('/integrations/google-drive', { method: 'DELETE' })
 };
 window.erpAuth = { logout: () => { erpToken = ''; localStorage.removeItem(ERP_TOKEN_KEY); location.reload(); }, login: () => { erpToken = ''; showAuth(); } };
 
+function rememberRevision() { if (Number.isInteger(erpRevision)) localStorage.setItem(ERP_REVISION_KEY, String(erpRevision)); }
+function markUnsynced() { erpDirty = true; localStorage.setItem(ERP_DIRTY_KEY, '1'); }
+function markSynced() { erpDirty = false; erpConflict = false; localStorage.removeItem(ERP_DIRTY_KEY); rememberRevision(); }
+
 async function pushWorkspace() {
+  if (erpConflict) return false;
   try {
-    const result = await api(`/workspaces/${ERP_WORKSPACE}`, { method: 'PUT', body: JSON.stringify({ state: db, revision: erpRevision }) });
+    const result = await api(`/workspaces/${ERP_WORKSPACE}`, { method: 'PUT', body: JSON.stringify({ state: db, revision: Number.isInteger(erpRevision) ? erpRevision : 0 }) });
     erpRevision = result.revision;
+    markSynced();
     setErpStatus('MongoDB sync active', true);
+    return true;
   } catch (error) {
     if (error.status === 409 && error.data?.state) {
-      erpRevision = error.data.revision;
-      setErpStatus('Newer server data found. Reload to review it.', false);
-      toast('A newer cloud version exists. Reload before making more changes.');
+      erpConflict = true;
+      setErpStatus('Cloud changes need review. Your browser data is protected.', false);
+      toast('Cloud changes were found. Your local work was kept safely and was not overwritten.');
     } else setErpStatus('Changes remain saved on this browser', false);
+    return false;
   }
 }
 
@@ -121,7 +135,7 @@ function scheduleWorkspaceSync() {
 const localPersist = persist;
 persist = function () {
   const saved = localPersist();
-  if (saved) scheduleWorkspaceSync();
+  if (saved) { markUnsynced(); scheduleWorkspaceSync(); }
   return saved;
 };
 
@@ -133,9 +147,16 @@ async function loadWorkspace() {
   }
   try {
     await api('/health');
-    const remote = await api(`/workspaces/${ERP_WORKSPACE}`);
+    let remote = await api(`/workspaces/${ERP_WORKSPACE}`);
+    if (erpDirty) {
+      erpRevision = Number.isInteger(erpRevision) ? erpRevision : Number(localStorage.getItem(ERP_REVISION_KEY));
+      if (!Number.isInteger(erpRevision)) erpRevision = remote.revision;
+      if (!await pushWorkspace()) return;
+      remote = await api(`/workspaces/${ERP_WORKSPACE}`);
+    }
     db = migrate(remote.state);
     erpRevision = remote.revision;
+    markSynced();
     localStorage.setItem(KEY, JSON.stringify(db));
     lastSnapshot = localStorage.getItem(KEY);
     render();
@@ -151,12 +172,13 @@ async function loadWorkspace() {
     }
     if (error.status === 404) {
       setErpStatus('Creating your MongoDB workspace…', true);
+      erpRevision = 0;
       await pushWorkspace();
     } else setErpStatus('Start the local API to enable sync', false);
   }
 }
 
-window.addEventListener('online', loadWorkspace);
+window.addEventListener('online', () => erpDirty ? pushWorkspace() : loadWorkspace());
 loadWorkspace();
 
 // Keep cloud data current without interrupting record editing.
@@ -165,7 +187,7 @@ let erpAutoRefreshTimer;
 let erpRefreshInFlight = false;
 
 async function refreshWorkspaceIfChanged() {
-  if (!erpToken || erpRefreshInFlight || document.hidden || recordDraft) return;
+  if (!erpToken || erpRefreshInFlight || document.hidden || recordDraft || erpDirty || erpConflict) return;
   erpRefreshInFlight = true;
   try {
     const remote = await api(`/workspaces/${ERP_WORKSPACE}`);

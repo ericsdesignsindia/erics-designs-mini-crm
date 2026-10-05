@@ -11,11 +11,13 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const app = express();
+if (process.env.NODE_ENV === 'production' || process.env.TRUST_PROXY === 'true') app.set('trust proxy', 1);
 const port = Number(process.env.PORT || 4000);
 const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/erics_designs_erp';
 const origins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5500,http://127.0.0.1:5500,http://localhost:4000,http://127.0.0.1:4000,https://ericsdesignsindia.github.io')
   .split(',').map(value => value.trim()).filter(Boolean);
 const secretFile = path.join(__dirname, '..', '.auth-secret');
+const backupSecretFile = path.join(__dirname, '..', '.backup-secret');
 const frontendUrl = String(process.env.FRONTEND_URL || 'https://ericsdesignsindia.github.io/erics-designs-mini-crm/').replace(/\/?$/, '/');
 const googleRedirectUri = process.env.GOOGLE_REDIRECT_URI || `http://localhost:${port}/api/integrations/google-drive/callback`;
 const gmailRedirectUri = process.env.GMAIL_REDIRECT_URI || `http://localhost:${port}/api/integrations/gmail/callback`;
@@ -39,7 +41,8 @@ const Workspace = mongoose.model('Workspace', workspaceSchema);
 const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true, trim: true, lowercase: true, maxlength: 60 },
   passwordHash: { type: String, required: true },
-  role: { type: String, default: 'admin' }
+  role: { type: String, enum: ['owner', 'staff'], default: 'staff' },
+  sessionVersion: { type: Number, default: 0 }
 }, { timestamps: true, versionKey: false });
 const User = mongoose.model('User', userSchema);
 const driveIntegrationSchema = new mongoose.Schema({
@@ -152,11 +155,21 @@ async function updateWorkspaceState(workspaceId, mutate, retries = 3) {
   throw conflict;
 }
 
-function backupKey() { return createHash('sha256').update(process.env.BACKUP_ENCRYPTION_KEY || jwtSecret).digest(); }
+function backupEncryptionSecret() {
+  if (process.env.BACKUP_ENCRYPTION_KEY) return process.env.BACKUP_ENCRYPTION_KEY;
+  if (process.env.NODE_ENV === 'production') throw new Error('Backup encryption is not configured.');
+  if (fs.existsSync(backupSecretFile)) return fs.readFileSync(backupSecretFile, 'utf8').trim();
+  const secret = randomUUID() + randomUUID(); fs.writeFileSync(backupSecretFile, secret, { mode: 0o600 }); return secret;
+}
+function backupKey() { return createHash('sha256').update(backupEncryptionSecret()).digest(); }
 function encryptBackup(value) {
   const iv = randomBytes(12), cipher = createCipheriv('aes-256-gcm', backupKey(), iv);
   const encrypted = Buffer.concat([cipher.update(JSON.stringify(value), 'utf8'), cipher.final()]);
   return Buffer.concat([iv, cipher.getAuthTag(), encrypted]).toString('base64');
+}
+function decryptBackup(value) {
+  const raw = Buffer.from(value, 'base64'); const decipher = createDecipheriv('aes-256-gcm', backupKey(), raw.subarray(0, 12));
+  decipher.setAuthTag(raw.subarray(12, 28)); return JSON.parse(Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]).toString('utf8'));
 }
 async function createAutomaticBackup(workspace) {
   const latest = await Backup.findOne({ workspaceId: workspace.workspaceId }).sort({ createdAt: -1 }).lean();
@@ -167,7 +180,7 @@ async function createAutomaticBackup(workspace) {
 }
 
 function issueToken(user) {
-  return jwt.sign({ sub: user._id.toString(), username: user.username, role: user.role }, jwtSecret, { expiresIn: '7d' });
+  return jwt.sign({ sub: user._id.toString(), username: user.username, role: user.role, sv: user.sessionVersion || 0 }, jwtSecret, { expiresIn: '7d' });
 }
 
 function googleDriveConfig() {
@@ -329,7 +342,10 @@ async function requireAuth(req, res, next) {
   try {
     const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
     if (!token) return res.status(401).json({ error: 'Sign in is required.' });
-    req.user = jwt.verify(token, jwtSecret);
+    const claims = jwt.verify(token, jwtSecret);
+    const user = await User.findById(claims.sub).lean();
+    if (!user || Number(claims.sv || 0) !== Number(user.sessionVersion || 0)) return res.status(401).json({ error: 'Your session is no longer valid. Sign in again.' });
+    req.user = { ...claims, role: user.role };
     return next();
   } catch (_error) { return res.status(401).json({ error: 'Your session has expired. Sign in again.' }); }
 }
@@ -355,22 +371,28 @@ function portalDocument(token) {
   return Workspace.findOne({ workspaceId: 'erics-designs-default', 'state.documents.portalToken': token }).lean();
 }
 function publicDocument(document) {
-  const copy = structuredClone(document);
-  delete copy.portalToken;
-  delete copy.client?.id;
-  return copy;
+  return {
+    type: document.type, number: document.number, status: document.status, date: document.date, due: document.due,
+    currency: document.currency, project: document.project, discount: document.discount, tax: document.tax, terms: document.terms,
+    client: { name: document.client?.name, contact: document.client?.contact, address: document.client?.address },
+    business: { name: document.business?.name, tagline: document.business?.tagline },
+    items: (document.items || []).map(item => ({ name: item.name, description: item.description, qty: item.qty, rate: item.rate, rateText: item.rateText }))
+  };
 }
+function portalAllowed(key) { const now = Date.now(), start = now - 10 * 60 * 1000; const attempts = (publicLeadRequests.get(`portal:${key}`) || []).filter(time => time > start); if (attempts.length >= 30) return false; attempts.push(now); publicLeadRequests.set(`portal:${key}`, attempts); return true; }
 app.get('/api/public/portal/:token', async (req, res, next) => {
   try {
+    if (!portalAllowed(`${req.ip || 'unknown'}:${req.params.token}`)) return res.status(429).json({ error: 'Please wait before opening this link again.' });
     const workspace = await portalDocument(req.params.token);
     const document = workspace?.state?.documents?.find(item => item.portalToken === req.params.token);
-    if (!document || document.status === 'Cancelled') return res.status(404).json({ error: 'This client link is unavailable.' });
+    if (!document || document.status === 'Cancelled' || document.portalRevokedAt || (document.portalExpiresAt && new Date(document.portalExpiresAt) < new Date())) return res.status(404).json({ error: 'This client link is unavailable.' });
     return res.json({ document: publicDocument(document) });
   } catch (error) { return next(error); }
 });
 app.post('/api/public/portal/:token/approve', async (req, res, next) => {
   try {
     const token = String(req.params.token || '');
+    if (!portalAllowed(`${req.ip || 'unknown'}:${token}`)) return res.status(429).json({ error: 'Please wait before trying again.' });
     const workspace = await portalDocument(token);
     const document = workspace?.state?.documents?.find(item => item.portalToken === token);
     if (!document || document.type !== 'Quotation' || document.status !== 'Sent') return res.status(409).json({ error: 'This quotation cannot be approved from this link.' });
@@ -395,6 +417,7 @@ app.get('/api', (_req, res) => res.json({
 
 const publicLeadRequests = new Map();
 function leadRequestAllowed(ip) { const now = Date.now(), windowStart = now - 10 * 60 * 1000; const list = (publicLeadRequests.get(ip) || []).filter(time => time > windowStart); if (list.length >= 12) return false; list.push(now); publicLeadRequests.set(ip, list); return true; }
+setInterval(() => { const cutoff = Date.now() - 10 * 60 * 1000; for (const [key, requests] of publicLeadRequests) if (!requests.some(time => time > cutoff)) publicLeadRequests.delete(key); }, 10 * 60 * 1000).unref();
 function secureTokenMatches(actual, expected) {
   if (!expected || !actual) return false;
   const actualBuffer = Buffer.from(actual), expectedBuffer = Buffer.from(expected);
@@ -551,25 +574,31 @@ app.post('/api/auth/setup', async (req, res, next) => {
   } catch (error) { return next(error); }
 });
 
+const loginAttempts = new Map();
+function loginAllowed(key) { const now = Date.now(), start = now - 15 * 60 * 1000; const attempts = (loginAttempts.get(key) || []).filter(time => time > start); if (attempts.length >= 8) return false; attempts.push(now); loginAttempts.set(key, attempts); return true; }
+setInterval(() => { const cutoff = Date.now() - 15 * 60 * 1000; for (const [key, attempts] of loginAttempts) if (!attempts.some(time => time > cutoff)) loginAttempts.delete(key); }, 15 * 60 * 1000).unref();
 app.post('/api/auth/login', async (req, res, next) => {
   try {
     const username = String(req.body.username || '').trim().toLowerCase();
+    const key = `${req.ip || 'unknown'}:${username}`;
+    if (!loginAllowed(key)) return res.status(429).json({ error: 'Too many sign-in attempts. Please wait 15 minutes.' });
     const user = await User.findOne({ username });
     if (!user || !await bcrypt.compare(String(req.body.password || ''), user.passwordHash)) return res.status(401).json({ error: 'Incorrect username or password.' });
+    loginAttempts.delete(key);
     return res.json({ token: issueToken(user), user: { username: user.username, role: user.role } });
   } catch (error) { return next(error); }
 });
 
 app.get('/api/admin/me', requireAuth, async (req, res, next) => { try { const owner = await ensureOwner(); const user = await User.findById(req.user.sub).lean(); return res.json({ username: user?.username || '', role: user?.role || 'admin', ownerUsername: owner?.username || '' }); } catch (error) { return next(error); } });
 app.get('/api/admin/users', requireAuth, requireOwner, async (_req, res, next) => { try { const users = await User.find({}, { username: 1, role: 1, createdAt: 1 }).sort({ createdAt: 1 }).lean(); return res.json({ users: users.map(user => ({ id: user._id.toString(), username: user.username, role: user.role, createdAt: user.createdAt })) }); } catch (error) { return next(error); } });
-app.post('/api/admin/users', requireAuth, requireOwner, async (req, res, next) => { try { const username = String(req.body.username || '').trim().toLowerCase(); const error = validCredentials(username, req.body.password); if (error) return res.status(400).json({ error }); if (await User.exists({ username })) return res.status(409).json({ error: 'That username is already in use.' }); const user = await User.create({ username, passwordHash: await bcrypt.hash(req.body.password, 12), role: 'owner' }); return res.status(201).json({ user: { id: user._id.toString(), username: user.username, role: user.role, createdAt: user.createdAt } }); } catch (error) { return next(error); } });
+app.post('/api/admin/users', requireAuth, requireOwner, async (req, res, next) => { try { const username = String(req.body.username || '').trim().toLowerCase(); const error = validCredentials(username, req.body.password); if (error) return res.status(400).json({ error }); if (await User.exists({ username })) return res.status(409).json({ error: 'That username is already in use.' }); const role = req.body.role === 'owner' ? 'owner' : 'staff'; const user = await User.create({ username, passwordHash: await bcrypt.hash(req.body.password, 12), role }); return res.status(201).json({ user: { id: user._id.toString(), username: user.username, role: user.role, createdAt: user.createdAt } }); } catch (error) { return next(error); } });
 app.put('/api/admin/users/:userId/password', requireAuth, requireOwner, async (req, res, next) => {
   try {
     const password = String(req.body.password || '');
     if (password.length < 10) return res.status(400).json({ error: 'Use a password with at least 10 characters.' });
     const user = await User.findById(req.params.userId);
     if (!user) return res.status(404).json({ error: 'Administrator not found.' });
-    user.passwordHash = await bcrypt.hash(password, 12);
+    user.passwordHash = await bcrypt.hash(password, 12); user.sessionVersion = Number(user.sessionVersion || 0) + 1;
     await user.save();
     return res.json({ message: `Password reset for ${user.username}.` });
   } catch (error) { return next(error); }
@@ -760,6 +789,22 @@ app.get('/api/workspaces/:workspaceId/backups', requireOwner, async (req, res, n
   } catch (error) { return next(error); }
 });
 
+app.post('/api/workspaces/:workspaceId/backups/:backupId/restore', requireOwner, async (req, res, next) => {
+  try {
+    const id = workspaceId(req.params.workspaceId);
+    if (!id || !mongoose.isValidObjectId(req.params.backupId)) return res.status(400).json({ error: 'Invalid backup request.' });
+    const backup = await Backup.findOne({ _id: req.params.backupId, workspaceId: id }).lean();
+    if (!backup) return res.status(404).json({ error: 'Backup not found.' });
+    const state = decryptBackup(backup.stateCiphertext);
+    const error = validateState(state);
+    if (error) return res.status(409).json({ error: 'This backup cannot be restored safely.' });
+    const current = await getWorkspace(id);
+    await Backup.create({ workspaceId: id, reason: 'Automatic restore point before backup recovery', stateCiphertext: encryptBackup(current.state) });
+    const updated = await saveState(current, normaliseState(state));
+    return res.json({ ok: true, revision: updated.revision, restoredFrom: backup._id.toString(), updatedAt: updated.updatedAt });
+  } catch (error) { return next(error); }
+});
+
 app.get('/api/workspaces/:workspaceId', async (req, res, next) => {
   try {
     const id = workspaceId(req.params.workspaceId);
@@ -776,17 +821,23 @@ app.put('/api/workspaces/:workspaceId', async (req, res, next) => {
     if (!id) return res.status(400).json({ error: 'Invalid workspace id.' });
     const error = validateState(req.body.state);
     if (error) return res.status(400).json({ error });
-    const expectedRevision = Number.isInteger(req.body.revision) ? req.body.revision : null;
-    const current = await Workspace.findOne({ workspaceId: id }).lean();
-    if (current && expectedRevision !== null && expectedRevision !== current.revision) {
-      return res.status(409).json({ error: 'A newer workspace version exists.', revision: current.revision, state: current.state, updatedAt: current.updatedAt });
+    const expectedRevision = Number.isInteger(req.body.revision) && req.body.revision >= 0 ? req.body.revision : null;
+    if (expectedRevision === null) return res.status(400).json({ error: 'A workspace revision is required to save safely.' });
+    let workspace;
+    try {
+      workspace = await Workspace.findOneAndUpdate(
+        { workspaceId: id, revision: expectedRevision },
+        { $set: { state: req.body.state }, $setOnInsert: { workspaceId: id }, $inc: { revision: 1 } },
+        { upsert: true, new: true, runValidators: true }
+      ).lean();
+    } catch (updateError) {
+      if (updateError?.code !== 11000) throw updateError;
     }
-    const nextRevision = (current?.revision || 0) + 1;
-    const workspace = await Workspace.findOneAndUpdate(
-      { workspaceId: id },
-      { workspaceId: id, state: req.body.state, revision: nextRevision },
-      { upsert: true, new: true, runValidators: true }
-    ).lean();
+    if (!workspace) {
+      const current = await Workspace.findOne({ workspaceId: id }).lean();
+      return res.status(409).json({ error: 'A newer workspace version exists.', revision: current?.revision ?? 0, state: current?.state, updatedAt: current?.updatedAt });
+    }
+    try { await createAutomaticBackup(workspace); } catch (backupError) { console.error('Automatic backup failed:', backupError.message); }
     return res.json({ ok: true, workspaceId: workspace.workspaceId, revision: workspace.revision, updatedAt: workspace.updatedAt });
   } catch (error) { return next(error); }
 });
@@ -898,11 +949,13 @@ app.delete('/api/workspaces/:workspaceId/:resource/:recordId', async (req, res, 
 });
 
 // The ERP frontend and API share one local development address.
+app.use('/api', (_req, res) => res.status(404).json({ error: 'API route not found.' }));
 app.use(express.static(path.join(__dirname, '..', 'dist')));
 
 app.use((error, _req, res, _next) => {
   console.error(error);
-  res.status(error.status || 500).json({ error: error.message || 'The ERP API could not complete this request.' });
+  const status = error.status || 500;
+  res.status(status).json({ error: status < 500 ? (error.message || 'The request could not be completed.') : 'The ERP API could not complete this request.' });
 });
 
 async function start() {

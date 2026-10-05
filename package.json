@@ -6,12 +6,13 @@
   "scripts": {
     "dev": "node --watch server/server.js",
     "start": "node server/server.js",
-    "check": "node --check server/server.js",
+    "check": "node --check server/server.js && node --check api-sync.js && node --check scripts/sync-dist.cjs",
     "mobile:sync": "npx cap sync ios",
     "mobile:ios": "npx cap open ios",
     "mobile:check": "node --check crm.js && node --check api-sync.js",
     "windows:app": "electron .",
-    "windows:build": "electron-builder --win portable --x64"
+    "windows:build": "electron-builder --win portable --x64",
+    "build:dist": "node scripts/sync-dist.cjs"
   },
   "dependencies": {
     "@capacitor/core": "^8.5.2",
@@ -29,5 +30,5 @@
     "electron-builder": "^26.15.3"
   },
   "main": "electron/main.cjs",
-  "author": "Eric’s Designs"
+  "author": "Eric's Designs"
 }

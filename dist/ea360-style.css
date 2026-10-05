@@ -1,0 +1,61 @@
+/*
+  Stable EA-style CRM shell.
+  One desktop scroll owner (main), one independently scrolling navigation list,
+  and normal document scrolling on mobile. This file intentionally replaces
+  earlier accumulated layout overrides.
+*/
+:root{--ea-navy:#0b1d34;--ea-navy-2:#122c4b;--ea-blue:#2167b6;--ea-bg:#f3f6fa;--ea-paper:#ffffff;--ea-ink:#182a42;--ea-muted:#6d7f96;--ea-line:#d9e4ef}
+body.ea360-interface{--accent:var(--ea-blue);--bg:var(--ea-bg);--paper:var(--ea-paper);--ink:var(--ea-ink);--muted:var(--ea-muted);--line:var(--ea-line);background:var(--ea-bg);color:var(--ea-ink)}
+body.ea360-interface .shell aside{background:linear-gradient(180deg,var(--ea-navy),#09182b)!important;color:#c5d3e5}
+body.ea360-interface .sidehead{border-bottom:1px solid #ffffff1c}
+body.ea360-interface .brand.brand-logo img{filter:brightness(0) invert(1)}
+body.ea360-interface .shell aside nav button{background:transparent!important;border:0!important;color:#b8c7da!important}
+body.ea360-interface .shell aside nav button .nav-icon{color:#91abc8!important}
+body.ea360-interface .shell aside nav button:hover{background:#173658!important;color:#fff!important}
+body.ea360-interface .shell aside nav button.active{background:#214a78!important;color:#fff!important;box-shadow:inset 3px 0 #71b1fb!important}
+body.ea360-interface .shell aside nav button.active .nav-icon{color:#a8d1ff!important}
+body.ea360-interface .ea-nav-heading{display:block;margin:18px 13px 7px;color:#8ba7c8;font-size:10px;font-weight:800;letter-spacing:.13em}
+body.ea360-interface .commandbar{background:#fffffff5;border-color:var(--ea-line);box-shadow:0 5px 20px #183a6014}
+body.ea360-interface .command-search{background:#f6f9fd;border-color:#dfe8f1;color:#5b7899}
+body.ea360-interface .command-search input{color:var(--ea-ink)}
+body.ea360-interface .command-new,body.ea360-interface .primary{background:var(--ea-blue)!important;border-color:var(--ea-blue)!important;color:#fff!important;box-shadow:none}
+body.ea360-interface .command-ai{background:#eef6ff!important;border-color:#cedef2!important;color:#1b5fa8!important}
+body.ea360-interface .command-icon,body.ea360-interface .profile-menu{background:#f6f9fd!important;border-color:#dce6f0!important;color:#315473!important}
+body.ea360-interface h1,body.ea360-interface h2,body.ea360-interface h3{color:var(--ea-ink)}
+body.ea360-interface header p,body.ea360-interface .sub,body.ea360-interface small{color:var(--ea-muted)}
+body.ea360-interface .panel,body.ea360-interface .stat,body.ea360-interface .document-card,body.ea360-interface .client-card{background:var(--ea-paper)!important;border-color:var(--ea-line)!important;box-shadow:0 4px 15px #1d395a0c}
+body.ea360-interface .panel{border-radius:12px}
+body.ea360-interface .eyebrow{color:#2368ba}
+body.ea360-interface .stats .stat strong{color:#17395f!important}
+body.ea360-interface .stats .stat:after,.ea360-interface .command-kpi:after{background:#4f8eea18!important}
+body.ea360-interface .command-dashboard .command-hero{background:linear-gradient(118deg,#102b4d,#1c548b 58%,#276fb5)!important;box-shadow:0 14px 30px #1e579426!important}
+body.ea360-interface .command-hero .eyebrow{color:#b8d8ff!important}.ea360-interface .command-hero h1{color:#fff!important}.ea360-interface .command-hero p{color:#e4f0ff!important}
+body.ea360-interface .command-actions button{background:#fff!important;border-color:#d5e2f2!important;color:#174b86!important}.ea360-interface .command-actions .primary{background:#67a9e8!important;border-color:#67a9e8!important;color:#082440!important}
+body.ea360-interface .smallbtn{background:#fff!important;border-color:#cad9e9!important;color:#234e7c!important}.ea360-interface .smallbtn:hover{background:#edf5ff!important;border-color:#8db6e2!important}
+body.ea360-interface table th{background:#eff4fa!important;color:#58708d!important;border-bottom-color:#dce6f0!important}.ea360-interface table td{border-bottom-color:#e7edf4!important}
+body.ea360-interface .pipeline .lane{background:#f5f8fb!important;border-color:#e0e8f1!important}.ea360-interface .lead-card{background:#fff!important;border-color:#dee7f0!important;box-shadow:0 3px 10px #253d590c}.ea360-interface .lead-card strong{color:#1c3049!important}
+body.ea360-interface .badge.Paid,body.ea360-interface .badge.Accepted{background:#e2f5ec!important;color:#16734c!important}.ea360-interface .badge.Overdue{background:#fde8eb!important;color:#b53448!important}.ea360-interface .badge.Sent{background:#e5f0ff!important;color:#2766aa!important}
+
+@media(min-width:1024px){
+  html,body{height:100%;overflow:hidden}
+  body.ea360-interface .shell,body.ea360-interface .shell.sidebar-collapsed{display:grid;grid-template-columns:252px minmax(0,1fr);height:100dvh;min-height:0;overflow:hidden;background:var(--ea-bg)}
+  body.ea360-interface .shell aside{position:relative!important;inset:auto!important;display:flex!important;flex-direction:column!important;align-items:stretch!important;width:auto!important;height:100dvh!important;min-height:0!important;padding:20px 13px 0!important;border:0!important;overflow:hidden!important}
+  body.ea360-interface .shell aside .sidehead{display:block!important;flex:0 0 auto;padding:7px 12px 20px!important;min-height:auto!important}
+  body.ea360-interface .shell aside .brand.brand-logo,body.ea360-interface .shell.sidebar-collapsed .brand.brand-logo{display:block!important}
+  body.ea360-interface .shell aside .brand.brand-logo img{width:156px!important;max-width:100%;height:42px!important;object-fit:contain;object-position:left center}
+  body.ea360-interface .shell aside .sidebar-toggle,body.ea360-interface .shell aside .navbar-compact-toggle,body.ea360-interface .shell aside #navbarStatus{display:none!important}
+  body.ea360-interface .shell aside nav{display:flex!important;flex:1 1 auto!important;flex-direction:column!important;align-items:stretch!important;min-height:0!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;scrollbar-gutter:stable;padding:15px 5px 22px 0!important;gap:3px!important}
+  body.ea360-interface .shell aside nav::-webkit-scrollbar{width:8px}body.ea360-interface .shell aside nav::-webkit-scrollbar-thumb{background:#42617f;border-radius:99px}
+  body.ea360-interface .shell aside nav button,body.ea360-interface .shell.sidebar-collapsed aside nav button{display:flex!important;justify-content:flex-start!important;align-items:center;flex:0 0 auto;min-height:42px!important;margin:0!important;padding:9px 13px!important;border-radius:8px!important;font-size:13px!important;text-align:left;white-space:nowrap}
+  body.ea360-interface .shell aside .nav-label,body.ea360-interface .shell.sidebar-collapsed .nav-label{display:inline!important}
+  body.ea360-interface .shell aside footer{display:none!important}
+  body.ea360-interface .shell main{display:block!important;min-width:0;max-width:none!important;height:100dvh!important;min-height:0!important;margin:0!important;padding:18px 30px 42px!important;background:var(--ea-bg)!important;overflow-y:auto!important;overflow-x:hidden!important;overscroll-behavior:contain;scrollbar-gutter:stable}
+  body.ea360-interface .commandbar{position:sticky!important;top:0!important;z-index:50;margin:0 0 24px!important;padding:11px 14px!important;border-radius:12px!important}
+  body.ea360-interface .command-search{height:40px;width:min(520px,50vw);border-radius:8px}
+}
+@media(max-width:1023px){
+  html,body{height:auto;min-height:100%;overflow-x:clip;overflow-y:auto}
+  body.ea360-interface .shell,body.ea360-interface .shell main{display:block;height:auto;min-height:0;overflow:visible}
+  body.ea360-interface .commandbar{position:static!important;background:#fff;border:1px solid var(--ea-line);box-shadow:0 5px 16px #2138560d}
+  body.ea360-interface #mobileNav{background:var(--ea-navy);border-top-color:#234666}.ea360-interface #mobileNav button.active{color:#a9d0ff}.ea360-interface .mobile-fab{background:var(--ea-blue)!important}
+}
