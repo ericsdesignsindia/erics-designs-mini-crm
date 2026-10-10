@@ -42,9 +42,24 @@
     more.setAttribute('aria-label','More workspaces');
     more.onclick=event=>{event.preventDefault();window.openMobileWorkspaceSheet();};
   }
+  window.openMobileWorkspace=function(name){
+    nav(name);
+    if(typeof refreshWorkspaceIfChanged==='function'){
+      Promise.resolve(refreshWorkspaceIfChanged()).then(()=>render()).catch(()=>toast('Showing the saved workspace. Refresh again when you are online.'));
+    }
+  };
+  function installMobileWorkspaceButtons(){
+    ['Documents','Pipeline'].forEach(name=>{
+      const button=[...document.querySelectorAll('#mobileNav button')].find(item=>(item.getAttribute('aria-label')||item.textContent||'').trim()===name);
+      if(!button||button.dataset.mobileWorkspaceReady)return;
+      button.dataset.mobileWorkspaceReady='true';
+      button.setAttribute('aria-label',`${name} workspace`);
+      button.onclick=event=>{event.preventDefault();window.openMobileWorkspace(name);};
+    });
+  }
   const renderWithMobileControls=window.render;
   if(typeof renderWithMobileControls==='function'){
-    window.render=function(){const output=renderWithMobileControls.apply(this,arguments);requestAnimationFrame(installMobileMoreButton);return output;};
+    window.render=function(){const output=renderWithMobileControls.apply(this,arguments);requestAnimationFrame(()=>{installMobileMoreButton();installMobileWorkspaceButtons();});return output;};
   }
-  requestAnimationFrame(()=>{installMobileMoreButton();render();});
+  requestAnimationFrame(()=>{installMobileMoreButton();installMobileWorkspaceButtons();render();});
 })();
