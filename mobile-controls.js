@@ -19,4 +19,5 @@
       return bar.replace('<button class="command-icon" onclick="showNotifications()"', '<button class="command-icon command-refresh" aria-label="Refresh workspace" onclick="refreshCRMWorkspace(this)" title="Refresh workspace">↻</button><button class="command-icon" onclick="showNotifications()"');
     };
   }
+  requestAnimationFrame(()=>render());
 })();
