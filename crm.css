@@ -482,3 +482,30 @@ body[data-theme="dark"] .quick-create-menu,body[data-theme="dark"] .command-pale
 
 /* Reliable compact controls on mobile */
 .command-refresh{font-size:21px!important;font-weight:800;line-height:1}.command-refresh[aria-busy="true"]{opacity:.58;pointer-events:none}@media(max-width:720px){#commandBar .command-actions{grid-template-columns:repeat(5,minmax(0,1fr))!important}#commandBar .command-actions .command-new{grid-column:span 2!important}#commandBar .command-actions .command-icon,#commandBar .command-actions .profile-menu{grid-column:span 1!important}#commandBar .command-actions .command-refresh{font-size:20px!important}}@media(max-width:370px){#commandBar .command-actions{grid-template-columns:repeat(4,minmax(0,1fr))!important}#commandBar .command-actions .command-new{grid-column:span 2!important}}
+/* Mobile navigation: aligned Create action and contained More workspace sheet. */
+@media(max-width:720px){
+  #mobileNav{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));align-items:center;justify-items:stretch;gap:0;padding-left:6px;padding-right:6px;overflow:visible}
+  #mobileNav button{width:100%;min-width:0;height:58px;padding:5px 2px;align-content:center}
+  #mobileNav .mobile-fab{position:static;top:auto;width:100%!important;height:58px!important;transform:none;margin:0;border:0!important;border-radius:10px!important;background:transparent!important;box-shadow:none!important;color:inherit!important;font-size:10px!important}
+  #mobileNav .mobile-fab span{display:grid;font-size:25px!important;line-height:1;color:#d8b45d}
+  #mobileNav .mobile-fab::after{content:'Create';font-size:10px;font-weight:650;line-height:1;color:inherit}
+  #mobileNav .mobile-fab.active,#mobileNav .mobile-fab:hover{background:#263120!important;color:#fff!important}
+  .mobile-workspace-sheet{position:fixed;z-index:240;inset:0;display:flex;align-items:flex-end;background:#080b0aa8;opacity:0;transition:opacity .2s ease}
+  .mobile-workspace-sheet.is-open{opacity:1}
+  .mobile-workspace-panel{width:100%;padding:9px 16px calc(22px + env(safe-area-inset-bottom));border:1px solid #3d4936;border-bottom:0;border-radius:22px 22px 0 0;background:linear-gradient(180deg,#20281d,#121711);color:#f5f4eb;box-shadow:0 -16px 42px #0009;transform:translateY(18px);transition:transform .24s ease}
+  .mobile-workspace-sheet.is-open .mobile-workspace-panel{transform:translateY(0)}
+  .mobile-sheet-handle{width:42px;height:4px;margin:0 auto 13px;border-radius:99px;background:#69735e}
+  .mobile-sheet-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .mobile-sheet-head span{display:block;margin-bottom:3px;color:#d8b45d;font-size:10px;font-weight:800;letter-spacing:1.5px}
+  .mobile-sheet-head h2{margin:0;color:#fff;font-size:18px}
+  .mobile-sheet-head button{width:36px;height:36px;padding:0;border:1px solid #485640;border-radius:10px;background:#1a2117;color:#f5f4eb;font-size:24px;line-height:1}
+  .mobile-workspace-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+  .mobile-workspace-grid button{min-height:48px;display:flex;align-items:center;gap:10px;padding:10px 11px;border:1px solid #3d4936;border-radius:12px;background:#1a2117;color:#f5f4eb;font-size:13px;font-weight:700;text-align:left}
+  .mobile-workspace-grid button:active{background:#303d2b;border-color:#d8b45d}
+  .mobile-workspace-grid button span{display:grid;place-items:center;width:22px;color:#e3c669;font-size:17px}
+}
+@media(max-width:370px){
+  #mobileNav{grid-template-columns:repeat(6,minmax(0,1fr));padding-left:2px;padding-right:2px}
+  #mobileNav button{font-size:8px}
+  #mobileNav .mobile-fab::after{font-size:8px}
+}
