@@ -6,6 +6,7 @@ const ERP_WORKSPACE = 'erics-designs-default';
 const ERP_TOKEN_KEY = 'erics-designs-erp-token';
 const ERP_DIRTY_KEY = 'erics-designs-erp-unsynced';
 const ERP_REVISION_KEY = 'erics-designs-erp-revision';
+const ERP_RECOVERY_KEY = 'erics-designs-erp-local-recovery';
 const savedRevision = localStorage.getItem(ERP_REVISION_KEY);
 let erpRevision = /^\d+$/.test(savedRevision || '') ? Number(savedRevision) : null;
 let erpSyncTimer;
@@ -155,10 +156,19 @@ async function loadWorkspace() {
     await api('/health');
     let remote = await api(`/workspaces/${ERP_WORKSPACE}`);
     if (erpDirty) {
-      erpRevision = Number.isInteger(erpRevision) ? erpRevision : Number(localStorage.getItem(ERP_REVISION_KEY));
-      if (!Number.isInteger(erpRevision)) erpRevision = remote.revision;
-      if (!await pushWorkspace()) return;
-      remote = await api(`/workspaces/${ERP_WORKSPACE}`);
+      const localRevision = Number.isInteger(erpRevision) ? erpRevision : Number(localStorage.getItem(ERP_REVISION_KEY));
+      // A new device must never replace the shared workspace with its browser cache.
+      // Only upload pending edits when they started from the exact cloud revision.
+      if (Number.isInteger(localRevision) && localRevision === remote.revision) {
+        if (!await pushWorkspace()) return;
+        remote = await api(`/workspaces/${ERP_WORKSPACE}`);
+      } else {
+        localStorage.setItem(ERP_RECOVERY_KEY, JSON.stringify({ savedAt: new Date().toISOString(), revision: Number.isInteger(localRevision) ? localRevision : null, state: db }));
+        erpDirty = false;
+        erpConflict = false;
+        localStorage.removeItem(ERP_DIRTY_KEY);
+        toast('Loaded the shared cloud workspace. A local recovery copy was kept on this device.');
+      }
     }
     db = migrate(remote.state);
     erpRevision = remote.revision;
