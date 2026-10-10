@@ -182,12 +182,12 @@ window.addEventListener('online', () => erpDirty ? pushWorkspace() : loadWorkspa
 loadWorkspace();
 
 // Keep cloud data current without interrupting record editing.
-const ERP_AUTO_REFRESH_MS = 5 * 60 * 1000;
+const ERP_AUTO_REFRESH_MS = 45 * 1000;
 let erpAutoRefreshTimer;
 let erpRefreshInFlight = false;
 
-async function refreshWorkspaceIfChanged() {
-  if (!erpToken || erpRefreshInFlight || document.hidden || recordDraft || erpDirty || erpConflict) return;
+async function refreshWorkspaceIfChanged(force = false) {
+  if (!erpToken || erpRefreshInFlight || (!force && document.hidden) || recordDraft || erpDirty || erpConflict) return false;
   erpRefreshInFlight = true;
   try {
     const remote = await api(`/workspaces/${ERP_WORKSPACE}`);
@@ -199,8 +199,10 @@ async function refreshWorkspaceIfChanged() {
       render();
       setErpStatus('MongoDB sync active · updated just now', true);
       toast('CRM updated with the latest cloud data.');
+      return true;
     } else {
       setErpStatus('MongoDB sync active · checked just now', true);
+      return false;
     }
   } catch (error) {
     if (error.status === 401) {
@@ -213,6 +215,14 @@ async function refreshWorkspaceIfChanged() {
     erpRefreshInFlight = false;
   }
 }
+
+async function syncWorkspaceNow() {
+  if (!erpToken) { showAuth(); return false; }
+  if (erpConflict) { toast('Cloud changes need review before this device can sync.'); return false; }
+  if (erpDirty && !await pushWorkspace()) return false;
+  return refreshWorkspaceIfChanged(true);
+}
+window.syncCRMNow = syncWorkspaceNow;
 
 function startWorkspaceAutoRefresh() {
   clearInterval(erpAutoRefreshTimer);

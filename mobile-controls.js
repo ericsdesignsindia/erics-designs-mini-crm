@@ -44,8 +44,9 @@
   }
   window.openMobileWorkspace=function(name){
     nav(name);
-    if(typeof refreshWorkspaceIfChanged==='function'){
-      Promise.resolve(refreshWorkspaceIfChanged()).then(()=>render()).catch(()=>toast('Showing the saved workspace. Refresh again when you are online.'));
+    const sync=typeof syncCRMNow==='function'?syncCRMNow:refreshWorkspaceIfChanged;
+    if(typeof sync==='function'){
+      Promise.resolve(sync(true)).then(()=>render()).catch(()=>toast('Showing the saved workspace. Refresh again when you are online.'));
     }
   };
   function installMobileWorkspaceButtons(){
