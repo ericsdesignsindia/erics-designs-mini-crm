@@ -14,8 +14,11 @@ const app = express();
 if (process.env.NODE_ENV === 'production' || process.env.TRUST_PROXY === 'true') app.set('trust proxy', 1);
 const port = Number(process.env.PORT || 4000);
 const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/erics_designs_erp';
-const origins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5500,http://127.0.0.1:5500,http://localhost:4000,http://127.0.0.1:4000,https://ericsdesignsindia.github.io')
+const configuredOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5500,http://127.0.0.1:5500,http://localhost:4000,http://127.0.0.1:4000,https://ericsdesignsindia.github.io')
   .split(',').map(value => value.trim()).filter(Boolean);
+// Capacitor serves the installed CRM from its own local origin. These are app-shell origins,
+// not public web origins, and let the installed PWA use the same authenticated cloud workspace.
+const origins = [...new Set([...configuredOrigins, 'capacitor://localhost', 'ionic://localhost', 'http://localhost', 'https://localhost'])];
 const secretFile = path.join(__dirname, '..', '.auth-secret');
 const backupSecretFile = path.join(__dirname, '..', '.backup-secret');
 const frontendUrl = String(process.env.FRONTEND_URL || 'https://ericsdesignsindia.github.io/erics-designs-mini-crm/').replace(/\/?$/, '/');

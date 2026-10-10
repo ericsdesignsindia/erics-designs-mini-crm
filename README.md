@@ -53,7 +53,7 @@ Tested client creation, project/follow-up storage, pipeline updates, linked Q→
 
 ## iOS app project
 
-The CRM is ready for Capacitor iOS packaging. The native iOS project is in `ios/App` and uses the same CRM files from `dist`, with the existing secure backend at `https://erics-designs-mini-crm.onrender.com`.
+The CRM is ready for Capacitor iOS packaging. The native iOS project is in `ios/App` and uses the same CRM files from `dist` and the same authenticated cloud workspace at `https://erics-designs-mini-crm.onrender.com`. Sign in with the same administrator account used in the browser CRM to load and save the shared clients, documents, pipeline, and accounts.
 
 - Run `npm run mobile:sync` after a CRM update to copy the latest app into the iOS project.
 - On a Mac with Xcode, run `npm run mobile:ios`, choose an Apple development team, test on an iPhone or simulator, and use Xcode Archive to submit the app through App Store Connect.

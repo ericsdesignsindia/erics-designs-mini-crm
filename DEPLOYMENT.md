@@ -16,7 +16,7 @@ In `dist/index.html`, add this script immediately before `api-sync.js` and repla
 <script>window.ERP_API_URL = 'https://YOUR-ERP-API.onrender.com/api';</script>
 ```
 
-Set `ALLOWED_ORIGINS` on the API host to `https://ericsdesignsindia.github.io`.
+Set `ALLOWED_ORIGINS` on the API host to `https://ericsdesignsindia.github.io,capacitor://localhost,ionic://localhost,http://localhost,https://localhost` so the browser CRM and installed Capacitor PWA can use the same cloud workspace.
 
 ## 4. Create the first production administrator
 
