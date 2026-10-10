@@ -9,6 +9,7 @@ const ERP_REVISION_KEY = 'erics-designs-erp-revision';
 const savedRevision = localStorage.getItem(ERP_REVISION_KEY);
 let erpRevision = /^\d+$/.test(savedRevision || '') ? Number(savedRevision) : null;
 let erpSyncTimer;
+let erpRetryTimer;
 let erpOnline = false;
 let erpDirty = localStorage.getItem(ERP_DIRTY_KEY) === '1';
 let erpConflict = false;
@@ -106,8 +107,13 @@ window.erpApi = {
 window.erpAuth = { logout: () => { erpToken = ''; localStorage.removeItem(ERP_TOKEN_KEY); location.reload(); }, login: () => { erpToken = ''; showAuth(); } };
 
 function rememberRevision() { if (Number.isInteger(erpRevision)) localStorage.setItem(ERP_REVISION_KEY, String(erpRevision)); }
-function markUnsynced() { erpDirty = true; localStorage.setItem(ERP_DIRTY_KEY, '1'); }
-function markSynced() { erpDirty = false; erpConflict = false; localStorage.removeItem(ERP_DIRTY_KEY); rememberRevision(); }
+function scheduleSyncRetry() {
+  clearTimeout(erpRetryTimer);
+  if (!erpToken || !erpDirty || erpConflict) return;
+  erpRetryTimer = setTimeout(() => pushWorkspace(), 20 * 1000);
+}
+function markUnsynced() { erpDirty = true; localStorage.setItem(ERP_DIRTY_KEY, '1'); scheduleSyncRetry(); }
+function markSynced() { erpDirty = false; erpConflict = false; clearTimeout(erpRetryTimer); localStorage.removeItem(ERP_DIRTY_KEY); rememberRevision(); }
 
 async function pushWorkspace() {
   if (erpConflict) return false;
@@ -122,7 +128,7 @@ async function pushWorkspace() {
       erpConflict = true;
       setErpStatus('Cloud changes need review. Your browser data is protected.', false);
       toast('Cloud changes were found. Your local work was kept safely and was not overwritten.');
-    } else setErpStatus('Changes remain saved on this browser', false);
+    } else { setErpStatus('Saving retry queued · your changes are safe on this device', false); scheduleSyncRetry(); }
     return false;
   }
 }
