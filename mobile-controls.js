@@ -23,7 +23,7 @@
     const id='stableMobileMenu';
     document.getElementById(id)?.remove();
     const menu=document.createElement('div');
-    const items=[['Projects','▣'],['Accounts','▤'],['Calendar','□'],['Reports','▥'],['Client Process','◇'],['Contracts','§'],['HR','♙'],['Automations','↗'],['Jarvis','✦']];
+    const items=[['Projects','▣'],['Accounts','▤'],['Calendar','□'],['Reports','▥'],['Client Process','◇'],['Contracts','§'],['Marketing','◉'],['HR','♙'],['Automations','↗'],['Jarvis','✦']];
     menu.id=id;
     menu.className='mobile-workspace-sheet';
     menu.innerHTML=`<section class="mobile-workspace-panel" role="dialog" aria-modal="true" aria-label="More workspaces"><div class="mobile-sheet-handle" aria-hidden="true"></div><div class="mobile-sheet-head"><div><span>MORE</span><h2>Open a workspace</h2></div><button type="button" aria-label="Close more workspaces">×</button></div><div class="mobile-workspace-grid">${items.map(([name,icon])=>`<button type="button" data-view="${name}"><span aria-hidden="true">${icon}</span>${name}</button>`).join('')}</div></section>`;
