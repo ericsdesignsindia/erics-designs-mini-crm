@@ -322,7 +322,9 @@ async function importMetaLead(leadgenId) {
   const lead = metaLeadFields(payload.field_data);
   const note = `Meta Lead Ads enquiry${lead.service ? ` - ${lead.service}` : ''}\nForm: ${payload.form_id || 'Unknown'}\nLead ID: ${leadgenId}\n\n${lead.details || 'No additional details supplied.'}`;
   return updateWorkspaceState('erics-designs-default', state => {
-    const existing = state.clients.find(client => lead.email && client.email === lead.email) || state.clients.find(client => lead.phone && client.phone === lead.phone);
+    const existing = state.clients.find(client => String(client.notes || '').includes(`Lead ID: ${leadgenId}`))
+      || state.clients.find(client => lead.email && client.email === lead.email)
+      || state.clients.find(client => lead.phone && client.phone === lead.phone);
     if (existing) {
       if (existing.notes?.includes(`Lead ID: ${leadgenId}`)) return { duplicate: true, client: existing };
       existing.notes = `${existing.notes ? existing.notes + '\n\n' : ''}${note}`; existing.updated = new Date().toISOString();
@@ -537,6 +539,17 @@ app.post('/api/integrations/meta-leads/subscribe-page', requireAuth, requireOwne
       error.status = response.status || 502; throw error;
     }
     return res.json({ connected: true, message: 'Meta Lead Ads is connected. New Page leads will be imported into the CRM.' });
+  } catch (error) { return next(error); }
+});
+
+// Recover a specific lead whose webhook was missed before the Page was connected.
+app.post('/api/integrations/meta-leads/import-existing', requireAuth, requireOwner, async (req, res, next) => {
+  try {
+    const leadgenId = String(req.body?.leadId || '').trim();
+    if (!/^\d{5,30}$/.test(leadgenId)) return res.status(400).json({ error: 'Enter the numeric lead ID from Meta.' });
+    if (!metaLeadConfig().configured) return res.status(409).json({ error: 'Meta Lead Ads setup is incomplete on the server.' });
+    const result = await importMetaLead(leadgenId);
+    return res.json({ imported: !result.duplicate, duplicate: Boolean(result.duplicate), message: result.duplicate ? 'Lead details were matched to an existing client or were already imported.' : 'Existing Meta lead imported into Clients.' });
   } catch (error) { return next(error); }
 });
 
