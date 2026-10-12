@@ -550,13 +550,35 @@ app.get('/api/integrations/meta-leads/webhook', (req, res) => {
 
 app.post('/api/integrations/meta-leads/webhook', async (req, res, next) => {
   try {
-    if (!validMetaSignature(req)) return res.sendStatus(403);
-    if (req.body?.object !== 'page') return res.sendStatus(404);
-    for (const entry of req.body.entry || []) for (const change of entry.changes || []) {
+    const entries = Array.isArray(req.body?.entry) ? req.body.entry : [];
+    const leadEvents = entries.flatMap(entry => Array.isArray(entry?.changes) ? entry.changes : [])
+      .filter(change => change?.field === 'leadgen' && change.value?.leadgen_id);
+    if (!validMetaSignature(req)) {
+      console.warn('Meta webhook rejected: signature validation failed.', JSON.stringify({
+        hasSignature: Boolean(req.headers['x-hub-signature-256']),
+        hasRawBody: Boolean(req.rawBody),
+        appSecretConfigured: Boolean(process.env.META_APP_SECRET)
+      }));
+      return res.sendStatus(403);
+    }
+    if (req.body?.object !== 'page') {
+      console.warn('Meta webhook rejected: unexpected object.', JSON.stringify({ object: String(req.body?.object || 'missing') }));
+      return res.sendStatus(404);
+    }
+    let imported = 0;
+    for (const change of leadEvents) {
       if (change.field === 'leadgen' && change.value?.leadgen_id) {
-        try { await importMetaLead(String(change.value.leadgen_id)); } catch (error) { console.error('Meta lead import failed:', error.message); }
+        try {
+          await importMetaLead(String(change.value.leadgen_id));
+          imported += 1;
+        } catch (error) {
+          console.error('Meta lead import failed.', JSON.stringify({ status: Number(error.status || 0), message: String(error.message || 'Unknown error').replace(/access_token=[^&\s]+/gi, 'access_token=[redacted]') }));
+          // A 5xx asks Meta to retry this delivery. Imports are idempotent by email/phone/lead ID.
+          return res.status(500).send('LEAD_IMPORT_FAILED');
+        }
       }
     }
+    console.info('Meta webhook accepted.', JSON.stringify({ entries: entries.length, leadEvents: leadEvents.length, imported }));
     return res.status(200).send('EVENT_RECEIVED');
   } catch (error) { return next(error); }
 });
