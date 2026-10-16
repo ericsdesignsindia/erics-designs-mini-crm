@@ -5,7 +5,7 @@ const root = path.join(__dirname, '..');
 const dist = path.join(root, 'dist');
 const files = [
   'index.html', 'classic.html', 'lead-form.html', 'portal.html', 'privacy-policy.html', 'demo.html',
-  'crm-loader.js', 'billing.js', 'crm.js', 'api-sync.js', 'pdf-engine.js', 'document-preview.js', 'proforma-advance.js',
+  'crm-loader.js', 'billing.js', 'crm.js', 'api-sync.js', 'demo.js', 'pdf-engine.js', 'document-preview.js', 'proforma-advance.js',
   'client-process-engine.js', 'client-process.js', 'crm-stability.js', 'crm-operations.js', 'crm-priority-fixes.js',
   'client-journey.js', 'project-finance.js', 'delivery-team.js', 'transaction-receipts.js', 'accounts-workspace.js',
   'accounts-ledger-cleanup.js', 'accounting-core.js', 'accounts-dropdowns.js', 'ea360-style.js', 'workflow-stability.js',
