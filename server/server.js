@@ -18,7 +18,15 @@ const configuredOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5500
   .split(',').map(value => value.trim()).filter(Boolean);
 // Capacitor serves the installed CRM from its own local origin. These are app-shell origins,
 // not public web origins, and let the installed PWA use the same authenticated cloud workspace.
-const origins = [...new Set([...configuredOrigins, 'capacitor://localhost', 'ionic://localhost', 'http://localhost', 'https://localhost'])];
+// The CRM is hosted both on GitHub Pages and on Render. Keep these exact
+// first-party origins allowed even when ALLOWED_ORIGINS is customized, so the
+// Render-hosted PWA can call its own API for login and workspace loading.
+const origins = [...new Set([
+  ...configuredOrigins,
+  'https://ericsdesignsindia.github.io',
+  'https://erics-designs-mini-crm.onrender.com',
+  'capacitor://localhost', 'ionic://localhost', 'http://localhost', 'https://localhost'
+])];
 const secretFile = path.join(__dirname, '..', '.auth-secret');
 const backupSecretFile = path.join(__dirname, '..', '.backup-secret');
 const frontendUrl = String(process.env.FRONTEND_URL || 'https://ericsdesignsindia.github.io/erics-designs-mini-crm/').replace(/\/?$/, '/');
