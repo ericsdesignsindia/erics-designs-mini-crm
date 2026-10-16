@@ -93,6 +93,7 @@ window.erpApi = {
   sendDocumentWhatsApp: payload => api('/integrations/whatsapp/send-document', { method: 'POST', body: JSON.stringify(payload) }),
   sendDocumentEmail: payload => api('/integrations/gmail/send-document', { method: 'POST', body: JSON.stringify(payload) }),
   subscribeMetaLeadPage: () => api('/integrations/meta-leads/subscribe-page', { method: 'POST' }),
+  importExistingMetaLead: leadId => api('/integrations/meta-leads/import-existing', { method: 'POST', body: JSON.stringify({ leadId }) }),
   gmailStatus: () => api('/integrations/gmail/status'),
   gmailMessages: () => api('/integrations/gmail/messages'),
   gmailMessage: id => api(`/integrations/gmail/messages/${encodeURIComponent(id)}`),
