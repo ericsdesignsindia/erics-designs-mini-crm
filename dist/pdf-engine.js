@@ -4,18 +4,18 @@ const FORMAT={Quotation:{title:'QUOTATION',payment:false},Invoice:{title:'INVOIC
 const typeOf=t=>t==='Final Invoice'?'Invoice':FORMAT[t]?t:'Quotation';
 const clean=v=>String(v??'').replace(/₹/g,'INR ').replace(/[\u2013\u2014]/g,'-').replace(/[\u2018\u2019]/g,"'");
 function buildPdf(doc,inputType,jsPDF,logo,qr){
- const type=typeOf(inputType||doc.type),quote=type==='Quotation',receipt=type==='Receipt',voucher=receipt&&doc.receiptKind==='Payment voucher',f=FORMAT[type],pdf=new jsPDF({unit:'mm',format:'a4',compress:true});
+ const type=typeOf(inputType||doc.type),quote=type==='Quotation',receipt=type==='Receipt',voucher=receipt&&doc.receiptKind==='Payment voucher',f=FORMAT[type],title=type==='Invoice'&&doc.billingMode==='service-wise'?'BALANCE INVOICE':f.title,pdf=new jsPDF({unit:'mm',format:'a4',compress:true});
  const b=doc.business||{},client=doc.client||{},m=18,r=192,w=r-m,gold=[153,115,51],ink=[32,29,26],muted=[105,99,87];let y=20;
  const text=(v,x,yy,size=9,style='normal',align='left',color=ink)=>{pdf.setFont('times',style);pdf.setFontSize(size);pdf.setTextColor(...color);pdf.text(Array.isArray(v)?v.map(clean):clean(v),x,yy,{align,lineHeightFactor:1.15});};
  const wrap=(v,width,size=9,style='normal')=>{pdf.setFont('times',style);pdf.setFontSize(size);return pdf.splitTextToSize(clean(v),width)};
  const rule=yy=>{pdf.setDrawColor(198,185,165);pdf.setLineWidth(.2);pdf.line(m,yy,r,yy)};
  const money=v=>(doc.currency||'INR')+' '+Number(v||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
- const newPage=()=>{pdf.addPage();text(f.title+' / '+(doc.number||''),m,16,10,'bold');rule(20);y=27;};
+ const newPage=()=>{pdf.addPage();text(title+' / '+(doc.number||''),m,16,10,'bold');rule(20);y=27;};
  const ensure=h=>{if(y+h>273)newPage()};
  const paragraph=(value,width=w,size=9,style='normal',x=m,color=ink)=>{for(const line of wrap(value,width,size,style)){ensure(5);text(line,x,y,size,style,'left',color);y+=size*.405;}y+=.7;};
  const heading=label=>{ensure(11);text(label,m,y,8.5,'bold','left',gold);y+=2.5;rule(y);y+=4.5;};
  if(quote){if(logo)pdf.addImage(logo,'PNG',r-19,12,10,21);text((b.name||"Eric's Designs").toUpperCase(),m,22,16,'bold');text(b.tagline||'Creative & Digital Marketing Agency',m,28,9,'italic','left',muted);text(f.title,m,39,22,'bold','left',gold);rule(45);y=51;}
- else{if(logo)pdf.addImage(logo,'PNG',m,12,13,27);text((b.name||"Eric's Designs").toUpperCase(),m+24,24,16,'bold','left',gold);text(b.tagline||'Marketing & Creative Design Studio',m+24,29,8.5,'italic','left',muted);text(receipt&&voucher?'PAYMENT VOUCHER':f.title,r,26,type==='Proforma'?15:18,'bold','right');rule(43);y=49;}
+ else{if(logo)pdf.addImage(logo,'PNG',m,12,13,27);text((b.name||"Eric's Designs").toUpperCase(),m+24,24,16,'bold','left',gold);text(b.tagline||'Marketing & Creative Design Studio',m+24,29,8.5,'italic','left',muted);text(receipt&&voucher?'PAYMENT VOUCHER':title,r,26,type==='Proforma'?15:18,'bold','right');rule(43);y=49;}
  const left=quote?[['DATE',doc.date],['VALID UNTIL',doc.due]]:receipt?[[voucher?'PAYEE':'CLIENT',client.name]]:[['CLIENT',client.name],['ADDRESS',client.address],['EMAIL',client.email],['PHONE',client.phone],['CONTACT',client.contact],['GSTIN',client.gstin]];
  text(quote?'QUOTATION DETAILS':receipt?(voucher?'PAID TO':'RECEIVED FROM'):'BILL TO',m,y,8,'bold','left',gold);text('DETAILS',r,y,8,'bold','right',gold);y+=5;const start=y;
  for(const [key,value] of left){if(value)paragraph(key+'  '+value,90,9,'normal',m)}
