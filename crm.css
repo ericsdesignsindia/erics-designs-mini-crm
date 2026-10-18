@@ -54,6 +54,7 @@ body[data-theme="dark"] .primary,body[data-theme="dark"] .gold{background:#d8b45
 @media(max-width:720px){.panel .dialog-title{align-items:flex-start}.panel .dialog-title .primary{margin-left:0;width:100%}.panel .taskrow{gap:10px}.panel .taskrow button,.panel .taskrow a{width:100%;text-align:center}.panel .taskrow>div{width:100%}}
 
 .recurring-billing{padding:22px 28px;margin-bottom:24px}.recurring-billing .dialog-title{margin-bottom:12px}.recurring-billing h2{margin-bottom:0}.recurring-billing .sub{margin:0 0 12px;max-width:720px}.recurring-billing .dialog-title .primary{min-width:185px}.recurring-billing .taskrow:last-child{border-bottom:0}@media(max-width:720px){.recurring-billing{padding:18px}.recurring-billing .dialog-title{margin-bottom:14px}.recurring-billing .dialog-title .primary{min-width:0}}
+.taskrow button:disabled{opacity:.55;cursor:not-allowed;filter:saturate(.5)}
 
 .mobile-sections{width:min(520px,94vw)}.mobile-section-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.mobile-section-list button{display:flex;align-items:center;gap:10px;text-align:left}.mobile-section-list span{width:22px;height:22px;display:grid;place-items:center;color:#b99b45}.mobile-section-list svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}@media(max-width:720px){.mobile-sections{width:100vw;max-width:100vw;align-self:end;margin:0;border-radius:18px 18px 0 0}.mobile-section-list{grid-template-columns:1fr}.mobile-section-list button{min-height:48px}}
 
@@ -470,6 +471,17 @@ body[data-theme="dark"] .quick-create-menu,body[data-theme="dark"] .command-pale
 
 .finance-actions-panel{display:grid;grid-template-columns:minmax(220px,.7fr) minmax(420px,1.3fr);gap:24px;align-items:start}.finance-action-groups{display:grid;gap:14px}.finance-action-groups>div{display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:center}.finance-action-groups>div>span{font-size:13px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}.finance-action-groups .actions{gap:8px}.finance-action-groups .actions button{margin:0}@media(max-width:900px){.finance-actions-panel{grid-template-columns:1fr;gap:16px}.finance-action-groups>div{grid-template-columns:1fr;gap:8px}.finance-action-groups .actions button{flex:1 1 145px}}
 .finance-summary-note{margin:0;color:var(--muted);font-size:14px;font-weight:600}.finance-actions-panel{grid-template-columns:minmax(310px,.7fr) minmax(600px,1.3fr)}.finance-action-groups>div{grid-template-columns:180px minmax(0,1fr)}.finance-action-groups>div>span{white-space:nowrap}.finance-action-groups .actions{justify-content:flex-start}@media(max-width:1100px){.finance-actions-panel{grid-template-columns:1fr}.finance-action-groups>div{grid-template-columns:1fr}.finance-action-groups>div>span{white-space:normal}}
+
+/* Keep Accounts finance controls in a predictable desktop row and a compact mobile grid. */
+.finance-actions-panel{display:grid;grid-template-columns:minmax(270px,.72fr) minmax(0,1.28fr);gap:28px;align-items:center}
+.finance-actions-copy,.finance-actions-controls{min-width:0}
+.finance-actions-copy h2{margin:4px 0 8px}
+.finance-actions-copy .sub{max-width:520px;margin:0;line-height:1.55}
+.finance-actions-controls{display:flex;justify-content:flex-end;align-items:center;flex-wrap:wrap;gap:10px}
+.finance-actions-controls>button{flex:0 0 auto;white-space:nowrap}
+.finance-actions-controls .finance-actions-menu{width:auto;min-width:190px;max-width:240px;flex:0 1 220px;margin:0}
+@media(max-width:1100px){.finance-actions-panel{grid-template-columns:minmax(0,1fr);gap:16px;align-items:start}.finance-actions-controls{justify-content:flex-start}}
+@media(max-width:720px){.finance-actions-panel{gap:14px}.finance-actions-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.finance-actions-controls>button{width:100%;min-width:0;padding-inline:8px}.finance-actions-controls .finance-actions-menu{grid-column:1/-1;width:100%;max-width:none;min-width:0}}
 
 
 /* Initial workspace loading state */
