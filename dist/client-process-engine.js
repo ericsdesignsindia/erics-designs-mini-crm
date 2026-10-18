@@ -14,16 +14,19 @@ function prepare(state,quote,uuid,now=new Date().toISOString()){
  p.terms='50% advance payment is required to commence work. The remaining balance is payable after completion.\n'+(quote.terms||'');state.documents.push(p);return p;
 }
 function nextNumber(state,type){const prefix=type==='Invoice'?'ED-':'ED-P-';const max=Math.max(0,...(state.documents||[]).filter(d=>d.type===type).map(d=>Number(String(d.number||'').replace(prefix,''))||0));return prefix+String(max+1).padStart(4,'0')}
-function serviceValue(quote,item){const subtotal=Number(item.qty||0)*Number(item.rate||0),discount=subtotal*Number(quote.discount||0)/100,net=subtotal-discount,tax=net*Number(quote.tax||0)/100;return Math.round((net+tax)*100)/100}
-function prepareServiceProformas(state,quote,uuid,now=new Date().toISOString()){
+function serviceBaseValue(quote,item,index){const allocated=Number(quote.serviceBillingAllocations?.[index]);return Number.isFinite(allocated)&&allocated>0?allocated:Number(item.qty||0)*Number(item.rate||0)}
+function serviceValue(quote,item,index=(quote.items||[]).indexOf(item)){const subtotal=serviceBaseValue(quote,item,index),discount=subtotal*Number(quote.discount||0)/100,net=subtotal-discount,tax=net*Number(quote.tax||0)/100;return Math.round((net+tax)*100)/100}
+function prepareServiceProformas(state,quote,uuid,now=new Date().toISOString(),allocations){
  if(quote.type!=='Quotation'||!quote.clientApprovedForProcess||!quote.contractConfirmedAt||quote.status!=='Accepted')return [];
- if(quote.rateCard||(quote.items||[]).some(item=>!(Number(item.rate)>0)||item.rateText))return [];
+ if(!Array.isArray(quote.items)||quote.items.length<2)return [];
+ const values=(allocations||quote.serviceBillingAllocations||(quote.rateCard?[]:quote.items.map(item=>Number(item.qty||0)*Number(item.rate||0)))).map(Number);
+ if(values.length!==quote.items.length||values.some(value=>!Number.isFinite(value)||value<=0))return [];
  if((state.documents||[]).some(d=>d.type==='Proforma'&&d.rootId===quote.id&&d.status!=='Cancelled'&&d.serviceIndex===undefined))return [];
- quote.billingMode='service-wise';const created=[];
+ quote.billingMode='service-wise';quote.serviceBillingAllocations=values.map(value=>Math.round(value*100)/100);const created=[];
  (quote.items||[]).forEach((item,index)=>{
   if((state.documents||[]).some(d=>d.type==='Proforma'&&d.rootId===quote.id&&d.serviceIndex===index&&d.status!=='Cancelled'))return;
-  const proformaAmount=Math.round(Number(item.qty||0)*Number(item.rate||0)*50)/100;
-  const p={...JSON.parse(JSON.stringify(quote)),id:uuid(),type:'Proforma',number:nextNumber(state,'Proforma'),rootId:quote.id,sourceId:quote.id,serviceIndex:index,serviceName:item.name||`Service ${index+1}`,billingMode:'service-wise',status:'Draft',date:now.slice(0,10),due:new Date(Date.parse(now)+7*86400000).toISOString().slice(0,10),payments:[],advancePercent:50,projectValue:serviceValue(quote,item),advanceAmount:Math.round(serviceValue(quote,item)*50)/100,rateCard:false,updated:now,items:[{...JSON.parse(JSON.stringify(item)),proformaAmount}]};
+  const qty=Number(item.qty||0)||1,rate=values[index]/qty,allocatedItem={...JSON.parse(JSON.stringify(item)),rate,rateText:'',proformaAmount:Math.round(values[index]*50)/100};
+  const p={...JSON.parse(JSON.stringify(quote)),id:uuid(),type:'Proforma',number:nextNumber(state,'Proforma'),rootId:quote.id,sourceId:quote.id,serviceIndex:index,serviceName:item.name||`Service ${index+1}`,billingMode:'service-wise',status:'Draft',date:now.slice(0,10),due:new Date(Date.parse(now)+7*86400000).toISOString().slice(0,10),payments:[],advancePercent:50,projectValue:serviceValue(quote,item,index),advanceAmount:Math.round(serviceValue(quote,item,index)*50)/100,rateCard:false,updated:now,items:[allocatedItem]};
   delete p.portalToken;delete p.acceptedAt;delete p.clientApprovedForProcess;delete p.workCompletedAt;
   p.terms=`Service: ${p.serviceName}\n50% advance payment is required to commence this service. The remaining balance is payable after completion.\n${quote.terms||''}`;
   state.documents.push(p);created.push(p);
@@ -34,7 +37,7 @@ function prepareServiceInvoice(state,quote,proforma,uuid,now=new Date().toISOStr
  if(!proforma||proforma.type!=='Proforma'||proforma.rootId!==quote.id||proforma.serviceIndex===undefined||proforma.status==='Cancelled')return null;
  const existing=(state.documents||[]).find(d=>d.type==='Invoice'&&d.rootId===quote.id&&d.serviceIndex===proforma.serviceIndex&&d.status!=='Cancelled');if(existing)return existing;
  const paid=(proforma.payments||[]).reduce((sum,payment)=>sum+Number(payment.amount||0),0);if(paid+0.005<Number(totalsForEngine(proforma)))return null;
-  const serviceIndex=proforma.serviceIndex,invoice={...JSON.parse(JSON.stringify(proforma)),id:uuid(),type:'Invoice',number:nextNumber(state,'Invoice'),sourceId:proforma.id,sourceProformaId:proforma.id,rootId:quote.id,serviceIndex,serviceName:proforma.serviceName,billingMode:'service-wise',status:'Draft',date:now.slice(0,10),due:new Date(Date.parse(now)+7*86400000).toISOString().slice(0,10),payments:(proforma.payments||[]).map(payment=>({...JSON.parse(JSON.stringify(payment)),sourceProformaId:proforma.id})),updated:now,terms:`Balance invoice for ${proforma.serviceName}. Full service value: ${quote.currency||'INR'} ${serviceValue(quote,quote.items[serviceIndex]).toFixed(2)}. Advance received: ${quote.currency||'INR'} ${paid.toFixed(2)}.\n${quote.business?.invoiceTerms||state.settings?.invoiceTerms||'Thank you for choosing Eric’s Designs.'}`};
+  const serviceIndex=proforma.serviceIndex,invoice={...JSON.parse(JSON.stringify(proforma)),id:uuid(),type:'Invoice',number:nextNumber(state,'Invoice'),sourceId:proforma.id,sourceProformaId:proforma.id,rootId:quote.id,serviceIndex,serviceName:proforma.serviceName,billingMode:'service-wise',status:'Draft',date:now.slice(0,10),due:new Date(Date.parse(now)+7*86400000).toISOString().slice(0,10),payments:(proforma.payments||[]).map(payment=>({...JSON.parse(JSON.stringify(payment)),sourceProformaId:proforma.id})),updated:now,terms:`Balance invoice for ${proforma.serviceName}. Full service value: ${quote.currency||'INR'} ${serviceValue(quote,quote.items[serviceIndex],serviceIndex).toFixed(2)}. Advance received: ${quote.currency||'INR'} ${paid.toFixed(2)}.\n${quote.business?.invoiceTerms||state.settings?.invoiceTerms||'Thank you for choosing Eric’s Designs.'}`};
  delete invoice.proformaAmount;invoice.items=invoice.items.map(item=>{const copy={...item};delete copy.proformaAmount;return copy});state.documents.push(invoice);return invoice;
 }
 function totalsForEngine(document){const subtotal=(document.items||[]).reduce((sum,item)=>sum+Number(item.proformaAmount??(Number(item.qty||0)*Number(item.rate||0))),0),net=subtotal*(1-Number(document.discount||0)/100);return Math.round(net*(1+Number(document.tax||0)/100)*100)/100}

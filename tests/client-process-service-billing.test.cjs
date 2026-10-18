@@ -39,4 +39,18 @@ assert.equal(invoiceTotal * 0.9 * 1.18 - invoicePaid, 5310, 'the invoice shows o
 assert.equal(prepareServiceInvoice(state, quote, first, uuid, now).id, invoice.id, 'repeated action opens the same invoice');
 assert.equal(serviceValue(quote, quote.items[1]), 21240);
 
+const unpricedQuote = {
+  id: 'quote-unpriced', type: 'Quotation', number: 'ED-Q-0002', status: 'Accepted',
+  clientApprovedForProcess: true, contractConfirmedAt: now, currency: 'INR',
+  rateCard: true, discount: 0, tax: 18,
+  items: [{ name: 'Brand strategy', qty: 1, rate: 0, rateText: 'Included in package' }, { name: 'Website', qty: 1, rate: 0, rateText: 'Included in package' }],
+};
+const allocatedState = { documents: [], settings: {} };
+const allocatedProformas = prepareServiceProformas(allocatedState, unpricedQuote, uuid, now, [12000, 18000]);
+assert.equal(allocatedProformas.length, 2, 'manual allocations support services without individual quotation prices');
+assert.deepEqual(unpricedQuote.serviceBillingAllocations, [12000, 18000], 'service allocations are saved on the source quotation');
+assert.deepEqual(allocatedProformas.map(doc => doc.projectValue), [14160, 21240], 'quotation tax is applied to each allocated service');
+assert.deepEqual(allocatedProformas.map(doc => doc.advanceAmount), [7080, 10620], 'each service requests its own half advance');
+assert.deepEqual(allocatedProformas.map(doc => doc.items[0].rate), [12000, 18000], 'generated billing documents use the entered service allocation');
+
 console.log('Service-wise billing creates distinct advances and linked balance invoices without duplicates.');
