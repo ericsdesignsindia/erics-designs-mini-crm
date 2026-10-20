@@ -94,3 +94,7 @@ body.ea360-interface .badge.Paid,body.ea360-interface .badge.Accepted{background
   body.ea360-interface #commandBar .command-actions .command-ai span{display:none!important}
   body.ea360-interface #commandBar .command-actions .command-new{grid-column:span 2!important}
 }
+
+/* Keep the command-center hero readable over its dark background. */
+body.ea360-interface .workday-hero h1{color:#f5f3e9!important}
+body.ea360-interface .workday-hero .workday-actions .primary{background:#d8b45d!important;border-color:#d8b45d!important;color:#1b1b15!important;box-shadow:none!important}
