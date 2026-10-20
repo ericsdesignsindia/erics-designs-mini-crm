@@ -1,0 +1,135 @@
+/* Influmo-inspired clean CRM visual system. Styling only: existing workflows stay intact. */
+body.ea360-interface{
+  --influmo-bg:#f9f9fa;
+  --influmo-paper:#fff;
+  --influmo-ink:#2c2e2d;
+  --influmo-muted:#77818d;
+  --influmo-line:#e7e9e9;
+  --influmo-green:#7bd1aa;
+  --influmo-green-ink:#287451;
+  --influmo-blue:#6897d5;
+  --influmo-blue-ink:#376da9;
+  --bg:var(--influmo-bg);
+  --paper:var(--influmo-paper);
+  --ink:var(--influmo-ink);
+  --muted:var(--influmo-muted);
+  --line:var(--influmo-line);
+  background:var(--influmo-bg)!important;
+  color:var(--influmo-ink)!important;
+  font-family:Inter,"Segoe UI",Arial,sans-serif;
+}
+
+body.ea360-interface .shell,
+body.ea360-interface .shell main{background:var(--influmo-bg)!important}
+body.ea360-interface .shell aside{background:#2c2e2d!important;color:#e7e9e8!important}
+body.ea360-interface .sidehead{border-bottom-color:#ffffff20!important}
+body.ea360-interface .shell aside nav button{color:#d0d5d3!important;border-radius:10px!important}
+body.ea360-interface .shell aside nav button .nav-icon{color:#b4bbae!important}
+body.ea360-interface .shell aside nav button:hover{background:#ffffff12!important;color:#fff!important}
+body.ea360-interface .shell aside nav button.active{background:#414a45!important;color:#fff!important;box-shadow:inset 3px 0 var(--influmo-green)!important}
+body.ea360-interface .shell aside nav button.active .nav-icon{color:var(--influmo-green)!important}
+body.ea360-interface .ea-nav-heading{color:#b4bbae!important}
+
+body.ea360-interface .commandbar{
+  background:#ffffff!important;
+  border:1px solid var(--influmo-line)!important;
+  border-radius:16px!important;
+  box-shadow:0 5px 20px #2c2e2d08!important;
+}
+body.ea360-interface .command-search{background:#f5f6f6!important;border-color:#eceeee!important;border-radius:12px!important}
+body.ea360-interface .command-new,
+body.ea360-interface .primary{background:var(--influmo-blue)!important;border-color:var(--influmo-blue)!important;color:#fff!important;box-shadow:none!important}
+body.ea360-interface .command-new:hover,
+body.ea360-interface .primary:hover{background:#5688c7!important;border-color:#5688c7!important}
+body.ea360-interface .command-ai{background:#eff7f3!important;border-color:#dceee5!important;color:#287451!important}
+body.ea360-interface .command-icon,
+body.ea360-interface .profile-menu{background:#f5f6f6!important;border-color:#e8ebea!important;color:#46514b!important}
+
+body.ea360-interface #app h1,
+body.ea360-interface #app h2,
+body.ea360-interface #app h3,
+body.ea360-interface #app h4{color:var(--influmo-ink)!important;letter-spacing:-.025em}
+body.ea360-interface #app header{align-items:center;margin-bottom:24px}
+body.ea360-interface #app header p,
+body.ea360-interface #app .sub,
+body.ea360-interface #app small,
+body.ea360-interface #app .hint{color:var(--influmo-muted)!important}
+body.ea360-interface .eyebrow{color:var(--influmo-blue-ink)!important;letter-spacing:.14em}
+
+body.ea360-interface .panel,
+body.ea360-interface .stat,
+body.ea360-interface .document-card,
+body.ea360-interface .client-card,
+body.ea360-interface .department-card,
+body.ea360-interface .work-queue-panel,
+body.ea360-interface .recent-work-panel,
+body.ea360-interface .work-metric{
+  background:var(--influmo-paper)!important;
+  border:1px solid var(--influmo-line)!important;
+  border-radius:16px!important;
+  box-shadow:0 5px 18px #2c2e2d08!important;
+}
+body.ea360-interface .panel{padding:22px!important}
+body.ea360-interface .stat{position:relative;overflow:hidden;padding:20px!important}
+body.ea360-interface .stat:first-child{background:#f0faf5!important;border-color:#dcefe5!important}
+body.ea360-interface .stats .stat strong{color:var(--influmo-ink)!important;font-size:28px}
+body.ea360-interface .stats .stat:after{background:#7bd1aa20!important}
+
+/* The Overview keeps its real CRM queue but uses the reference's quieter cards. */
+body.ea360-interface .workday-hero{
+  background:linear-gradient(110deg,#ffffff 0%,#f3faf7 72%,#eef5fb 100%)!important;
+  border:1px solid #e3ece8!important;
+  border-radius:18px!important;
+  box-shadow:0 8px 24px #2c2e2d09!important;
+  color:var(--influmo-ink)!important;
+}
+body.ea360-interface .workday-hero .eyebrow{color:var(--influmo-green-ink)!important}
+body.ea360-interface .workday-hero h1{color:var(--influmo-ink)!important}
+body.ea360-interface .workday-hero p{color:#626f6a!important}
+body.ea360-interface .workday-actions button,
+body.ea360-interface #app button:not(.primary):not(.danger):not(.active):not(.nav-icon){border-radius:10px}
+body.ea360-interface .workday-actions button:not(.primary){background:#fff!important;border-color:#e2e8e5!important;color:#35413b!important}
+body.ea360-interface .workday-actions .primary{background:var(--influmo-blue)!important;border-color:var(--influmo-blue)!important;color:#fff!important}
+body.ea360-interface .work-queue-item{border-bottom-color:#edf0ef!important}
+body.ea360-interface .work-priority-dot{background:var(--influmo-green)!important;box-shadow:0 0 0 5px #7bd1aa24!important}
+
+body.ea360-interface .smallbtn{background:#fff!important;border-color:#e2e8e5!important;color:#47554e!important;border-radius:9px!important}
+body.ea360-interface .smallbtn:hover{background:#f1f8f4!important;border-color:#b9dfcc!important;color:#287451!important}
+body.ea360-interface .danger{color:#b33b4b!important}
+body.ea360-interface .danger.smallbtn{background:#fff!important;border-color:#f0d9dd!important}
+body.ea360-interface table{border-color:var(--influmo-line)!important}
+body.ea360-interface table th{background:#f5f7f6!important;color:#77818d!important;border-bottom-color:#e6eae8!important}
+body.ea360-interface table td{border-bottom-color:#edf0ef!important;color:#424846}
+body.ea360-interface table tbody tr:hover{background:#f8fbf9}
+body.ea360-interface .pipeline .lane{background:#f1f3f3!important;border-color:#e5e8e7!important;border-radius:16px!important}
+body.ea360-interface .lead-card{background:#fff!important;border:1px solid #e7e9e9!important;border-radius:14px!important;box-shadow:0 4px 14px #2c2e2d0a!important}
+body.ea360-interface .lead-card strong{color:var(--influmo-ink)!important}
+
+body.ea360-interface input,
+body.ea360-interface select,
+body.ea360-interface textarea{background:#fff!important;border-color:#e1e6e4!important;border-radius:10px!important;color:var(--influmo-ink)!important}
+body.ea360-interface input:focus,
+body.ea360-interface select:focus,
+body.ea360-interface textarea:focus{outline:3px solid #6897d533!important;border-color:var(--influmo-blue)!important}
+body.ea360-interface label{color:#59645f!important}
+body.ea360-interface dialog{border-radius:18px!important;background:#f9f9fa!important;box-shadow:0 24px 80px #18231d33!important}
+body.ea360-interface .modalbar{background:#fff!important;border-bottom:1px solid var(--influmo-line)!important}
+
+body.ea360-interface .badge.Paid,
+body.ea360-interface .badge.Accepted{background:#e4f7ed!important;color:#287451!important}
+body.ea360-interface .badge.Sent{background:#edf4fc!important;color:#376da9!important}
+body.ea360-interface .badge.Overdue{background:#fff0f0!important;color:#ad414b!important}
+body.ea360-interface #mobileNav{background:#fff!important;border-top:1px solid var(--influmo-line)!important;box-shadow:0 -5px 20px #2c2e2d0a!important}
+body.ea360-interface #mobileNav button{color:#77818d!important}
+body.ea360-interface #mobileNav button.active{color:#376da9!important}
+body.ea360-interface .mobile-fab{background:var(--influmo-blue)!important;box-shadow:0 8px 18px #6897d544!important}
+
+@media(max-width:720px){
+  body.ea360-interface #app header{gap:12px;margin-bottom:18px}
+  body.ea360-interface .panel{padding:16px!important}
+  body.ea360-interface .workday-hero{padding:20px 18px!important}
+  body.ea360-interface .workday-hero p{line-height:1.55}
+  body.ea360-interface .stats{gap:10px}
+  body.ea360-interface .stat{padding:14px!important}
+  body.ea360-interface #app table{min-width:640px}
+}
