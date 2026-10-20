@@ -36,6 +36,10 @@ body.ea360-interface .commandbar{
   border-radius:16px!important;
   box-shadow:0 5px 20px #2c2e2d08!important;
 }
+@media(min-width:721px){
+  body.ea360-interface .commandbar .command-search{flex:1 1 180px;min-width:180px}
+  body.ea360-interface .commandbar .command-actions{flex:0 0 auto;flex-wrap:nowrap;gap:6px}
+}
 body.ea360-interface .command-search{background:#f5f6f6!important;border-color:#eceeee!important;border-radius:12px!important}
 body.ea360-interface .command-new,
 body.ea360-interface .primary{background:var(--influmo-blue)!important;border-color:var(--influmo-blue)!important;color:#fff!important;box-shadow:none!important}
