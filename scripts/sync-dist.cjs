@@ -9,7 +9,7 @@ const files = [
   'client-process-engine.js', 'client-process.js', 'crm-stability.js', 'crm-operations.js', 'crm-priority-fixes.js',
   'client-journey.js', 'project-finance.js', 'delivery-team.js', 'transaction-receipts.js', 'accounts-workspace.js',
   'accounts-ledger-cleanup.js', 'accounting-core.js', 'accounts-dropdowns.js', 'ea360-style.js', 'workflow-stability.js',
-  'crm-animations.js', 'mobile-controls.js', 'contracts.js', 'marketing-workspace.js',
+  'crm-animations.js', 'mobile-controls.js', 'contracts.js', 'marketing-workspace.js', 'workspace-home.js',
   'crm.css', 'style.css', 'demo.css', 'ea360-style.css', 'service-worker.js', 'site.webmanifest',
   'ed-icon-180.png', 'ed-icon-192.png', 'ed-icon-512.png', 'favicon-32.png', 'favicon.svg'
 ];
