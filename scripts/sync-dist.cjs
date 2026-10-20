@@ -10,7 +10,7 @@ const files = [
   'client-journey.js', 'project-finance.js', 'delivery-team.js', 'transaction-receipts.js', 'accounts-workspace.js',
   'accounts-ledger-cleanup.js', 'accounting-core.js', 'accounts-dropdowns.js', 'ea360-style.js', 'workflow-stability.js',
   'crm-animations.js', 'mobile-controls.js', 'contracts.js', 'marketing-workspace.js', 'workspace-home.js',
-  'crm.css', 'style.css', 'demo.css', 'ea360-style.css', 'influmo-ui.css', 'service-worker.js', 'site.webmanifest',
+  'crm.css', 'style.css', 'demo.css', 'ea360-style.css', 'influmo-ui.css', 'revamp-dark-ui.css', 'service-worker.js', 'site.webmanifest',
   'ed-icon-180.png', 'ed-icon-192.png', 'ed-icon-512.png', 'favicon-32.png', 'favicon.svg'
 ];
 const assetFiles = ['eric-rodgers-google-pay-qr.jpeg', 'erics-designs-crm-logo.png', 'gsap.min.js', 'jspdf.umd.min.js', 'payment-received-seal.svg', 'pdf-quotation-logo-clean.png', 'quotation-accepted-seal.svg', 'reference-document-logo.png', 'reference-payment-qr.png'];
