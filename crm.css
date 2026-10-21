@@ -444,6 +444,12 @@ body[data-theme="dark"] .template-steps b{background:#3d4a29}body[data-theme="da
 body[data-theme="light"] #app :is(.panel,.stat,.document-card,.client-card,.lead-card,.lane,.client-form,.mailbox-panel,.mailbox-list,.mail-row,.mail-reader,.mail-detail,.notification-dialog,.settings-card,.connection-item,.template-card,.template-intro,.finance-forecast>div,.reconciliation-stats>div){color:#252619}
 body[data-theme="light"] #app :is(.panel,.stat,.document-card,.client-card,.lead-card,.lane,.client-form,.mailbox-panel,.mailbox-list,.mail-row,.mail-reader,.mail-detail,.notification-dialog,.settings-card,.connection-item,.template-card,.template-intro,.finance-forecast>div,.reconciliation-stats>div) :is(h1,h2,h3,h4,strong,b,.detail-number){color:#252619}
 body[data-theme="light"] #app :is(.panel,.stat,.document-card,.client-card,.lead-card,.lane,.client-form,.mailbox-panel,.mailbox-list,.mail-row,.mail-reader,.mail-detail,.notification-dialog,.settings-card,.connection-item,.template-card,.template-intro,.finance-forecast>div,.reconciliation-stats>div) :is(p,small,label,.sub,.hint,.counts,td,th){color:#756f5d}
+
+/* Make lead-card navigation explicit and reliable on both pointer and touch devices. */
+.advanced-pipeline .lead-card[role="link"]{cursor:pointer;touch-action:manipulation}
+.advanced-pipeline .lead-card[role="link"]:focus-visible{outline:3px solid #3b82f6;outline-offset:3px}
+.pipeline-open-profile{display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--ink);font-weight:650;cursor:pointer}
+.pipeline-open-profile:hover{border-color:#3b82f6;color:#2563eb}
 body[data-theme="light"] .stats .stat strong{color:#252619}
 
 /* Automation centre and lead scoring. */
