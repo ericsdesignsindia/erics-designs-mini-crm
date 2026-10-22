@@ -10,8 +10,23 @@ app.whenReady().then(async () => {
     const result = await window.webContents.executeJavaScript(`(() => { try {
       document.getElementById('erp-auth')?.remove();
       const quote={id:'service-billing-quote',type:'Quotation',number:'ED-Q-SERVICE-1',status:'Accepted',clientApprovedForProcess:true,contractConfirmedAt:'2026-10-18T08:00:00.000Z',billingMode:'service-wise',date:today(),due:today(),currency:'INR',client:{name:'Billing Test Client'},project:'Website and SEO',items:[{name:'Website',qty:1,rate:10000},{name:'SEO',qty:2,rate:10000}],payments:[],tax:18,discount:10,terms:'Test scope',business:structuredClone(defaults.settings)};
-      db=migrate({settings:structuredClone(defaults.settings),documents:[quote],clients:[],services:[],tasks:[],projects:[],activity:[]});
+      const setupQuote={id:'service-billing-setup-quote',type:'Quotation',number:'ED-Q-SETUP-1',status:'Accepted',clientApprovedForProcess:true,date:today(),due:today(),currency:'INR',client:{name:'Setup Test Client'},project:'Website and SEO',items:[{name:'Website',qty:1,rate:10000},{name:'SEO',qty:2,rate:10000}],payments:[],tax:18,discount:10,terms:'Test scope',business:structuredClone(defaults.settings)};
+      db=migrate({settings:structuredClone(defaults.settings),documents:[quote,setupQuote],clients:[{id:'client-setup',name:'Setup Test Client'}],services:[],tasks:[],projects:[],activity:[]});
       persist=()=>true;
+      processContract(setupQuote.id);
+      const basis=document.getElementById('contract-billing-structure'),advance=document.getElementById('contract-advance-mode'),advanceOptions=document.getElementById('contract-advance-setting');
+      if(!basis||!advance||!advanceOptions.hidden)throw Error('The contract form did not show separate billing and advance controls.');
+      basis.value='service';basis.dispatchEvent(new Event('change',{bubbles:true}));
+      if(advanceOptions.hidden||!advance.options[0].textContent.includes('Proforma Invoice'))throw Error('Selecting per-service billing did not expose the advance proforma option.');
+      advance.value='proforma';document.getElementById('contract-status').value='Confirmed';document.getElementById('recordForm').requestSubmit();
+      const configuredQuote=db.documents.find(item=>item.id===setupQuote.id),configuredProformas=db.documents.filter(item=>item.type==='Proforma'&&item.rootId===setupQuote.id&&item.serviceIndex!==undefined);
+      if(configuredQuote.billingMode!=='service-wise'||configuredProformas.length!==2)throw Error('The advance proforma option did not create one proforma for each service.');
+      const noAdvanceSetup={id:'service-billing-no-advance-setup',type:'Quotation',number:'ED-Q-SETUP-2',status:'Accepted',clientApprovedForProcess:true,date:today(),due:today(),currency:'INR',client:{name:'Setup Test Client'},project:'Brand strategy and website',items:[{name:'Brand strategy',qty:1,rate:12000},{name:'Website',qty:1,rate:18000}],payments:[],tax:18,discount:10,terms:'Test scope',business:structuredClone(defaults.settings)};
+      db.documents.push(noAdvanceSetup);processContract(noAdvanceSetup.id);
+      const noAdvanceBasis=document.getElementById('contract-billing-structure'),noAdvanceOption=document.getElementById('contract-advance-mode');
+      noAdvanceBasis.value='service';noAdvanceBasis.dispatchEvent(new Event('change',{bubbles:true}));noAdvanceOption.value='none';document.getElementById('contract-status').value='Confirmed';document.getElementById('recordForm').requestSubmit();
+      const noAdvanceConfigured=db.documents.find(item=>item.id===noAdvanceSetup.id);
+      if(noAdvanceConfigured.billingMode!=='service-completion'||db.documents.some(item=>item.type==='Proforma'&&item.rootId===noAdvanceSetup.id))throw Error('The no-advance choice did not preserve separate billing without creating a proforma.');
       const proformas=ClientProcessEngine.prepareServiceProformas(db,quote,uid);
       if(proformas.length!==2)throw Error('Separate service proformas were not prepared.');
       proformas[0].payments.push({id:'advance-1',date:today(),amount:totals(proformas[0]).total,reference:'UPI'});
