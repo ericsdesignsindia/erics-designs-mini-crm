@@ -27,7 +27,20 @@ app.whenReady().then(async () => {
       if(invoice.payments[0].sourceProformaId!==proformas[0].id)throw Error('Advance is not linked to its balance invoice.');
       if(totals(invoice).balance!==5310)throw Error('The invoice balance is incorrect: '+totals(invoice).balance);
       if(db.documents.some(item=>item.type==='Invoice'&&item.serviceIndex===1))throw Error('An incomplete service received an invoice.');
-      return { serviceCards:2, proformas:proformas.length, invoiceBalance:totals(invoice).balance, unrelatedServiceInvoiced:false };
+      const noAdvanceQuote={id:'no-advance-service-quote',type:'Quotation',number:'ED-Q-SERVICE-2',status:'Accepted',clientApprovedForProcess:true,contractConfirmedAt:'2026-10-18T08:00:00.000Z',billingMode:'service-completion',serviceBillingAllocations:[12000,18000],date:today(),due:today(),currency:'INR',client:{name:'No Advance Test Client'},project:'Brand strategy and website',items:[{name:'Brand strategy',qty:1,rate:12000},{name:'Website',qty:1,rate:18000}],payments:[],tax:18,discount:10,terms:'Test scope',business:structuredClone(defaults.settings)};
+      db.documents.push(noAdvanceQuote);
+      processProject(noAdvanceQuote.id);
+      const noAdvanceProject=db.projects.find(item=>item.sourceQuotationId===noAdvanceQuote.id);
+      noAdvanceProject.tasks[0].done=true;
+      nav('Client Process');
+      if(!document.getElementById('app').innerText.includes('Invoice each service when complete'))throw Error('No-advance service billing cards are missing.');
+      processCompletedServiceInvoice(noAdvanceQuote.id,0);
+      const noAdvanceInvoice=db.documents.find(item=>item.type==='Invoice'&&item.serviceIndex===0&&item.rootId===noAdvanceQuote.id);
+      if(!noAdvanceInvoice||draft?.id!==noAdvanceInvoice.id)throw Error('The completed service did not open its invoice.');
+      if(noAdvanceInvoice.items.length!==1||totals(noAdvanceInvoice).total!==12744)throw Error('The service invoice has the wrong amount or scope.');
+      if(noAdvanceInvoice.payments.length||noAdvanceInvoice.advanceAmount!==0)throw Error('The no-advance invoice contains advance payment data.');
+      if(db.documents.some(item=>item.type==='Invoice'&&item.rootId===noAdvanceQuote.id&&item.serviceIndex===1))throw Error('An incomplete service received an invoice.');
+      return { serviceCards:2, proformas:proformas.length, balanceInvoice:totals(invoice).balance, noAdvanceInvoice:totals(noAdvanceInvoice).total, unrelatedServicesInvoiced:false };
     } catch(error) { return { error:error.stack||error.message }; }
     })()`);
     if (!result || result.error) throw new Error(result?.error || 'Browser billing verification returned no result.');

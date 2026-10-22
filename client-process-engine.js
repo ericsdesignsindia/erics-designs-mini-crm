@@ -2,7 +2,7 @@
 /* Keep the total project value and the advance requested as separate values. */
 function prepare(state,quote,uuid,now=new Date().toISOString()){
  if(quote.type!=='Quotation'||!quote.clientApprovedForProcess||!quote.contractConfirmedAt||quote.status!=='Accepted')return null;
- if(quote.billingMode==='service-wise')return null;
+ if(quote.billingMode==='service-wise'||quote.billingMode==='service-completion')return null;
  const existing=state.documents.find(d=>d.rootId===quote.id&&d.type==='Proforma'&&d.status!=='Cancelled');if(existing)return existing;
  const projectValue=(quote.items||[]).reduce((a,i)=>a+Number(i.qty||0)*Number(i.rate||0),0)*(1-Number(quote.discount||0)/100)*(1+Number(quote.tax||0)/100);
  if(!(projectValue>0)||(quote.items||[]).some(i=>!(Number(i.rate)>0)||i.rateText))return null;
@@ -40,6 +40,15 @@ function prepareServiceInvoice(state,quote,proforma,uuid,now=new Date().toISOStr
   const serviceIndex=proforma.serviceIndex,invoice={...JSON.parse(JSON.stringify(proforma)),id:uuid(),type:'Invoice',number:nextNumber(state,'Invoice'),sourceId:proforma.id,sourceProformaId:proforma.id,rootId:quote.id,serviceIndex,serviceName:proforma.serviceName,billingMode:'service-wise',status:'Draft',date:now.slice(0,10),due:new Date(Date.parse(now)+7*86400000).toISOString().slice(0,10),payments:(proforma.payments||[]).map(payment=>({...JSON.parse(JSON.stringify(payment)),sourceProformaId:proforma.id})),updated:now,terms:`Balance invoice for ${proforma.serviceName}. Full service value: ${quote.currency||'INR'} ${serviceValue(quote,quote.items[serviceIndex],serviceIndex).toFixed(2)}. Advance received: ${quote.currency||'INR'} ${paid.toFixed(2)}.\n${quote.business?.invoiceTerms||state.settings?.invoiceTerms||'Thank you for choosing Eric’s Designs.'}`};
  delete invoice.proformaAmount;invoice.items=invoice.items.map(item=>{const copy={...item};delete copy.proformaAmount;return copy});state.documents.push(invoice);return invoice;
 }
+function prepareCompletedServiceInvoice(state,quote,serviceIndex,uuid,now=new Date().toISOString()){
+ if(quote?.type!=='Quotation'||quote.status!=='Accepted'||!quote.contractConfirmedAt||quote.billingMode!=='service-completion')return null;
+ const item=quote.items?.[serviceIndex];if(!item)return null;
+ const existing=(state.documents||[]).find(document=>document.type==='Invoice'&&document.rootId===quote.id&&document.serviceIndex===serviceIndex&&document.status!=='Cancelled');if(existing)return existing;
+ const allocated=serviceBaseValue(quote,item,serviceIndex);if(!(allocated>0))return null;
+ const quantity=Number(item.qty||0)||1,invoice={...JSON.parse(JSON.stringify(quote)),id:uuid(),type:'Invoice',number:nextNumber(state,'Invoice'),sourceId:quote.id,sourceQuotationId:quote.id,rootId:quote.id,serviceIndex,serviceName:item.name||`Service ${serviceIndex+1}`,billingMode:'service-completion',status:'Draft',date:now.slice(0,10),due:new Date(Date.parse(now)+7*86400000).toISOString().slice(0,10),payments:[],projectValue:serviceValue(quote,item,serviceIndex),advanceAmount:0,updated:now,items:[{...JSON.parse(JSON.stringify(item)),rate:allocated/quantity,rateText:''}],terms:`Invoice for completed service: ${item.name||`Service ${serviceIndex+1}`}. No advance was requested.\n${quote.business?.invoiceTerms||state.settings?.invoiceTerms||'Thank you for choosing Eric’s Designs.'}`};
+ delete invoice.portalToken;delete invoice.acceptedAt;delete invoice.clientApprovedForProcess;delete invoice.workCompletedAt;delete invoice.advancePercent;delete invoice.serviceBillingAllocations;
+ state.documents.push(invoice);return invoice;
+}
 function totalsForEngine(document){const subtotal=(document.items||[]).reduce((sum,item)=>sum+Number(item.proformaAmount??(Number(item.qty||0)*Number(item.rate||0))),0),net=subtotal*(1-Number(document.discount||0)/100);return Math.round(net*(1+Number(document.tax||0)/100)*100)/100}
-if(typeof module!=='undefined')module.exports={prepare,prepareServiceProformas,prepareServiceInvoice,serviceValue};else root.ClientProcessEngine={prepare,prepareServiceProformas,prepareServiceInvoice,serviceValue};
+if(typeof module!=='undefined')module.exports={prepare,prepareServiceProformas,prepareServiceInvoice,prepareCompletedServiceInvoice,serviceValue};else root.ClientProcessEngine={prepare,prepareServiceProformas,prepareServiceInvoice,prepareCompletedServiceInvoice,serviceValue};
 })(typeof window!=='undefined'?window:globalThis);

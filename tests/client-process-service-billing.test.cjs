@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { prepare, prepareServiceProformas, prepareServiceInvoice, serviceValue } = require('../client-process-engine');
+const { prepare, prepareServiceProformas, prepareServiceInvoice, prepareCompletedServiceInvoice, serviceValue } = require('../client-process-engine');
 
 const state = { documents: [], settings: { invoiceTerms: 'Net 7 days.' } };
 const quote = {
@@ -53,4 +53,29 @@ assert.deepEqual(allocatedProformas.map(doc => doc.projectValue), [14160, 21240]
 assert.deepEqual(allocatedProformas.map(doc => doc.advanceAmount), [7080, 10620], 'each service requests its own half advance');
 assert.deepEqual(allocatedProformas.map(doc => doc.items[0].rate), [12000, 18000], 'generated billing documents use the entered service allocation');
 
-console.log('Service-wise billing creates distinct advances and linked balance invoices without duplicates.');
+const noAdvanceQuote = {
+  id: 'quote-no-advance', type: 'Quotation', number: 'ED-Q-0003', status: 'Accepted',
+  clientApprovedForProcess: true, contractConfirmedAt: now, billingMode: 'service-completion',
+  currency: 'INR', discount: 10, tax: 18, serviceBillingAllocations: [12000, 18000],
+  items: [
+    { name: 'Brand strategy', qty: 1, rate: 0, rateText: 'Included in package' },
+    { name: 'Website', qty: 1, rate: 0, rateText: 'Included in package' },
+  ],
+};
+const noAdvanceState = { documents: [], settings: { invoiceTerms: 'Net 7 days.' } };
+assert.equal(prepare(noAdvanceState, noAdvanceQuote, uuid, now), null, 'no combined advance proforma is created');
+assert.equal(prepareCompletedServiceInvoice(noAdvanceState, { ...noAdvanceQuote, contractConfirmedAt: null }, 0, uuid, now), null, 'invoice creation requires a confirmed contract');
+const serviceInvoice = prepareCompletedServiceInvoice(noAdvanceState, noAdvanceQuote, 0, uuid, now);
+assert.ok(serviceInvoice, 'completed service can receive its own invoice without an advance');
+assert.equal(serviceInvoice.serviceIndex, 0);
+assert.equal(serviceInvoice.items.length, 1, 'invoice contains only the completed service');
+assert.equal(serviceInvoice.projectValue, 12744, 'service value includes its share of discount and tax');
+assert.deepEqual(serviceInvoice.payments, [], 'no advance payment is carried to the service invoice');
+assert.equal(serviceInvoice.advanceAmount, 0);
+assert.match(serviceInvoice.terms, /No advance was requested/);
+assert.equal(prepareCompletedServiceInvoice(noAdvanceState, noAdvanceQuote, 0, uuid, now).id, serviceInvoice.id, 'repeated action returns the existing service invoice');
+const remainingServiceInvoice = prepareCompletedServiceInvoice(noAdvanceState, noAdvanceQuote, 1, uuid, now);
+assert.ok(remainingServiceInvoice, 'each quoted service can be invoiced separately');
+assert.equal(remainingServiceInvoice.serviceIndex, 1);
+
+console.log('Service-wise advances and no-advance completion invoices are generated separately and without duplicates.');
