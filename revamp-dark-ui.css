@@ -472,3 +472,65 @@ body.ea360-interface[data-theme="dark"] .shell>aside>#nav>button.active{border-c
  body.ea360-interface .home-period-switch{overflow:hidden!important}
  body.ea360-interface .home-period-switch button{width:33.333%!important}
 }
+
+/* Keep the document as the single vertical scroll surface in every layout.
+   The previous EA360 shell hid root scrolling on desktop/tablet while this
+   file made the inner main area overflow visibly. */
+html:has(body.ea360-interface){
+  height:auto!important;
+  min-height:100%!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  scroll-padding-top:130px;
+}
+body.ea360-interface{
+  height:auto!important;
+  min-height:100dvh!important;
+  overflow-x:clip!important;
+  overflow-y:visible!important;
+  overscroll-behavior-y:auto!important;
+}
+body.ea360-interface .shell,
+body.ea360-interface .shell.sidebar-collapsed{
+  height:auto!important;
+  min-height:100dvh!important;
+  overflow:visible!important;
+}
+body.ea360-interface .shell>main{
+  height:auto!important;
+  min-height:calc(100dvh - 76px)!important;
+  overflow:visible!important;
+  overscroll-behavior-y:auto!important;
+}
+
+@media(min-width:1101px){
+ body.ea360-interface .shell>aside{
+  grid-template-columns:164px minmax(0,1fr)!important;
+  grid-template-rows:auto auto!important;
+  gap:8px 18px!important;
+  min-height:122px!important;
+  padding:10px clamp(16px,2.4vw,36px) 8px!important;
+ }
+ body.ea360-interface .shell>aside>.sidehead{grid-column:1!important;grid-row:1!important}
+ body.ea360-interface .shell>aside>#commandBar{grid-column:2!important;grid-row:1!important;max-width:100%!important}
+ body.ea360-interface .shell>aside>#nav{
+  grid-column:1/-1!important;grid-row:2!important;
+  width:100%!important;min-height:40px!important;
+  overflow-x:auto!important;overflow-y:hidden!important;
+  scrollbar-width:thin!important;scrollbar-color:#b8c6d9 transparent!important;
+  padding-bottom:2px!important;
+ }
+ body.ea360-interface .shell>aside>#nav::-webkit-scrollbar{display:block!important;height:5px!important}
+ body.ea360-interface .shell>aside>#nav::-webkit-scrollbar-thumb{background:#b8c6d9!important;border-radius:99px!important}
+ body.ea360-interface .shell>main{min-height:calc(100dvh - 122px)!important}
+}
+
+@media(max-width:720px){
+ html:has(body.ea360-interface){scroll-padding-top:180px}
+ body.ea360-interface{padding-bottom:calc(66px + env(safe-area-inset-bottom))!important}
+ body.ea360-interface #commandBar .command-actions .command-ai span{display:none!important}
+ body.ea360-interface .shell>main{
+  min-height:calc(100dvh - 122px)!important;
+  padding-bottom:calc(92px + env(safe-area-inset-bottom))!important;
+ }
+}
