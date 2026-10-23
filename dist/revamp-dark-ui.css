@@ -534,3 +534,41 @@ body.ea360-interface .shell>main{
   padding-bottom:calc(92px + env(safe-area-inset-bottom))!important;
  }
 }
+
+/* Keep every desktop workspace link visible without a clipped horizontal nav strip. */
+@media(min-width:1101px){
+ body.ea360-interface .shell>aside{
+  min-height:158px!important;
+  grid-template-rows:auto auto!important;
+  align-content:center!important;
+ }
+ body.ea360-interface .shell>aside>#nav{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-content:center!important;
+  align-items:center!important;
+  gap:3px 5px!important;
+  min-height:76px!important;
+  max-height:80px!important;
+  padding:0!important;
+  overflow:visible!important;
+  scrollbar-width:none!important;
+ }
+ body.ea360-interface .shell>aside>#nav::-webkit-scrollbar{display:none!important}
+ body.ea360-interface .shell>aside>#nav>button{
+  flex:0 0 auto!important;
+  min-height:34px!important;
+  height:34px!important;
+  padding:0 8px!important;
+  gap:5px!important;
+  font-size:11px!important;
+ }
+ body.ea360-interface .shell>aside>#nav>button .nav-icon{font-size:14px!important}
+ body.ea360-interface .shell>main{min-height:calc(100dvh - 158px)!important}
+}
+
+@media(min-width:1101px) and (max-width:1199px){
+ body.ea360-interface .shell>aside{min-height:194px!important}
+ body.ea360-interface .shell>aside>#nav{min-height:112px!important;max-height:114px!important}
+ body.ea360-interface .shell>main{min-height:calc(100dvh - 194px)!important}
+}
