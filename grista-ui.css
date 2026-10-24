@@ -137,6 +137,71 @@ body.ea360-interface[data-theme="dark"] .shell>aside>#commandBar{background:rgba
 body.ea360-interface[data-theme="dark"] #app table th{background:#202b40!important;color:#bdc9de!important}
 body.ea360-interface[data-theme="dark"] #app input,body.ea360-interface[data-theme="dark"] #app select,body.ea360-interface[data-theme="dark"] #app textarea{background:#111a2a!important;color:var(--gr-ink)!important}
 
+/* Grista finish: light lavender navigation, warm canvas, and clear blue actions. */
+body.ea360-interface{
+  --gr-bg:#f5f4f8;--gr-surface:#fffefa;--gr-surface-2:#f7f6fb;--gr-ink:#172238;--gr-muted:#748096;
+  --gr-line:#e4e6ee;--gr-blue:#2867dc;--gr-blue-dark:#1e50b4;--gr-blue-soft:#eaf1ff;
+  --gr-shadow:0 10px 26px rgba(27,43,72,.055);background:var(--gr-bg)!important
+}
+body.ea360-interface .shell>aside{
+  color:#26344d!important;background:#edf0fa!important;border-right:1px solid #e0e4f0!important;
+  box-shadow:8px 0 28px rgba(31,45,77,.035)!important
+}
+body.ea360-interface .shell>aside>.sidehead{border-bottom-color:#dce2ef!important}
+body.ea360-interface .shell>aside .brand.brand-logo img{filter:none!important}
+body.ea360-interface .shell>aside>#nav .ea-nav-heading{color:#8b96ac!important}
+body.ea360-interface .shell>aside>#nav>button{color:#66738a!important}
+body.ea360-interface .shell>aside>#nav>button .nav-icon{color:#7c8ca8!important}
+body.ea360-interface .shell>aside>#nav>button:hover{color:#1e2c45!important;background:#e3e9f8!important}
+body.ea360-interface .shell>aside>#nav>button.active{
+  color:#fff!important;background:linear-gradient(105deg,#2867dc,#4384f2)!important;border-color:#2867dc!important;
+  box-shadow:0 7px 16px rgba(40,103,220,.2),inset 3px 0 #8cc0ff!important
+}
+body.ea360-interface .shell>aside>#nav>button.active .nav-icon{color:#fff!important}
+body.ea360-interface .shell>aside>#nav .nav-count{border-color:#edf0fa!important}
+body.ea360-interface .shell>aside>footer{color:#8994a8!important;border-top-color:#dce2ef!important}
+body.ea360-interface .shell>aside>#commandBar{
+  background:rgba(255,254,250,.94)!important;border-bottom-color:#e4e6ee!important;
+  box-shadow:0 5px 22px rgba(25,40,66,.04)!important
+}
+body.ea360-interface .command-search{background:#f8f8fc!important;border-color:#e2e6f0!important}
+body.ea360-interface .command-ai,body.ea360-interface .command-icon,body.ea360-interface .profile-menu{background:#fffefa!important;border-color:#e1e5ef!important;color:#26344d!important}
+body.ea360-interface .shell>main{background:var(--gr-bg)!important}
+body.ea360-interface #app .home-kpi,body.ea360-interface #app .home-card,body.ea360-interface #app .card,
+body.ea360-interface #app .panel,body.ea360-interface #app .stat-card,body.ea360-interface #app .tablewrap,
+body.ea360-interface #app .section-card,body.ea360-interface #app .workspace-card{
+  background:var(--gr-surface)!important;border-color:var(--gr-line)!important;border-radius:20px!important;box-shadow:var(--gr-shadow)!important
+}
+body.ea360-interface #app button.primary,body.ea360-interface #app .primary,body.ea360-interface #app .home-primary,
+body.ea360-interface #app button[data-primary="true"]{background:var(--gr-blue)!important;border-color:var(--gr-blue)!important;color:#fff!important}
+body.ea360-interface #app button:not(.primary):not(.home-primary){border-color:#dfe4ef}
+body.ea360-interface #app table th{background:#f1f2f7!important;color:#68758a!important}
+body.ea360-interface .shell>aside>#nav,body.ea360-interface #app .tablewrap{scrollbar-color:#b8c3d8 transparent!important}
+
+/* Dark mode follows the same Grista structure while retaining user choice. */
+body.ea360-interface[data-theme="dark"]{
+  --gr-bg:#101522;--gr-surface:#171e2d;--gr-surface-2:#121a29;--gr-ink:#edf2fc;--gr-muted:#a1aec3;
+  --gr-line:#2b354a;--gr-blue:#4387f5;--gr-blue-dark:#2f70da;--gr-blue-soft:#1d3151;--gr-shadow:0 12px 30px rgba(0,0,0,.17)
+}
+body.ea360-interface[data-theme="dark"] .shell>aside{background:#151a29!important;border-color:#2a3042!important;color:#e7ecf8!important}
+body.ea360-interface[data-theme="dark"] .shell>aside>.sidehead{border-bottom-color:#2a3042!important}
+body.ea360-interface[data-theme="dark"] .shell>aside>#nav .ea-nav-heading{color:#8d9ab1!important}
+body.ea360-interface[data-theme="dark"] .shell>aside>#nav>button{color:#bac4d6!important}
+body.ea360-interface[data-theme="dark"] .shell>aside>#nav>button:hover{color:#fff!important;background:#222c40!important}
+body.ea360-interface[data-theme="dark"] .shell>aside>#nav>button.active{color:#fff!important;background:#20477f!important;border-color:#3266aa!important}
+body.ea360-interface[data-theme="dark"] .shell>aside>footer{color:#8d9ab1!important;border-color:#2a3042!important}
+body.ea360-interface[data-theme="dark"] .shell>aside>#commandBar{background:rgba(18,25,39,.94)!important}
+body.ea360-interface[data-theme="dark"] .command-search,body.ea360-interface[data-theme="dark"] .command-ai,
+body.ea360-interface[data-theme="dark"] .command-icon,body.ea360-interface[data-theme="dark"] .profile-menu{background:#171e2d!important;border-color:#2b354a!important;color:#edf2fc!important}
+
+@media(max-width:720px){
+  body.ea360-interface .shell>aside>#commandBar{background:rgba(255,254,250,.97)!important}
+  body.ea360-interface #mobileNav{background:#171f30!important;border-color:#2c3850!important}
+  body.ea360-interface #mobileNav button.active{background:#263d64!important;color:#fff!important}
+  body.ea360-interface[data-theme="dark"] .shell>aside>#commandBar{background:rgba(18,25,39,.97)!important}
+  body.ea360-interface[data-theme="dark"] #mobileNav{background:#0c1423!important;border-color:#202d43!important}
+}
+
 @media(min-width:721px) and (max-width:1050px){
  body.ea360-interface .shell,body.ea360-interface .shell.sidebar-collapsed{grid-template-columns:220px minmax(0,1fr)!important}
  body.ea360-interface .shell>aside{width:220px!important;padding-right:11px!important;padding-left:11px!important}
