@@ -288,3 +288,98 @@ body.ea360-interface[data-theme="dark"] .command-icon,body.ea360-interface[data-
  body.ea360-interface #mobileNav{right:7px!important;left:7px!important}
  body.ea360-interface #mobileNav button{font-size:8px!important}
 }
+
+/* Reference pass: match Grista's warm canvas, compact command header and dark mobile dock. */
+body.ea360-interface{
+  --gr-bg:#f6f2e9;--gr-surface:#fffefa;--gr-surface-2:#f8f5ee;--gr-ink:#182437;--gr-muted:#778191;
+  --gr-line:#e6e0d5;--gr-blue:#2e64d6;--gr-blue-dark:#214eae;--gr-blue-soft:#edf3ff;
+  --gr-shadow:0 8px 24px rgba(35,45,62,.055);background:var(--gr-bg)!important
+}
+body.ea360-interface .shell,body.ea360-interface .shell>main{background:var(--gr-bg)!important}
+body.ea360-interface .shell>aside{background:#f0ece3!important;border-right-color:#e3ddd1!important;box-shadow:4px 0 20px rgba(35,45,62,.035)!important}
+body.ea360-interface .shell>aside>.sidehead{border-bottom-color:#dfd9cd!important}
+body.ea360-interface .shell>aside>#nav>button{color:#536176!important}
+body.ea360-interface .shell>aside>#nav>button .nav-icon{color:#71819a!important}
+body.ea360-interface .shell>aside>#nav>button:hover{color:#1d2c45!important;background:#e7e9ee!important}
+body.ea360-interface .shell>aside>#nav>button.active{color:#fff!important;background:var(--gr-blue)!important;border-color:var(--gr-blue)!important;box-shadow:0 6px 15px rgba(46,100,214,.17)!important}
+body.ea360-interface .shell>aside>#nav>button.active .nav-icon{color:#fff!important}
+body.ea360-interface .shell>aside>#nav .ea-nav-heading{color:#8b8e94!important}
+body.ea360-interface .shell>aside>footer{color:#7d8795!important;border-color:#dfd9cd!important}
+body.ea360-interface .shell>aside>#commandBar{background:rgba(255,254,250,.96)!important;border-bottom-color:var(--gr-line)!important}
+body.ea360-interface .mobile-page-title{display:none}
+body.ea360-interface .command-search{display:flex!important;align-items:center!important;gap:9px!important;box-sizing:border-box!important}
+body.ea360-interface .command-search input{flex:1 1 auto!important;width:100%!important;min-width:0!important;height:100%!important;margin:0!important;padding:0!important;border:0!important;outline:0!important;background:transparent!important;box-shadow:none!important}
+body.ea360-interface .shell>main{padding-top:96px!important}
+body.ea360-interface #app .home-dashboard-head{padding:5px 2px 9px!important}
+body.ea360-interface #app .home-dashboard-head h1{letter-spacing:-.04em!important}
+body.ea360-interface #app .home-period-switch{background:#eeece6!important;border:1px solid var(--gr-line)!important;border-radius:13px!important;padding:4px!important}
+body.ea360-interface #app .home-period-switch button{border-radius:10px!important}
+body.ea360-interface #app .home-period-switch button.active{background:var(--gr-blue)!important;color:#fff!important;box-shadow:0 4px 10px rgba(46,100,214,.18)!important}
+body.ea360-interface #app .home-kpi,body.ea360-interface #app .home-card,body.ea360-interface #app .card,
+body.ea360-interface #app .panel,body.ea360-interface #app .stat-card,body.ea360-interface #app .tablewrap,
+body.ea360-interface #app .section-card,body.ea360-interface #app .workspace-card{
+  background:var(--gr-surface)!important;border-color:var(--gr-line)!important;box-shadow:var(--gr-shadow)!important
+}
+body.ea360-interface #app .home-kpi{border-radius:18px!important}
+body.ea360-interface #app .home-card{border-radius:21px!important}
+body.ea360-interface #app .home-kpi-icon{background:var(--gr-blue-soft)!important;color:var(--gr-blue)!important}
+body.ea360-interface #app .home-header-actions button{border-radius:13px!important}
+body.ea360-interface #app .home-header-actions .home-primary{background:var(--gr-blue)!important;border-color:var(--gr-blue)!important;color:#fff!important}
+body.ea360-interface #app .home-project-table tr:hover td{background:#f8f7f3!important}
+body.ea360-interface #mobileNav{background:#151c2c!important;border-color:#252d40!important;box-shadow:0 12px 32px rgba(17,25,42,.25)!important}
+body.ea360-interface #mobileNav button.active{background:#344f9e!important;color:#fff!important}
+body.ea360-interface #mobileNav .mobile-fab span{color:#7fa8ff!important}
+body.ea360-interface[data-theme="dark"]{
+  --gr-bg:#111522;--gr-surface:#1a2030;--gr-surface-2:#151c2a;--gr-ink:#edf1f8;--gr-muted:#a6b0c0;
+  --gr-line:#30394a;--gr-blue:#4c7df0;--gr-blue-dark:#3765d0;--gr-blue-soft:#242f4b;--gr-shadow:0 10px 28px rgba(0,0,0,.2)
+}
+body.ea360-interface[data-theme="dark"] .shell>aside{background:#151a28!important;border-color:#2b3242!important}
+body.ea360-interface[data-theme="dark"] .shell>aside>.sidehead,body.ea360-interface[data-theme="dark"] .shell>aside>footer{border-color:#2b3242!important}
+body.ea360-interface[data-theme="dark"] .shell>aside>#nav>button{color:#bac4d6!important}
+body.ea360-interface[data-theme="dark"] .shell>aside>#nav>button.active{background:#344f9e!important;border-color:#4568bd!important}
+body.ea360-interface[data-theme="dark"] .shell>aside>#commandBar{background:rgba(20,26,39,.96)!important}
+body.ea360-interface[data-theme="dark"] #app .home-period-switch{background:#202737!important}
+body.ea360-interface[data-theme="dark"] #app .home-project-table tr:hover td{background:#202737!important}
+
+@media(max-width:720px){
+  body.ea360-interface{padding:0 0 calc(76px + env(safe-area-inset-bottom))!important;background:var(--gr-bg)!important}
+  body.ea360-interface .shell>aside>#commandBar{position:sticky!important;top:0!important;min-height:60px!important;height:60px!important;padding:8px 10px!important;background:rgba(255,254,250,.97)!important}
+  body.ea360-interface .commandbar{display:flex!important;flex-direction:row!important;align-items:center!important;gap:5px!important}
+  body.ea360-interface .mobile-page-title{display:block!important;flex:0 1 76px!important;min-width:0!important;overflow:hidden!important;color:var(--gr-ink)!important;font-size:12px!important;font-weight:750!important;line-height:1.15!important;text-overflow:ellipsis!important;white-space:nowrap!important}
+  body.ea360-interface .command-search{position:relative!important;flex:0 0 34px!important;width:34px!important;min-width:34px!important;max-width:34px!important;height:38px!important;min-height:38px!important;padding:0!important;justify-content:center!important;border-radius:12px!important}
+  body.ea360-interface .command-search input{position:absolute!important;inset:0!important;width:100%!important;min-width:0!important;height:100%!important;padding:0!important;opacity:0!important;cursor:pointer!important}
+  body.ea360-interface .command-search:focus-within{flex:1 1 76px!important;width:auto!important;max-width:none!important}
+  body.ea360-interface .command-search:focus-within input{position:relative!important;opacity:1!important;cursor:text!important}
+  body.ea360-interface .command-actions{flex:0 0 auto!important;display:flex!important;justify-content:flex-end!important;gap:3px!important;width:auto!important;overflow:visible!important}
+  body.ea360-interface #commandBar .command-actions button{flex:0 0 32px!important;width:32px!important;min-width:32px!important;height:36px!important;min-height:36px!important;padding:0!important;border-radius:11px!important}
+  body.ea360-interface .command-actions [data-today-workspace],body.ea360-interface .command-actions .command-logout{display:none!important}
+  body.ea360-interface .command-actions .command-ai span{display:none!important}
+  body.ea360-interface #commandBar .command-actions .command-new{flex:0 0 34px!important;width:34px!important;min-width:34px!important;grid-column:auto!important;padding:0!important;background:var(--gr-blue)!important;color:#fff!important}
+  body.ea360-interface #commandBar .command-actions .command-new span{display:none!important}
+  body.ea360-interface .shell>main{padding:16px 12px calc(98px + env(safe-area-inset-bottom))!important}
+  body.ea360-interface #app .home-dashboard-head{padding:2px 2px 6px!important}
+  body.ea360-interface #app .home-breadcrumb{font-size:9px!important;letter-spacing:.11em!important}
+  body.ea360-interface #app .home-dashboard-head h1{font-size:25px!important;line-height:1.16!important}
+  body.ea360-interface #app .home-dashboard-head p{font-size:13px!important}
+  body.ea360-interface #app .home-header-actions{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;margin-top:13px!important}
+  body.ea360-interface #app .home-header-actions button{min-height:42px!important;font-size:11px!important}
+  body.ea360-interface #app .home-header-actions button:last-child{grid-column:1/-1!important}
+  body.ea360-interface #app .home-period-row{align-items:flex-start!important;gap:10px!important}
+  body.ea360-interface #app .home-period-row h2{font-size:18px!important}
+  body.ea360-interface #app .home-period-switch{width:100%!important}
+  body.ea360-interface #app .home-period-switch button{flex:1 1 0!important;min-width:0!important;padding:8px 3px!important;font-size:10px!important}
+  body.ea360-interface #app .home-kpi{background:var(--gr-surface)!important;border-radius:17px!important;padding:12px!important}
+  body.ea360-interface #app .home-card{background:var(--gr-surface)!important;border-radius:18px!important}
+  body.ea360-interface #mobileNav{inset:auto 10px calc(10px + env(safe-area-inset-bottom))!important;min-height:62px!important;border-radius:22px!important}
+  body.ea360-interface[data-theme="dark"] .shell>aside>#commandBar{background:rgba(20,26,39,.97)!important}
+}
+@media(max-width:390px){
+  body.ea360-interface .shell>aside>#commandBar{padding-right:8px!important;padding-left:8px!important}
+  body.ea360-interface .mobile-page-title{flex-basis:62px!important;font-size:11px!important}
+  body.ea360-interface .command-search{flex-basis:32px!important;width:32px!important;min-width:32px!important;max-width:32px!important}
+  body.ea360-interface .commandbar{gap:4px!important}
+  body.ea360-interface .command-actions{gap:3px!important}
+  body.ea360-interface #commandBar .command-actions button{flex-basis:31px!important;width:31px!important;min-width:31px!important}
+  body.ea360-interface #commandBar .command-actions .command-new{flex-basis:33px!important;width:33px!important;min-width:33px!important}
+  body.ea360-interface #app .home-header-actions button{padding:8px 5px!important;font-size:10px!important}
+}

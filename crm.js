@@ -1704,6 +1704,16 @@ createDocumentPdf=document=>document?.type==='Invoice'?createInvoicePdf(document
   if(view==='PDF Studio'){view='Documents';render()}
 })();
 
+/* Keep a live page title in the compact mobile command bar. */
+const commandBarWithMobileTitle=commandBar;
+commandBar=function(){
+  const label=typeof view==='string'&&view?view:'Workspace';
+  const safeLabel=typeof esc==='function'?esc(label):label.replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  return commandBarWithMobileTitle().replace('<div class="command-search">',`<span class="mobile-page-title">${safeLabel}</span><div class="command-search">`);
+};
+const mobileTitleBarNode=document.getElementById('commandBar');
+if(mobileTitleBarNode)mobileTitleBarNode.innerHTML=commandBar();
+
 
 /* Fixed approved templates: ignore any old PDF Studio layout settings. */
 getPdfProfile=function(type){const key=pdfProfileKey(type);return {...PDF_STUDIO_DEFAULTS[key]}};
