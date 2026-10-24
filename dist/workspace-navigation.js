@@ -1,20 +1,25 @@
-/* Start each newly selected workspace at its heading on desktop and mobile. */
+/* Reset page scroll when the CRM changes its selected workspace. */
 (function installWorkspaceScrollReset(){
-  if(window.__crmWorkspaceScrollResetInstalled||typeof window.nav!=='function')return;
-  window.__crmWorkspaceScrollResetInstalled=true;
-  const navigate=window.nav;
-  const currentView=()=>{try{return typeof view==='string'?view:''}catch{return''}};
+  const navigation=document.getElementById('nav');
+  if(!navigation||navigation.dataset.scrollResetObserver==='installed')return;
+  navigation.dataset.scrollResetObserver='installed';
 
-  window.nav=function(){
-    const previous=currentView();
-    const result=navigate.apply(this,arguments);
-    if(currentView()!==previous){
-      requestAnimationFrame(()=>requestAnimationFrame(()=>{
-        window.scrollTo({top:0,left:0,behavior:'auto'});
-        const main=document.querySelector('.shell>main');
-        if(main){main.scrollTop=0;main.scrollLeft=0}
-      }));
-    }
-    return result;
+  const activeWorkspace=()=>{
+    const active=navigation.querySelector('button.active');
+    return active?.title||active?.querySelector('.nav-label')?.textContent?.trim()||active?.textContent?.trim()||'';
   };
+  let previousWorkspace=activeWorkspace();
+  const resetScroll=()=>requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    window.scrollTo({top:0,left:0,behavior:'auto'});
+    const main=document.querySelector('.shell>main');
+    if(main){main.scrollTop=0;main.scrollLeft=0;}
+  }));
+
+  new MutationObserver(()=>{
+    const nextWorkspace=activeWorkspace();
+    if(nextWorkspace&&nextWorkspace!==previousWorkspace){
+      previousWorkspace=nextWorkspace;
+      resetScroll();
+    }
+  }).observe(navigation,{subtree:true,childList:true,attributes:true,attributeFilter:['class']});
 })();
