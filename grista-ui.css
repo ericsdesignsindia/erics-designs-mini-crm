@@ -289,6 +289,186 @@ body.ea360-interface[data-theme="dark"] .command-icon,body.ea360-interface[data-
  body.ea360-interface #mobileNav button{font-size:8px!important}
 }
 
+/* Grista fidelity: dark framed workspace, indigo panels, and a data-first overview. */
+body.ea360-interface{
+  --gr-bg:#080a0d;--gr-surface:#10111f;--gr-surface-2:#141626;--gr-ink:#f4f6fb;--gr-muted:#a0a8bb;
+  --gr-line:#252a3c;--gr-blue:#3984ff;--gr-blue-dark:#2869d8;--gr-blue-soft:#1b2544;
+  --gr-green:#10d6a0;--gr-shadow:0 12px 32px rgba(0,0,0,.22);
+  --bg:var(--gr-bg);--paper:var(--gr-surface);--ink:var(--gr-ink);--muted:var(--gr-muted);--line:var(--gr-line);
+  min-height:100dvh!important;padding:24px!important;overflow:hidden!important;color:var(--gr-ink)!important;
+  background:radial-gradient(ellipse at 14% 10%,#d1d4f5 0,#bfc4eb 42%,#b4b8df 100%)!important
+}
+body.ea360-interface .shell,body.ea360-interface .shell.sidebar-collapsed{
+  grid-template-columns:250px minmax(0,1fr)!important;width:min(100%,1600px)!important;height:calc(100dvh - 48px)!important;min-height:620px!important;
+  margin:0 auto!important;overflow:hidden!important;border:1px solid #272b3c!important;border-radius:19px!important;
+  background:#08090c!important;box-shadow:0 28px 80px rgba(27,28,52,.2)!important
+}
+body.ea360-interface .shell>aside{height:100%!important;min-height:0!important;background:#090a0d!important;border-right:1px solid #20222b!important;box-shadow:none!important}
+body.ea360-interface .shell>aside>.sidehead{border-bottom-color:#23242c!important}
+body.ea360-interface .shell>aside>#nav .ea-nav-heading{color:#8992a8!important}
+body.ea360-interface .shell>aside>#nav>button{color:#bec5d4!important}
+body.ea360-interface .shell>aside>#nav>button .nav-icon{color:#aab4c9!important}
+body.ea360-interface .shell>aside>#nav>button:hover{color:#fff!important;background:#171b2b!important}
+body.ea360-interface .shell>aside>#nav>button.active{color:#fff!important;background:linear-gradient(100deg,#18284c,#171b2c)!important;border-color:#303c61!important;box-shadow:inset 3px 0 #4387ff!important}
+body.ea360-interface .shell>aside>#nav>button.active .nav-icon{color:#43c9ff!important}
+body.ea360-interface .shell>aside>footer{color:#8c96aa!important;border-top-color:#23242c!important}
+body.ea360-interface .shell>aside>#commandBar{
+  top:24px!important;left:calc((100vw - min(1600px,100vw - 48px))/2 + 250px)!important;
+  right:calc((100vw - min(1600px,100vw - 48px))/2 + 1px)!important;height:68px!important;padding:10px 18px!important;
+  background:rgba(9,10,14,.96)!important;border-bottom:1px solid #202431!important;border-radius:0 18px 0 0!important;
+  box-shadow:none!important;backdrop-filter:blur(16px)!important
+}
+body.ea360-interface .command-search{background:#10121d!important;border-color:#2a2e42!important;color:#bfc7da!important}
+body.ea360-interface .command-search input{color:#f3f5fa!important}
+body.ea360-interface .command-ai,body.ea360-interface .command-icon,body.ea360-interface .profile-menu{background:#10121d!important;border-color:#2a2e42!important;color:#e4e9f4!important}
+body.ea360-interface .shell>main{height:100%!important;min-height:0!important;padding:91px 28px 34px!important;overflow-y:auto!important;overscroll-behavior:contain!important;background:#08090c!important;scrollbar-color:#343a4c transparent!important}
+body.ea360-interface #app{max-width:1500px!important}
+body.ea360-interface #app h1,body.ea360-interface #app h2,body.ea360-interface #app h3,body.ea360-interface #app h4{color:#f3f5fa!important}
+body.ea360-interface #app header p,body.ea360-interface #app .sub,body.ea360-interface #app small,body.ea360-interface #app .hint{color:#a0a8bb!important}
+body.ea360-interface #app .home-dashboard{gap:17px!important}
+body.ea360-interface #app .home-dashboard-head{align-items:flex-end!important;padding:3px 1px 2px!important}
+body.ea360-interface #app .home-dashboard-head h1{color:#f7f8fc!important;font-size:clamp(25px,2.25vw,34px)!important;letter-spacing:-.04em!important}
+body.ea360-interface #app .home-dashboard-head p{color:#aab1c1!important}
+body.ea360-interface #app .home-breadcrumb{color:#40bfff!important}
+body.ea360-interface #app .home-eyebrow{display:block;color:#47c6ff!important;font-size:10px!important;font-weight:750!important;letter-spacing:.14em!important}
+body.ea360-interface #app .home-header-actions button{background:#111421!important;border-color:#2b3044!important;color:#eef1f8!important}
+body.ea360-interface #app .home-header-actions button.home-primary{background:#3984ff!important;border-color:#3984ff!important;color:#fff!important}
+body.ea360-interface #app .home-summary-strip{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:10px!important}
+body.ea360-interface #app .home-summary-strip>button{display:grid!important;grid-template-columns:9px minmax(0,1fr)!important;grid-template-rows:auto auto!important;align-items:center!important;gap:3px 10px!important;min-width:0!important;padding:12px 14px!important;text-align:left!important;background:#10121d!important;border:1px solid #22283a!important;border-radius:13px!important;color:#eef1f8!important}
+body.ea360-interface #app .home-summary-strip>button>span{font-size:12px!important}
+body.ea360-interface #app .home-summary-strip>button>small{grid-column:2!important;font-size:10px!important}
+body.ea360-interface #app .home-summary-strip b{color:#fff!important;font-size:13px!important}
+body.ea360-interface #app .summary-dot{grid-row:1/3;width:8px;height:8px;border-radius:50%;background:#ffb74a;box-shadow:0 0 14px currentColor}
+body.ea360-interface #app .summary-dot.cyan{background:#19c6f4;color:#19c6f4}
+body.ea360-interface #app .summary-dot.violet{background:#a176ff;color:#a176ff}
+body.ea360-interface #app .home-overview-grid{display:grid!important;grid-template-columns:minmax(0,1.45fr) minmax(300px,.85fr)!important;gap:14px!important}
+body.ea360-interface #app .home-secondary-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px!important}
+body.ea360-interface #app .home-card,body.ea360-interface #app .home-kpi,body.ea360-interface #app .card,body.ea360-interface #app .panel,body.ea360-interface #app .stat-card,body.ea360-interface #app .tablewrap,body.ea360-interface #app .section-card,body.ea360-interface #app .workspace-card{
+  color:#eef1f8!important;background:linear-gradient(145deg,#111321 0%,#101421 100%)!important;border:1px solid #252a3d!important;border-radius:19px!important;box-shadow:0 10px 28px rgba(0,0,0,.18)!important
+}
+body.ea360-interface #app .home-card{padding:19px!important}
+body.ea360-interface #app .home-card-head{align-items:flex-start!important;gap:12px!important}
+body.ea360-interface #app .home-card-head h2{margin:3px 0 4px!important;color:#f4f6fb!important;font-size:17px!important}
+body.ea360-interface #app .home-card-head p{color:#9da6b9!important;font-size:11px!important}
+body.ea360-interface #app .home-card-head>button,body.ea360-interface #app .home-status-foot button,body.ea360-interface #app .home-focus-actions button{background:#141827!important;border:1px solid #30364a!important;color:#dce4f4!important}
+body.ea360-interface #app .home-client-work-card{background:radial-gradient(ellipse at 12% 0%,#172344 0%,#111321 58%,#101421 100%)!important}
+body.ea360-interface #app .home-period-switch{background:#0d101a!important;border:1px solid #2a3042!important}
+body.ea360-interface #app .home-period-switch button{color:#aab3c6!important}
+body.ea360-interface #app .home-period-switch button.active{background:#253d76!important;color:#fff!important;box-shadow:0 0 16px #327cff3a!important}
+body.ea360-interface #app .home-work-hero{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:16px!important;margin:17px 0 16px!important;padding:16px 18px!important;border:1px solid #29314a!important;border-radius:16px!important;background:linear-gradient(115deg,#101729,#111322)!important}
+body.ea360-interface #app .home-work-hero>div:first-child{display:grid;gap:3px}
+body.ea360-interface #app .home-work-hero>div:first-child>span{color:#aab5ca!important;font-size:12px!important}
+body.ea360-interface #app .home-work-hero>div:first-child>strong{color:#f8f9fc!important;font-size:clamp(34px,4vw,52px)!important;letter-spacing:-.05em!important;line-height:1.1!important}
+body.ea360-interface #app .home-work-hero>div:first-child>small{font-size:10px!important}
+body.ea360-interface #app .home-work-progress{display:grid;place-items:center;flex:0 0 88px;width:88px;height:88px;border-radius:50%;background:conic-gradient(#29d5c8 0 var(--progress,50%),#815cff var(--progress,50%) var(--progress,50%),#252b40 0)!important;position:relative}
+body.ea360-interface #app .home-work-progress::before{content:"";position:absolute;inset:7px;border-radius:50%;background:#111523}
+body.ea360-interface #app .home-work-progress>div{position:relative;z-index:1;display:grid;text-align:center}
+body.ea360-interface #app .home-work-progress b{color:#fff!important;font-size:17px!important}
+body.ea360-interface #app .home-work-progress small{font-size:8px!important;line-height:1.2}
+body.ea360-interface #app .home-delivery-allocation{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+body.ea360-interface #app .home-allocation-row{display:grid!important;grid-template-columns:minmax(0,1fr) auto auto!important;gap:5px 10px!important;align-items:center!important;padding:10px 11px!important;text-align:left!important;background:#10121d!important;border:1px solid #252a3d!important;border-radius:12px!important;color:#e8edf6!important}
+body.ea360-interface #app .home-allocation-row>span{display:flex;align-items:center;gap:7px;color:#b7c0d2!important;font-size:10px!important}
+body.ea360-interface #app .home-allocation-row>span i{width:7px;height:7px;border-radius:50%;background:#36c8f4}
+body.ea360-interface #app .home-allocation-row>span i.violet{background:#9b75ff}.home-allocation-row>span i.rose{background:#ef4d9b}.home-allocation-row>span i.green{background:#15d4a0}
+body.ea360-interface #app .home-allocation-row>b{color:#fff!important;font-size:12px!important}
+body.ea360-interface #app .home-allocation-row>small{font-size:9px!important}
+body.ea360-interface #app .home-allocation-row>em{grid-column:1/-1;height:4px;overflow:hidden;border-radius:8px;background:#25293a}
+body.ea360-interface #app .home-allocation-row>em>span{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,#22c3e5,#876aff)}
+body.ea360-interface #app .home-account-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:13px}
+body.ea360-interface #app .home-account-totals button{display:grid;gap:4px;padding:10px 11px;text-align:left;background:#0e111b;border:1px solid #22283a;border-radius:11px;color:#e5eaf4}
+body.ea360-interface #app .home-account-totals small{font-size:9px!important}
+body.ea360-interface #app .home-account-totals b{font-size:14px!important;color:#fff!important}
+body.ea360-interface #app .home-account-totals b span{font-size:10px;color:#8c96aa}
+body.ea360-interface #app .home-focus-list{display:grid;gap:6px;margin-top:8px}
+body.ea360-interface #app .home-focus-item{min-height:53px!important;background:#101421!important;border-bottom:1px solid #242a3a!important;color:#ecf1f8!important}
+body.ea360-interface #app .home-focus-item small{color:#9da8bc!important}
+body.ea360-interface #app .home-focus-mark{background:#26354e!important;color:#58c6ef!important}
+body.ea360-interface #app .home-focus-item.is-overdue .home-focus-mark{background:#492435!important;color:#ff7b91!important}
+body.ea360-interface #app .home-pipeline-flow{display:grid;gap:8px;margin-top:12px}
+body.ea360-interface #app .home-flow-stage{display:grid!important;grid-template-columns:minmax(95px,1fr) 36px minmax(70px,2fr)!important;align-items:center!important;gap:10px!important;padding:8px 10px!important;text-align:left!important;background:#0e111b!important;border:1px solid #22283a!important;border-radius:10px!important;color:#c5cede!important;font-size:10px!important}
+body.ea360-interface #app .home-flow-stage b{color:#fff!important;font-size:12px!important;text-align:center}
+body.ea360-interface #app .home-flow-stage i{height:5px;overflow:hidden;border-radius:8px;background:#252a3a}
+body.ea360-interface #app .home-flow-stage em{display:block;height:100%;border-radius:8px;background:#22c5e8}
+body.ea360-interface #app .home-flow-stage.blue em{background:#4387ff}.home-flow-stage.violet em{background:#946bff}.home-flow-stage.green em{background:#10d6a0}.home-flow-stage.rose em{background:#ed4f9b}
+body.ea360-interface #app .home-status-bars{display:grid;gap:12px;margin:18px 0}
+body.ea360-interface #app .home-status-bar-row{color:#c4ccda!important}
+body.ea360-interface #app .home-status-bar-row i{background:#282d40!important}
+body.ea360-interface #app .home-status-bar-row strong{color:#fff!important}
+body.ea360-interface #app .home-status-foot{border-top-color:#272d3f!important;color:#909bb0!important}
+body.ea360-interface #app .home-project-tabs button{background:#141827!important;border-color:#2a3042!important;color:#aeb8ca!important}
+body.ea360-interface #app .home-project-tabs button.active{background:#263d76!important;border-color:#3454a0!important;color:#fff!important}
+body.ea360-interface #app .home-project-search{background:#0d1019!important;border-color:#282e40!important}
+body.ea360-interface #app .home-project-search input{background:transparent!important;color:#f3f5f9!important}
+body.ea360-interface #app .home-project-table th{background:#171a29!important;color:#9ba7bd!important;border-color:#2a2e40!important}
+body.ea360-interface #app .home-project-table td{color:#c4ccda!important;border-color:#252a3b!important}
+body.ea360-interface #app .home-project-table tr:hover td{background:#171b2a!important}
+body.ea360-interface #app .home-status{background:#202943!important;color:#8db7ff!important}
+body.ea360-interface #app .home-shortcuts button{background:#121522!important;border-color:#262c3d!important;color:#d9e0ed!important}
+body.ea360-interface #app input,body.ea360-interface #app select,body.ea360-interface #app textarea{background:#121522!important;border-color:#2a3042!important;color:#edf2fb!important}
+body.ea360-interface #app table th{background:#171a29!important;color:#a3aec2!important}
+body.ea360-interface #app table td{border-color:#252a3b!important;color:#d4d9e4!important}
+body.ea360-interface dialog,body.ea360-interface .modal,body.ea360-interface .mobile-workspace-panel{background:#101320!important;color:#edf2fb!important;border-color:#2a3042!important}
+body.ea360-interface #mobileNav{background:#101320!important;border-color:#292e40!important}
+body.ea360-interface #mobileNav button{color:#a6aec0!important}
+body.ea360-interface #mobileNav button.active{background:#263f79!important;color:#fff!important}
+body.ea360-interface[data-theme="dark"]{--gr-bg:#080a0d;--gr-surface:#10111f;--gr-surface-2:#141626;--gr-ink:#f4f6fb;--gr-muted:#a0a8bb;--gr-line:#252a3c;--gr-blue:#3984ff;--gr-blue-dark:#2869d8;--gr-blue-soft:#1b2544;--gr-shadow:0 12px 32px rgba(0,0,0,.22)}
+@media(max-width:1050px) and (min-width:721px){body.ea360-interface{padding:14px!important}body.ea360-interface .shell{height:calc(100dvh - 28px)!important}body.ea360-interface .shell>aside>#commandBar{top:14px!important;left:calc((100vw - min(1600px,100vw - 28px))/2 + 220px)!important;right:calc((100vw - min(1600px,100vw - 28px))/2 + 1px)!important}body.ea360-interface .shell>main{padding:86px 18px 25px!important}}
+@media(max-width:720px){
+ body.ea360-interface{padding:0 0 calc(76px + env(safe-area-inset-bottom))!important;overflow-x:hidden!important;background:#08090c!important}
+ body.ea360-interface .shell,body.ea360-interface .shell.sidebar-collapsed{width:100%!important;height:auto!important;min-height:100dvh!important;margin:0!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+ body.ea360-interface .shell>aside{background:#08090c!important}
+ body.ea360-interface .shell>aside>#commandBar{top:0!important;left:0!important;right:0!important;height:60px!important;min-height:60px!important;padding:8px 10px!important;background:rgba(9,10,14,.97)!important;border-radius:0!important;border-bottom:1px solid #242837!important}
+ body.ea360-interface .shell>main{height:auto!important;min-height:calc(100dvh - 60px)!important;padding:15px 12px 100px!important;overflow:visible!important;background:#08090c!important}
+ body.ea360-interface #app .home-dashboard{gap:11px!important}
+ body.ea360-interface #app .home-dashboard-head{display:block!important;padding:2px 1px 4px!important}
+ body.ea360-interface #app .home-dashboard-head h1{font-size:25px!important}
+ body.ea360-interface #app .home-summary-strip{display:flex!important;gap:7px!important;margin:4px -2px 0!important;overflow-x:auto!important;scroll-snap-type:x proximity;padding-bottom:2px}
+ body.ea360-interface #app .home-summary-strip>button{flex:0 0 175px!important;scroll-snap-align:start!important;padding:10px!important}
+ body.ea360-interface #app .home-overview-grid,body.ea360-interface #app .home-secondary-grid{grid-template-columns:minmax(0,1fr)!important;gap:10px!important}
+ body.ea360-interface #app .home-card{padding:14px!important;border-radius:17px!important}
+ body.ea360-interface #app .home-work-hero{margin:12px 0!important;padding:12px!important}
+ body.ea360-interface #app .home-work-progress{flex-basis:74px!important;width:74px!important;height:74px!important}
+ body.ea360-interface #app .home-delivery-allocation{gap:6px!important}
+ body.ea360-interface #app .home-allocation-row{padding:8px!important}
+ body.ea360-interface #app .home-account-totals button{padding:8px!important}
+ body.ea360-interface #app .home-card-head{gap:8px!important}
+ body.ea360-interface #app .home-project-table{min-width:0!important;width:100%!important}
+ body.ea360-interface #mobileNav{background:rgba(16,19,32,.97)!important;border-color:#2b3042!important;box-shadow:0 12px 36px rgba(0,0,0,.48)!important;backdrop-filter:blur(16px)!important}
+}
+@media(max-width:390px){body.ea360-interface #app .home-work-hero>div:first-child>strong{font-size:36px!important}body.ea360-interface #app .home-card-head h2{font-size:16px!important}}
+@media(prefers-reduced-motion:no-preference){body.ea360-interface #app .home-card{animation:grista-card-in .42s cubic-bezier(.2,.7,.2,1) both}body.ea360-interface #app .home-card:nth-child(2){animation-delay:.06s}body.ea360-interface #app .home-card:nth-child(3){animation-delay:.1s}@keyframes grista-card-in{from{opacity:.01;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}}
+
+/* The CRM can start in its saved light setting; keep this reference theme consistent there too. */
+body.ea360-interface[data-theme="light"]{--gr-bg:#080a0d;--gr-surface:#10111f;--gr-surface-2:#141626;--gr-ink:#f4f6fb;--gr-muted:#a0a8bb;--gr-line:#252a3c;--gr-blue:#3984ff;--gr-blue-dark:#2869d8;--gr-blue-soft:#1b2544;--gr-shadow:0 12px 32px rgba(0,0,0,.22);background:radial-gradient(ellipse at 14% 10%,#d1d4f5 0,#bfc4eb 42%,#b4b8df 100%)!important;color:#f4f6fb!important}
+body.ea360-interface[data-theme="light"] .shell,body.ea360-interface[data-theme="light"] .shell.sidebar-collapsed{background:#08090c!important;border-color:#272b3c!important}
+body.ea360-interface[data-theme="light"] .shell>aside{background:#090a0d!important;border-right-color:#20222b!important;box-shadow:none!important;color:#eaf0fc!important}
+body.ea360-interface[data-theme="light"] .shell>aside>.sidehead{border-bottom-color:#23242c!important}
+body.ea360-interface[data-theme="light"] .shell>aside>#nav>button{color:#bec5d4!important}
+body.ea360-interface[data-theme="light"] .shell>aside>#nav>button .nav-icon{color:#aab4c9!important}
+body.ea360-interface[data-theme="light"] .shell>aside>#nav>button.active{color:#fff!important;background:linear-gradient(100deg,#18284c,#171b2c)!important;border-color:#303c61!important;box-shadow:inset 3px 0 #4387ff!important}
+body.ea360-interface[data-theme="light"] .shell>aside>#commandBar{background:rgba(9,10,14,.96)!important;border-bottom-color:#202431!important;box-shadow:none!important}
+body.ea360-interface[data-theme="light"] .command-search,body.ea360-interface[data-theme="light"] .command-ai,body.ea360-interface[data-theme="light"] .command-icon,body.ea360-interface[data-theme="light"] .profile-menu{background:#10121d!important;border-color:#2a2e42!important;color:#e4e9f4!important}
+body.ea360-interface[data-theme="light"] .command-search input{color:#f3f5fa!important}
+body.ea360-interface[data-theme="light"] .shell>main{background:#08090c!important;color:#f4f6fb!important}
+body.ea360-interface[data-theme="light"] #app h1,body.ea360-interface[data-theme="light"] #app h2,body.ea360-interface[data-theme="light"] #app h3,body.ea360-interface[data-theme="light"] #app h4,body.ea360-interface[data-theme="light"] #app strong{color:#f3f5fa!important}
+body.ea360-interface[data-theme="light"] #app header p,body.ea360-interface[data-theme="light"] #app small,body.ea360-interface[data-theme="light"] #app .sub,body.ea360-interface[data-theme="light"] #app .hint{color:#a0a8bb!important}
+body.ea360-interface[data-theme="light"] #app .home-card,body.ea360-interface[data-theme="light"] #app .home-kpi,body.ea360-interface[data-theme="light"] #app .card,body.ea360-interface[data-theme="light"] #app .panel,body.ea360-interface[data-theme="light"] #app .stat,body.ea360-interface[data-theme="light"] #app .tablewrap,body.ea360-interface[data-theme="light"] #app .section-card,body.ea360-interface[data-theme="light"] #app .workspace-card{color:#eef1f8!important;background:linear-gradient(145deg,#111321 0%,#101421 100%)!important;border-color:#252a3d!important;box-shadow:0 10px 28px rgba(0,0,0,.18)!important}
+body.ea360-interface[data-theme="light"] #app .home-client-work-card{background:radial-gradient(ellipse at 12% 0%,#172344 0%,#111321 58%,#101421 100%)!important}
+body.ea360-interface[data-theme="light"] #app .home-card-head h2{color:#f4f6fb!important}
+body.ea360-interface[data-theme="light"] #app button:not(.primary):not(.home-primary){color:#e1e7f3!important;background:#141827!important;border-color:#30364a!important}
+body.ea360-interface[data-theme="light"] #app .home-header-actions button.home-primary{background:#3984ff!important;color:#fff!important;border-color:#3984ff!important}
+body.ea360-interface[data-theme="light"] #app input,body.ea360-interface[data-theme="light"] #app select,body.ea360-interface[data-theme="light"] #app textarea{background:#121522!important;color:#edf2fb!important;border-color:#2a3042!important}
+body.ea360-interface[data-theme="light"] #app table th{background:#171a29!important;color:#a3aec2!important}
+body.ea360-interface[data-theme="light"] #app table td{border-color:#252a3b!important;color:#d4d9e4!important}
+@media(max-width:720px){
+ body.ea360-interface #app .home-summary-strip{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;overflow:visible!important;margin:4px 0 0!important;padding:0!important}
+ body.ea360-interface #app .home-summary-strip>button{min-width:0!important;width:100%!important;padding:9px!important}
+ body.ea360-interface #app .home-summary-strip>button:nth-child(3){grid-column:1/-1!important}
+ body.ea360-interface #app .home-client-work-card>.home-card-head{display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:8px!important}
+ body.ea360-interface #app .home-client-work-card .home-period-switch{width:100%!important;margin-top:3px!important}
+ body.ea360-interface #app .home-summary-strip::-webkit-scrollbar{display:none!important}
+}
+
 /* Reference pass: match Grista's warm canvas, compact command header and dark mobile dock. */
 body.ea360-interface{
   --gr-bg:#f6f2e9;--gr-surface:#fffefa;--gr-surface-2:#f8f5ee;--gr-ink:#182437;--gr-muted:#778191;
