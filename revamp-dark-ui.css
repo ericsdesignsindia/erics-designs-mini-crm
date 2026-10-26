@@ -656,6 +656,19 @@ body.ea360-interface .shell>main{
  body.ea360-interface #mobileNav button{font-size:8px!important}
 }
 
+/* Keep the root viewport as the scroll container so sticky desktop navigation
+   stays in place. `hidden` on the horizontal axis changes visible vertical
+   overflow to `auto`, which makes body a nested scroll container. */
+html:has(body.ea360-interface){overflow-x:clip!important}
+body.ea360-interface{overflow-x:clip!important}
+body.ea360-interface[data-theme="dark"]{
+  background:var(--revamp-bg,#090b0f)!important;
+}
+body.ea360-interface[data-theme="dark"] .shell,
+body.ea360-interface[data-theme="dark"] .shell>main{
+  background:var(--revamp-bg,#090b0f)!important;
+}
+
 /* Final navbar corrections: keep desktop links in one vertical column and give
    the mobile search field its own row so toolbar controls cannot squeeze it. */
 @media(min-width:721px){
