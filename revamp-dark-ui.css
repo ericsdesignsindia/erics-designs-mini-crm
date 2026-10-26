@@ -662,6 +662,9 @@ body.ea360-interface .shell>main{
  html body.ea360-interface .shell,html body.ea360-interface .shell.sidebar-collapsed{
   margin:0!important;border-radius:0!important;overflow:visible!important
  }
+ html body.ea360-interface[data-theme="dark"] .shell,html body.ea360-interface[data-theme="dark"] .shell.sidebar-collapsed{
+  margin:0!important;border-radius:0!important;overflow:visible!important
+ }
  html body.ea360-interface .shell>aside>#nav{
   flex-wrap:nowrap!important;align-content:flex-start!important;align-items:stretch!important;
   width:100%!important;min-width:0!important;overflow-x:hidden!important;overflow-y:auto!important
