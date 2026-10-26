@@ -705,6 +705,7 @@ body.ea360-interface[data-theme="dark"] .shell>main{
  html body.ea360-interface .shell>aside{
   position:fixed!important;inset:0 auto 0 0!important;z-index:140!important;
   width:250px!important;height:100dvh!important;min-height:0!important;
+  background:#0d1422!important;border-right:1px solid #26334a!important;
  }
  html body.ea360-interface .shell>aside>#commandBar{
   position:fixed!important;inset:14px 20px auto 274px!important;z-index:160!important;
