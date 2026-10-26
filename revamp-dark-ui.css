@@ -572,3 +572,86 @@ body.ea360-interface .shell>main{
  body.ea360-interface .shell>aside>#nav{min-height:112px!important;max-height:114px!important}
  body.ea360-interface .shell>main{min-height:calc(100dvh - 194px)!important}
 }
+
+/* Stable navigation layout: one scrollable desktop rail, compact mobile header. */
+@media(min-width:721px){
+ body.ea360-interface{padding:0!important;overflow-x:hidden!important}
+ body.ea360-interface .shell,body.ea360-interface .shell.sidebar-collapsed{
+  display:grid!important;grid-template-columns:250px minmax(0,1fr)!important;align-items:stretch!important;
+  width:100%!important;max-width:none!important;min-height:100dvh!important;height:auto!important;margin:0!important;
+  overflow:visible!important;border:0!important;border-radius:0!important;box-shadow:none!important
+ }
+ body.ea360-interface .shell>aside{
+  position:sticky!important;top:0!important;grid-column:1!important;grid-row:1!important;display:flex!important;
+  flex-direction:column!important;align-items:stretch!important;gap:14px!important;width:250px!important;height:100dvh!important;
+  min-height:0!important;padding:18px 14px 12px!important;overflow:hidden!important;background:#111d34!important;
+  border:0!important;border-right:1px solid #29334a!important;border-radius:0!important;box-shadow:none!important
+ }
+ body.ea360-interface .shell>aside>.sidehead{display:flex!important;flex:0 0 auto!important;grid-column:auto!important;grid-row:auto!important;min-height:58px!important;height:58px!important;margin:0 0 4px!important;padding:0 8px 12px!important;border-bottom:1px solid #ffffff18!important}
+ body.ea360-interface .shell>aside .brand.brand-logo{display:flex!important;min-width:0!important}
+ body.ea360-interface .shell>aside .brand.brand-logo img{width:160px!important;max-width:100%!important;max-height:42px!important;filter:brightness(1.06)!important}
+ body.ea360-interface .shell>aside>#nav{
+  position:static!important;display:flex!important;flex:1 1 auto!important;flex-direction:column!important;align-items:stretch!important;
+  justify-content:flex-start!important;gap:4px!important;width:100%!important;min-width:0!important;min-height:0!important;
+  max-height:none!important;padding:2px 2px 14px!important;overflow-x:hidden!important;overflow-y:auto!important;
+  overscroll-behavior:contain!important;scrollbar-width:thin!important;scrollbar-color:#465574 transparent!important
+ }
+ body.ea360-interface .shell>aside>#nav .ea-nav-heading{display:block!important;position:static!important;margin:15px 8px 5px!important;color:#91a1bd!important;font-size:10px!important;letter-spacing:.13em!important}
+ body.ea360-interface .shell>aside>#nav>button{
+  position:relative!important;display:flex!important;flex:0 0 auto!important;align-items:center!important;justify-content:flex-start!important;
+  width:100%!important;min-width:0!important;height:42px!important;min-height:42px!important;margin:0!important;padding:0 11px!important;
+  gap:11px!important;overflow:visible!important;border:1px solid transparent!important;border-radius:11px!important;
+  color:#bec9dc!important;background:transparent!important;font-size:13px!important;text-align:left!important;white-space:nowrap!important
+ }
+ body.ea360-interface .shell>aside>#nav>button .nav-icon{display:grid!important;flex:0 0 20px!important;width:20px!important;color:#aab5ce!important;font-size:16px!important}
+ body.ea360-interface .shell>aside>#nav>button .nav-label{display:inline!important;overflow:hidden!important;text-overflow:ellipsis!important}
+ body.ea360-interface .shell>aside>#nav>button.active{color:#fff!important;background:#20477f!important;border-color:#3266aa!important;box-shadow:inset 3px 0 #4387ff!important}
+ body.ea360-interface .shell>aside>#nav .nav-count{position:static!important;flex:0 0 auto!important;margin-left:auto!important}
+ body.ea360-interface .shell>aside>#commandBar{position:fixed!important;inset:0 0 auto 250px!important;z-index:120!important;display:block!important;grid-column:auto!important;grid-row:auto!important;width:auto!important;height:76px!important;min-width:0!important;margin:0!important;padding:12px clamp(16px,2.4vw,36px)!important;background:rgba(16,21,34,.96)!important;border:0!important;border-bottom:1px solid #293047!important;box-shadow:0 6px 22px #0003!important;backdrop-filter:blur(12px)!important}
+ body.ea360-interface .commandbar{display:flex!important;flex-direction:row!important;align-items:center!important;gap:10px!important;width:100%!important;height:100%!important;margin:0!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
+ body.ea360-interface .command-search{flex:1 1 auto!important;width:auto!important;min-width:120px!important;max-width:620px!important;height:42px!important;min-height:42px!important}
+ body.ea360-interface .command-actions{display:flex!important;flex:0 0 auto!important;flex-wrap:nowrap!important;align-items:center!important;justify-content:flex-end!important;gap:6px!important;width:auto!important;min-width:0!important;overflow:visible!important}
+ body.ea360-interface .command-actions button{flex:0 0 auto!important;min-width:40px!important;width:auto!important;height:40px!important;min-height:40px!important;padding:0 10px!important;white-space:nowrap!important}
+ body.ea360-interface .shell>main{grid-column:2!important;grid-row:1!important;width:100%!important;max-width:none!important;min-width:0!important;min-height:100dvh!important;margin:0!important;padding:98px clamp(18px,2.5vw,40px) 48px!important;overflow:visible!important}
+ body.ea360-interface #mobileNav{display:none!important}
+}
+@media(min-width:721px) and (max-width:1000px){
+ body.ea360-interface .shell,body.ea360-interface .shell.sidebar-collapsed{grid-template-columns:212px minmax(0,1fr)!important}
+ body.ea360-interface .shell>aside{width:212px!important;padding-right:10px!important;padding-left:10px!important}
+ body.ea360-interface .shell>aside>#commandBar{left:212px!important;padding-right:14px!important;padding-left:14px!important}
+ body.ea360-interface .command-actions{gap:4px!important}
+ body.ea360-interface .command-actions button{min-width:36px!important;padding-right:8px!important;padding-left:8px!important}
+ body.ea360-interface .shell>main{padding-right:18px!important;padding-left:18px!important}
+}
+@media(max-width:720px){
+ body.ea360-interface{min-height:100dvh!important;height:auto!important;padding:0 0 calc(72px + env(safe-area-inset-bottom))!important;overflow-x:hidden!important;overflow-y:visible!important}
+ body.ea360-interface .shell,body.ea360-interface .shell.sidebar-collapsed{display:block!important;width:100%!important;min-height:100dvh!important;height:auto!important;margin:0!important;overflow:visible!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+ body.ea360-interface .shell>aside{position:sticky!important;inset:0 0 auto!important;z-index:120!important;display:block!important;width:100%!important;height:auto!important;min-height:0!important;margin:0!important;padding:calc(8px + env(safe-area-inset-top)) 12px 9px!important;overflow:visible!important;background:rgba(16,21,34,.97)!important;border:0!important;border-bottom:1px solid #293047!important;border-radius:0!important;box-shadow:0 5px 16px #0003!important;backdrop-filter:blur(14px)!important}
+ body.ea360-interface .shell>aside>.sidehead,body.ea360-interface .shell>aside>#nav,body.ea360-interface .shell>aside>footer{display:none!important}
+ body.ea360-interface .shell>aside>#commandBar{position:static!important;inset:auto!important;display:block!important;width:100%!important;height:auto!important;min-width:0!important;margin:0!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
+ body.ea360-interface .commandbar{display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;align-items:center!important;gap:7px!important;width:100%!important;height:auto!important;margin:0!important;padding:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
+ body.ea360-interface .mobile-page-title{display:none!important}
+ body.ea360-interface .command-search{display:flex!important;width:100%!important;max-width:none!important;min-width:0!important;height:40px!important;min-height:40px!important;padding:0 11px!important}
+ body.ea360-interface .command-search input{position:static!important;inset:auto!important;display:block!important;flex:1 1 auto!important;width:100%!important;max-width:none!important;min-width:0!important;height:auto!important;padding:0!important;opacity:1!important;cursor:text!important;font-size:13px!important}
+ body.ea360-interface .command-actions{display:flex!important;flex-wrap:nowrap!important;align-items:center!important;justify-content:flex-end!important;gap:4px!important;width:auto!important;min-width:0!important;overflow:visible!important}
+ body.ea360-interface .command-actions button{display:grid!important;place-items:center!important;flex:0 0 36px!important;width:36px!important;min-width:36px!important;height:38px!important;min-height:38px!important;padding:0 4px!important;font-size:12px!important}
+ body.ea360-interface .command-actions .command-ai span,body.ea360-interface .command-actions .command-new span{display:none!important}
+ body.ea360-interface .command-actions .command-new,body.ea360-interface .command-actions [data-today-workspace],body.ea360-interface .command-actions .command-ai{display:none!important}
+ body.ea360-interface .command-actions #erp-logout-button{display:block!important;flex:0 0 auto!important;width:auto!important;min-width:54px!important;padding:0 7px!important;font-size:10px!important}
+ body.ea360-interface .shell>main{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;min-height:calc(100dvh - 100px)!important;margin:0!important;padding:16px 12px calc(88px + env(safe-area-inset-bottom))!important;overflow:visible!important}
+ body.ea360-interface #app{width:100%!important;max-width:100%!important;min-width:0!important}
+ body.ea360-interface #mobileNav{position:fixed!important;inset:auto 10px calc(10px + env(safe-area-inset-bottom))!important;z-index:150!important;display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;align-items:center!important;justify-items:stretch!important;gap:0!important;width:auto!important;max-width:none!important;min-height:calc(64px + env(safe-area-inset-bottom))!important;padding:5px 6px calc(5px + env(safe-area-inset-bottom))!important;overflow:visible!important;background:#101522!important;border:1px solid #293047!important;border-radius:22px!important;box-shadow:0 -6px 20px #0005!important}
+ body.ea360-interface #mobileNav button{display:grid!important;place-content:center!important;justify-items:center!important;gap:3px!important;width:100%!important;min-width:0!important;height:48px!important;min-height:48px!important;margin:0!important;padding:3px 1px!important;overflow:hidden!important;border:0!important;border-radius:11px!important;background:transparent!important;color:#a3aec2!important;font-size:9px!important;line-height:1.1!important;white-space:nowrap!important}
+ body.ea360-interface #mobileNav button>span{display:block!important;font-size:18px!important;line-height:1!important}
+ body.ea360-interface #mobileNav button.active{background:#1d2c45!important;color:#7dcaff!important}
+ body.ea360-interface #mobileNav .mobile-fab{position:static!important;display:grid!important;grid-column:6!important;transform:none!important;width:100%!important;height:48px!important;min-height:48px!important;margin:0!important;padding:3px 1px!important;border:0!important;border-radius:11px!important;background:transparent!important;box-shadow:none!important;color:#a3aec2!important;font-size:9px!important}
+ body.ea360-interface #mobileNav .mobile-fab span{display:block!important;color:#70aaff!important;font-size:22px!important;line-height:1!important}
+ body.ea360-interface #mobileNav .mobile-fab::after{content:'Create';font-size:9px;font-weight:650;line-height:1;color:inherit}
+}
+@media(max-width:370px){
+ body.ea360-interface .command-search{min-width:0!important}
+ body.ea360-interface .command-actions button{flex-basis:32px!important;width:32px!important;min-width:32px!important}
+ body.ea360-interface .command-actions #erp-logout-button{min-width:48px!important}
+ body.ea360-interface #mobileNav{padding-right:3px!important;padding-left:3px!important}
+ body.ea360-interface #mobileNav button{font-size:8px!important}
+}
