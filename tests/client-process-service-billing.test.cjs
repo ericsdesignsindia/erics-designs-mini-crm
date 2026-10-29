@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { prepare, prepareServiceProformas, prepareServiceInvoice, prepareCompletedServiceInvoice, serviceValue } = require('../client-process-engine');
+const { prepare, prepareServiceProformas, prepareServiceInvoice, prepareCompletedServiceInvoice, serviceValue, serviceProgressStage, isSequentialStepBlocked } = require('../client-process-engine');
 
 const state = { documents: [], settings: { invoiceTerms: 'Net 7 days.' } };
 const quote = {
@@ -38,6 +38,46 @@ assert.equal(invoiceTotal, 10000, 'the balance invoice retains the full service 
 assert.equal(invoiceTotal * 0.9 * 1.18 - invoicePaid, 5310, 'the invoice shows only the remaining amount due');
 assert.equal(prepareServiceInvoice(state, quote, first, uuid, now).id, invoice.id, 'repeated action opens the same invoice');
 assert.equal(serviceValue(quote, quote.items[1]), 21240);
+
+const singleServiceQuote = {
+  ...quote, id: 'quote-single-service', serviceBillingAllocations: undefined,
+  items: [{ name: 'SEO', qty: 1, rate: 12000 }], discount: 0, tax: 0,
+};
+const singleServiceState = { documents: [], settings: {} };
+assert.equal(prepareServiceProformas(singleServiceState, singleServiceQuote, uuid, now).length, 1, 'separate service billing supports a quotation with one service');
+
+const progressQuote = { ...quote, id: 'quote-progress', billingMode: 'service-wise' };
+const progressDocs = [
+  { id: 'progress-p1', type: 'Proforma', status: 'Accepted', rootId: progressQuote.id, serviceIndex: 0, total: 5000, paid: 5000, balance: 0 },
+  { id: 'progress-p2', type: 'Proforma', status: 'Accepted', rootId: progressQuote.id, serviceIndex: 1, total: 5000, paid: 5000, balance: 0 },
+  { id: 'progress-i1', type: 'Invoice', status: 'Paid', rootId: progressQuote.id, serviceIndex: 0, total: 10000, paid: 10000, balance: 0 },
+];
+const summaryTotals = document => ({ total: document.total, paid: document.paid, balance: document.balance });
+assert.equal(serviceProgressStage(progressQuote, progressDocs, summaryTotals), 5, 'one paid service does not mark the full quotation complete');
+progressDocs.push({ id: 'progress-i2', type: 'Invoice', status: 'Sent', rootId: progressQuote.id, serviceIndex: 1, total: 10000, paid: 0, balance: 10000 });
+assert.equal(serviceProgressStage(progressQuote, progressDocs, summaryTotals), 6, 'an unpaid balance invoice keeps the quotation at payment due');
+progressDocs[3].paid = 10000;
+progressDocs[3].balance = 0;
+assert.equal(serviceProgressStage(progressQuote, progressDocs, summaryTotals), 7, 'the quotation completes after every service invoice is paid');
+
+const legacyProgressQuote = { ...progressQuote, id: 'quote-legacy-progress', billingMode: 'service-completion' };
+const legacyProgressDocs = [
+  { id: 'legacy-i1', type: 'Invoice', status: 'Paid', rootId: legacyProgressQuote.id, serviceIndex: 0, total: 10000, paid: 10000, balance: 0 },
+];
+assert.equal(serviceProgressStage(legacyProgressQuote, legacyProgressDocs, summaryTotals), 5, 'one paid legacy service invoice leaves remaining services in progress');
+legacyProgressDocs.push({ id: 'legacy-i2', type: 'Invoice', status: 'Sent', rootId: legacyProgressQuote.id, serviceIndex: 1, total: 10000, paid: 0, balance: 10000 });
+assert.equal(serviceProgressStage(legacyProgressQuote, legacyProgressDocs, summaryTotals), 6, 'a legacy service invoice balance remains due');
+legacyProgressDocs[1].paid = 10000;
+legacyProgressDocs[1].balance = 0;
+assert.equal(serviceProgressStage(legacyProgressQuote, legacyProgressDocs, summaryTotals), 7, 'legacy service billing completes only after all services are invoiced and paid');
+
+const sequentialProject = { deliveryMode: 'sequential', tasks: [
+  { id: 'first', serviceIndex: 0, sequence: 1, done: false },
+  { id: 'second', serviceIndex: 1, sequence: 2, done: true },
+] };
+assert.equal(isSequentialStepBlocked(sequentialProject, sequentialProject.tasks[1]), true, 'sequential billing cannot advance past an unfinished earlier service');
+sequentialProject.tasks[0].done = true;
+assert.equal(isSequentialStepBlocked(sequentialProject, sequentialProject.tasks[1]), false, 'sequential billing unlocks after the earlier service is complete');
 
 const unpricedQuote = {
   id: 'quote-unpriced', type: 'Quotation', number: 'ED-Q-0002', status: 'Accepted',

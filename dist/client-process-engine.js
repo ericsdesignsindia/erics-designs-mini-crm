@@ -16,9 +16,29 @@ function prepare(state,quote,uuid,now=new Date().toISOString()){
 function nextNumber(state,type){const prefix=type==='Invoice'?'ED-':'ED-P-';const max=Math.max(0,...(state.documents||[]).filter(d=>d.type===type).map(d=>Number(String(d.number||'').replace(prefix,''))||0));return prefix+String(max+1).padStart(4,'0')}
 function serviceBaseValue(quote,item,index){const allocated=Number(quote.serviceBillingAllocations?.[index]);return Number.isFinite(allocated)&&allocated>0?allocated:Number(item.qty||0)*Number(item.rate||0)}
 function serviceValue(quote,item,index=(quote.items||[]).indexOf(item)){const subtotal=serviceBaseValue(quote,item,index),discount=subtotal*Number(quote.discount||0)/100,net=subtotal-discount,tax=net*Number(quote.tax||0)/100;return Math.round((net+tax)*100)/100}
+function serviceProgressStage(quote,documents,totals){
+ const items=quote.items||[],docs=documents||[],serviceDocs=items.map((_,index)=>({
+  proforma:docs.find(document=>document.type==='Proforma'&&document.status!=='Cancelled'&&document.rootId===quote.id&&Number(document.serviceIndex)===index),
+  invoice:docs.find(document=>document.type==='Invoice'&&document.status!=='Cancelled'&&document.rootId===quote.id&&Number(document.serviceIndex)===index)
+ }));
+ const invoices=serviceDocs.map(record=>record.invoice).filter(Boolean),outstanding=invoices.some(invoice=>totals(invoice).balance>0.005),allServicesInvoiced=items.length>0&&invoices.length===items.length,allInvoicesPaid=allServicesInvoiced&&invoices.every(invoice=>totals(invoice).balance<=0.005);
+ if(allInvoicesPaid)return 7;
+ if(outstanding)return 6;
+ if(quote.billingMode==='service-completion')return invoices.length?5:3;
+ const allAdvancesPaid=items.length>0&&serviceDocs.every(record=>record.proforma&&totals(record.proforma).paid+0.005>=totals(record.proforma).total);
+ if(allAdvancesPaid)return 5;
+ if(serviceDocs.some(record=>record.proforma))return 4;
+ return 3;
+}
+function isSequentialStepBlocked(project,task){
+ if(!project||!task)return false;
+ const tasks=(project.tasks||[]).map((entry,index)=>({entry,index,order:Number(entry.sequence)||Number(entry.serviceIndex??index)+1}));
+ const current=tasks.find(item=>item.entry.id===task.id);
+ return !!current&&tasks.some(item=>item.order<current.order&&!item.entry.done);
+}
 function prepareServiceProformas(state,quote,uuid,now=new Date().toISOString(),allocations){
  if(quote.type!=='Quotation'||!quote.clientApprovedForProcess||!quote.contractConfirmedAt||quote.status!=='Accepted')return [];
- if(!Array.isArray(quote.items)||quote.items.length<2)return [];
+ if(!Array.isArray(quote.items)||quote.items.length<1)return [];
  const values=(allocations||quote.serviceBillingAllocations||(quote.rateCard?[]:quote.items.map(item=>Number(item.qty||0)*Number(item.rate||0)))).map(Number);
  if(values.length!==quote.items.length||values.some(value=>!Number.isFinite(value)||value<=0))return [];
  if((state.documents||[]).some(d=>d.type==='Proforma'&&d.rootId===quote.id&&d.status!=='Cancelled'&&d.serviceIndex===undefined))return [];
@@ -50,5 +70,5 @@ function prepareCompletedServiceInvoice(state,quote,serviceIndex,uuid,now=new Da
  state.documents.push(invoice);return invoice;
 }
 function totalsForEngine(document){const subtotal=(document.items||[]).reduce((sum,item)=>sum+Number(item.proformaAmount??(Number(item.qty||0)*Number(item.rate||0))),0),net=subtotal*(1-Number(document.discount||0)/100);return Math.round(net*(1+Number(document.tax||0)/100)*100)/100}
-if(typeof module!=='undefined')module.exports={prepare,prepareServiceProformas,prepareServiceInvoice,prepareCompletedServiceInvoice,serviceValue};else root.ClientProcessEngine={prepare,prepareServiceProformas,prepareServiceInvoice,prepareCompletedServiceInvoice,serviceValue};
+if(typeof module!=='undefined')module.exports={prepare,prepareServiceProformas,prepareServiceInvoice,prepareCompletedServiceInvoice,serviceValue,serviceProgressStage,isSequentialStepBlocked};else root.ClientProcessEngine={prepare,prepareServiceProformas,prepareServiceInvoice,prepareCompletedServiceInvoice,serviceValue,serviceProgressStage,isSequentialStepBlocked};
 })(typeof window!=='undefined'?window:globalThis);
