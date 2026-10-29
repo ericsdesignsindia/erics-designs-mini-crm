@@ -585,9 +585,13 @@ body[data-theme="dark"] .quick-create-menu,body[data-theme="dark"] .command-pale
 .accounting-tools-menu{grid-column:2;width:100%;max-width:none}
 .accounting-metric-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:18px 0}
 .accounting-metric-grid>.stat{min-width:0}
-.accounting-metric-grid>.accounting-due-stat{display:block;width:100%;text-align:left;font:inherit;cursor:pointer;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease}
-.accounting-metric-grid>.accounting-due-stat:hover{border-color:#4f83e8;box-shadow:0 0 0 2px #2563eb20;transform:translateY(-1px)}
-.accounting-metric-grid>.accounting-due-stat:focus-visible{outline:3px solid #4f83e8;outline-offset:3px}
+.accounting-metric-grid>.accounting-summary-action,.accounting-metric-grid>.accounting-due-stat{display:block;width:100%;text-align:left;font:inherit;cursor:pointer;transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease}
+.accounting-metric-grid>.accounting-summary-action:hover,.accounting-metric-grid>.accounting-due-stat:hover{border-color:#4f83e8;box-shadow:0 0 0 2px #2563eb20;transform:translateY(-1px)}
+.accounting-metric-grid>.accounting-summary-action:focus-visible,.accounting-metric-grid>.accounting-due-stat:focus-visible{outline:3px solid #4f83e8;outline-offset:3px}
+.accounting-summary-filter-note{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;margin:0 0 12px;border:1px solid #4f83e866;border-radius:12px;background:#2563eb12;color:inherit}
+.accounting-summary-filter-note button{flex:0 0 auto}
+.finance-bill-row[hidden]{display:none!important}
+@media(max-width:560px){.accounting-summary-filter-note{align-items:flex-start;flex-direction:column}}
 .accounting-metric-grid>.stat strong{font-size:clamp(19px,2.2vw,27px);overflow-wrap:anywhere}
 .accounting-forecast-panel{display:grid;grid-template-columns:minmax(200px,.8fr) minmax(0,1.2fr);gap:20px;align-items:center}
 .accounting-forecast-panel h2{margin:6px 0}

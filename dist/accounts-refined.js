@@ -55,6 +55,56 @@
     document.querySelector('#accounts-reconciliation .collections-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  window.clearAccountingSummaryFilter = function () {
+    const list = document.getElementById('accountRows');
+    if (!list) return;
+    const search = document.querySelector('#accounts-transactions input[aria-label="Search account records"]');
+    if (search) search.value = '';
+    const rows = accountLedger().slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    list.innerHTML = accountLedgerRows(rows);
+  };
+
+  window.openAccountingSummaryDetails = function (kind) {
+    if (kind === 'dues') return window.openClientInvoiceDues();
+    if (kind === 'bills') {
+      const section = document.getElementById('accounts-vendor-bills');
+      if (!section) return;
+      const rows = [...section.querySelectorAll('.finance-bill-row')];
+      rows.forEach(row => { row.hidden = row.querySelector('.badge')?.textContent.trim() === 'Paid'; });
+      let note = document.getElementById('accounts-bills-summary-filter');
+      if (!note) {
+        note = document.createElement('div');
+        note.id = 'accounts-bills-summary-filter';
+        note.className = 'accounting-summary-filter-note';
+        section.querySelector('.finance-bills')?.before(note);
+      }
+      const pending = rows.filter(row => !row.hidden).length;
+      note.innerHTML = `<span>Showing ${pending} unpaid supplier bill${pending === 1 ? '' : 's'}.</span><button type="button" onclick="window.clearAccountingBillsSummaryFilter()">Show all bills</button>`;
+      section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+
+    const type = kind === 'received' ? 'Income' : kind === 'paid' ? 'Expense' : null;
+    if (!type) return;
+    const month = today().slice(0, 7);
+    const entries = accountLedger().filter(entry => !entry.externalPayment && entry.type === type && String(entry.date).slice(0, 7) === month)
+      .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    const section = document.getElementById('accounts-transactions');
+    const list = document.getElementById('accountRows');
+    if (!section || !list) return;
+    const search = section.querySelector('input[aria-label="Search account records"]');
+    if (search) search.value = '';
+    const label = kind === 'received' ? 'money received' : 'money paid';
+    list.innerHTML = `<div class="accounting-summary-filter-note"><span>Showing ${label} for ${esc(month)} · ${entries.length} transaction${entries.length === 1 ? '' : 's'}.</span><button type="button" onclick="window.clearAccountingSummaryFilter()">Show all transactions</button></div>` + accountLedgerRows(entries);
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  window.clearAccountingBillsSummaryFilter = function () {
+    const section = document.getElementById('accounts-vendor-bills');
+    section?.querySelectorAll('.finance-bill-row').forEach(row => { row.hidden = false; });
+    document.getElementById('accounts-bills-summary-filter')?.remove();
+  };
+
   accounts = function () {
     const month = today().slice(0, 7);
     const ledger = accountLedger().slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
@@ -101,10 +151,10 @@
         <select id="accounts-quick-tools" class="smallbtn accounting-tools-menu" aria-label="Other accounting tools" onchange="runAccountingAction(this)"><option value="">Choose a tool…</option>${setupAction('opening', 'Set opening funds')}${setupAction('vendor', 'View vendor bills')}${setupAction('invoices', 'Manage final invoices')}${setupAction('receipts', 'Transaction receipts')}${setupAction('reconcile', 'Bank reconciliation')}${setupAction('budgets', 'Budgets and recurring costs')}${setupAction('export', 'Download accounting report')}</select>
       </section>
       <section class="accounting-metric-grid" aria-label="Accounting summary">
-        <article class="stat"><span>Received this month · ${esc(month)}</span><strong>${financeRows(monthIncome)}</strong><small>Invoice payments and other income</small></article>
-        <article class="stat"><span>Paid this month · ${esc(month)}</span><strong>${financeRows(monthExpense)}</strong><small>Payments made from CRM funds</small></article>
+        <button type="button" class="stat accounting-summary-action" onclick="window.openAccountingSummaryDetails('received')" aria-label="View money received this month"><span>Received this month · ${esc(month)}</span><strong>${financeRows(monthIncome)}</strong><small>Invoice payments and other income · View transactions →</small></button>
+        <button type="button" class="stat accounting-summary-action" onclick="window.openAccountingSummaryDetails('paid')" aria-label="View payments made this month"><span>Paid this month · ${esc(month)}</span><strong>${financeRows(monthExpense)}</strong><small>Payments made from CRM funds · View transactions →</small></button>
         <button type="button" class="stat accounting-due-stat" onclick="window.openClientInvoiceDues()" aria-label="View unpaid final invoices and pending Proforma advances"><span>Client invoices due</span><strong>${financeRows(receivables)}</strong><small>${openInvoices.length} unpaid final invoice${openInvoices.length === 1 ? '' : 's'} · ${openProformas.length} pending Proforma advance${openProformas.length === 1 ? '' : 's'} · View details →</small></button>
-        <article class="stat"><span>Supplier bills due</span><strong>${financeRows(payables)}</strong><small>${pendingBills.length} unpaid vendor bill${pendingBills.length === 1 ? '' : 's'}</small></article>
+        <button type="button" class="stat accounting-summary-action" onclick="window.openAccountingSummaryDetails('bills')" aria-label="View unpaid supplier bills"><span>Supplier bills due</span><strong>${financeRows(payables)}</strong><small>${pendingBills.length} unpaid vendor bill${pendingBills.length === 1 ? '' : 's'} · View bills →</small></button>
       </section>
       <section class="panel accounting-forecast-panel"><div><div class="eyebrow">NEXT 30 DAYS</div><h2>Expected cash movement</h2><p class="sub">A planning estimate based on due final invoices, shared Proforma advances, vendor bills, and scheduled expenses.</p></div><div class="accounting-forecast-values"><div><span>Expected collections</span><b>${financeRows(forecast.receivables)}</b><button onclick="nav('Proforma invoices')">Review payment requests</button></div><div><span>Planned payments</span><b>${financeRows(forecast.outgoings)}</b><button onclick="document.getElementById('accounts-vendor-bills')?.scrollIntoView({behavior:'smooth',block:'start'})">Review bills</button></div></div></section>
       <section class="panel" id="accounts-vendor-bills"><div class="dialog-title"><div><div class="eyebrow">SUPPLIER BILLS</div><h2>Bills to manage</h2><p class="sub">Adding a bill records an obligation; use “Record payment” only after you pay it.</p></div><button class="primary" onclick="editVendorBill()">Add vendor bill</button></div><div class="finance-bills">${billRows}</div></section>
