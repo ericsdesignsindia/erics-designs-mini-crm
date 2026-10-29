@@ -4,6 +4,37 @@
 
   const setupAction = (value, label) => `<option value="${value}">${esc(label)}</option>`;
 
+  const performanceSummary = (period = today().slice(0, 7)) => {
+    const entries = accountLedger().filter(entry => ['Income', 'Expense'].includes(entry.type)
+      && (period === 'all' || String(entry.date).slice(0, 7) === period));
+    const expenses = entries.filter(entry => entry.type === 'Expense');
+    const isEmployeePayment = entry => Boolean(entry.employeeId)
+      || String(entry.category || '').toLowerCase() === 'payroll'
+      || /^employee payment\b/i.test(String(entry.note || ''));
+    const income = financeSum(entries.filter(entry => entry.type === 'Income'));
+    const employeePayments = financeSum(expenses.filter(isEmployeePayment));
+    const otherExpenses = financeSum(expenses.filter(entry => !isEmployeePayment(entry)));
+    const profit = {};
+    for (const currency of new Set([...Object.keys(income), ...Object.keys(employeePayments), ...Object.keys(otherExpenses)])) {
+      profit[currency] = num(income[currency]) - num(employeePayments[currency]) - num(otherExpenses[currency]);
+    }
+    return { income, employeePayments, otherExpenses, profit, transactionCount: entries.length };
+  };
+
+  window.accountingPerformanceSummary = performanceSummary;
+
+  const performancePanel = (period = today().slice(0, 7)) => {
+    const months = [...new Set([today().slice(0, 7), ...accountLedger().map(entry => String(entry.date || '').slice(0, 7)).filter(value => /^\d{4}-\d{2}$/.test(value))])].sort().reverse();
+    const summary = performanceSummary(period);
+    const options = months.map(value => `<option value="${value}" ${period === value ? 'selected' : ''}>${esc(value)}</option>`).join('');
+    return `<div class="dialog-title"><div><div class="eyebrow">INCOME, PAYROLL & PROFIT</div><h2>Business performance</h2><p class="sub">See recorded income, employee payments, other expenses, and the remaining result for one period.</p></div><label class="accounting-performance-period-label" for="accounts-performance-period">Period<select id="accounts-performance-period" onchange="window.updateAccountsPerformance(this.value)"><option value="all" ${period === 'all' ? 'selected' : ''}>All recorded time</option>${options}</select></label></div><div class="accounting-performance-grid"><div class="accounting-performance-stat"><span>Income received</span><strong>${financeRows(summary.income)}</strong></div><div class="accounting-performance-stat"><span>Employee payments</span><strong>${financeRows(summary.employeePayments)}</strong></div><div class="accounting-performance-stat"><span>Other expenses</span><strong>${financeRows(summary.otherExpenses)}</strong></div><div class="accounting-performance-stat accounting-performance-profit"><span>Profit estimate</span><strong>${financeRows(summary.profit)}</strong></div></div><p class="hint">Cash-basis estimate: recorded income minus recorded employee and other expenses, including expenses paid outside CRM funds. Unpaid invoices and bills are excluded; this is not an accrual or tax report.</p>`;
+  };
+
+  window.updateAccountsPerformance = function (period) {
+    const target = document.getElementById('accounts-performance-content');
+    if (target) target.innerHTML = performancePanel(period === 'all' ? 'all' : /^\d{4}-\d{2}$/.test(period) ? period : today().slice(0, 7));
+  };
+
   const cashBreakdown = () => {
     const balances = () => ({ INR: 0, AED: 0 });
     const opening = { ...balances(), ...(db.openingBalances || {}) };
@@ -123,7 +154,7 @@
     const payables = financeSum(pendingBills);
     const forecast = financeForecast(30);
     const bills = (db.vendorBills || []).slice().sort((a, b) => String(a.due).localeCompare(String(b.due)));
-    const billRows = bills.length ? bills.map(item => `<div class="finance-bill-row"><div><b>${esc(item.vendor)}</b><small>${esc(item.category)} · Due ${esc(item.due)}${item.note ? ` · ${esc(item.note)}` : ''}</small></div><span class="badge ${item.status === 'Paid' ? 'Paid' : item.status === 'Approved' ? 'Sent' : 'Overdue'}">${esc(item.status)}</span><b>${currencySymbol(item.currency)}${num(item.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b><div class="actions"><button class="smallbtn" onclick="editVendorBill('${esc(item.id)}')">Edit</button>${item.status !== 'Paid' ? `<button class="smallbtn" onclick="markVendorBillPaid('${esc(item.id)}')">Record payment</button>` : ''}</div></div>`).join('') : '<div class="empty"><h2>No supplier bills yet</h2><p>Add a vendor bill to track a business payment that is due.</p></div>';
+    const billRows = bills.length ? bills.map(item => `<div class="finance-bill-row"><div><b>${esc(item.vendor)}</b><small>${esc(item.category)} · Due ${esc(item.due)}${item.note ? ` · ${esc(item.note)}` : ''}</small></div><span class="badge ${item.status === 'Paid' ? 'Paid' : item.status === 'Approved' ? 'Sent' : 'Overdue'}">${esc(item.status)}</span><b>${currencySymbol(item.currency)}${num(item.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b><div class="actions">${item.status !== 'Paid' ? `<button class="smallbtn" onclick="editVendorBill('${esc(item.id)}')">Edit</button><button class="smallbtn" onclick="markVendorBillPaid('${esc(item.id)}')">Record payment</button>` : '<span class="sub">Payment recorded</span>'}</div></div>`).join('') : '<div class="empty"><h2>No supplier bills yet</h2><p>Add a vendor bill to track a business payment that is due.</p></div>';
     const hasDeficit = ['INR', 'AED'].some(currency => num(breakdown.available[currency]) < 0);
     const cashClass = hasDeficit ? 'accounting-cash-card has-deficit' : 'accounting-cash-card';
 
@@ -131,7 +162,7 @@
 
     return header + `
       <nav class="accounting-section-nav" aria-label="Accounts sections">
-        <a href="#accounts-overview">Overview</a><a href="#accounts-workflow">Record money</a><a href="#accounts-vendor-bills">Bills to pay</a><a href="#accounts-transactions">Transactions</a><a href="#accounts-more">Accounting tools</a>
+        <a href="#accounts-overview">Overview</a><a href="#accounts-workflow">Record money</a><a href="#accounts-performance">Performance</a><a href="#accounts-vendor-bills">Bills to pay</a><a href="#accounts-transactions">Transactions</a><a href="#accounts-more">Accounting tools</a>
       </nav>
       <section class="panel accounting-cash-panel" id="accounts-overview">
         <div class="accounting-cash-heading"><div><div class="eyebrow">BUSINESS CASH AVAILABLE</div><h2 class="${hasDeficit ? 'accounting-deficit' : ''}">${currencySummary(breakdown.available)}</h2><p class="sub">Opening funds + income recorded in Accounts − payments made from CRM funds.</p></div><button onclick="showOpeningBalances()">Set opening funds</button></div>
@@ -154,6 +185,7 @@
         <button type="button" class="stat accounting-due-stat" onclick="window.openClientInvoiceDues()" aria-label="View unpaid final invoices and pending Proforma advances"><span>Client invoices due</span><strong>${financeRows(receivables)}</strong><small>${openInvoices.length} unpaid final invoice${openInvoices.length === 1 ? '' : 's'} · ${openProformas.length} pending Proforma advance${openProformas.length === 1 ? '' : 's'} · View details →</small></button>
         <button type="button" class="stat accounting-summary-action" onclick="window.openAccountingSummaryDetails('bills')" aria-label="View unpaid supplier bills"><span>Supplier bills due</span><strong>${financeRows(payables)}</strong><small>${pendingBills.length} unpaid vendor bill${pendingBills.length === 1 ? '' : 's'} · View bills →</small></button>
       </section>
+      <section class="panel accounting-performance-panel" id="accounts-performance"><div id="accounts-performance-content">${performancePanel(month)}</div></section>
       <section class="panel accounting-forecast-panel"><div><div class="eyebrow">NEXT 30 DAYS</div><h2>Expected cash movement</h2><p class="sub">A planning estimate based on due final invoices, shared Proforma advances, vendor bills, and scheduled expenses.</p></div><div class="accounting-forecast-values"><div><span>Expected collections</span><b>${financeRows(forecast.receivables)}</b><button onclick="nav('Proforma invoices')">Review payment requests</button></div><div><span>Planned payments</span><b>${financeRows(forecast.outgoings)}</b><button onclick="document.getElementById('accounts-vendor-bills')?.scrollIntoView({behavior:'smooth',block:'start'})">Review bills</button></div></div></section>
       <section class="panel" id="accounts-vendor-bills"><div class="dialog-title"><div><div class="eyebrow">SUPPLIER BILLS</div><h2>Bills to manage</h2><p class="sub">Adding a bill records an obligation; use “Record payment” only after you pay it.</p></div><button class="primary" onclick="editVendorBill()">Add vendor bill</button></div><div class="finance-bills">${billRows}</div></section>
       <section class="panel accounting-transactions-panel" id="accounts-transactions"><div class="dialog-title"><div><div class="eyebrow">COMPLETE CASH BOOK</div><h2>All transactions</h2><p class="sub">Use each row’s Actions menu for its receipt or voucher, editing, and related document.</p></div><button onclick="exportAccounts()">Export transactions</button></div><div class="toolbar"><input aria-label="Search account records" placeholder="Search date, client, category, or reference…" oninput="filterAccountRows(this.value)"></div><div id="accountRows">${accountLedgerRows(ledger)}</div></section>

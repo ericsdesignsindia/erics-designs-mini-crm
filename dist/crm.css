@@ -593,6 +593,13 @@ body[data-theme="dark"] .quick-create-menu,body[data-theme="dark"] .command-pale
 .finance-bill-row[hidden]{display:none!important}
 @media(max-width:560px){.accounting-summary-filter-note{align-items:flex-start;flex-direction:column}}
 .accounting-metric-grid>.stat strong{font-size:clamp(19px,2.2vw,27px);overflow-wrap:anywhere}
+.accounting-performance-panel{margin:18px 0;scroll-margin-top:16px}
+.accounting-performance-period-label{display:grid;gap:6px;min-width:180px;color:var(--muted);font-size:13px}
+.accounting-performance-period-label select{min-height:42px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);font:inherit}
+.accounting-performance-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}
+.accounting-performance-stat{display:grid;gap:10px;min-width:0;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--paper);color:var(--muted)}
+.accounting-performance-stat strong{color:var(--ink);font-size:clamp(19px,2vw,26px);overflow-wrap:anywhere}
+.accounting-performance-profit{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));background:color-mix(in srgb,var(--accent) 9%,var(--paper))}
 .accounting-forecast-panel{display:grid;grid-template-columns:minmax(200px,.8fr) minmax(0,1.2fr);gap:20px;align-items:center}
 .accounting-forecast-panel h2{margin:6px 0}
 .accounting-forecast-values{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
@@ -607,8 +614,9 @@ body[data-theme="dark"] .quick-create-menu,body[data-theme="dark"] .command-pale
 .accounting-more-tools[open]>summary:after,.accounting-tool-group[open]>summary:after{content:'Hide details'}
 .accounting-more-tools>summary span,.accounting-tool-group>summary span{font-size:13px;color:var(--muted);font-weight:400}
 .accounting-tool-group{padding:16px}
-@media(max-width:1050px){.accounting-workflow-panel{grid-template-columns:1fr}.accounting-tools-label,.accounting-tools-menu{grid-column:1}.accounting-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:720px){.accounting-cash-heading{flex-direction:column}.accounting-balance-grid,.accounting-workflow-grid,.accounting-forecast-values{grid-template-columns:1fr}.accounting-workflow-grid p{min-height:0}.accounting-forecast-panel{grid-template-columns:1fr}.accounting-metric-grid{gap:9px}.accounting-metric-grid>.stat{padding:13px}.accounting-section-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;padding:2px;margin-bottom:12px}.accounting-section-nav a{display:flex;align-items:center;justify-content:center;min-width:0;min-height:40px;padding:8px 10px;text-align:center;white-space:normal}.accounting-section-nav a:last-child{grid-column:1/-1}.accounting-tools-label{margin:2px 0 -12px}}
+@media(max-width:1050px){.accounting-workflow-panel{grid-template-columns:1fr}.accounting-tools-label,.accounting-tools-menu{grid-column:1}.accounting-metric-grid,.accounting-performance-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:720px){.accounting-cash-heading{flex-direction:column}.accounting-balance-grid,.accounting-workflow-grid,.accounting-forecast-values{grid-template-columns:1fr}.accounting-workflow-grid p{min-height:0}.accounting-forecast-panel{grid-template-columns:1fr}.accounting-metric-grid{gap:9px}.accounting-metric-grid>.stat{padding:13px}.accounting-section-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;padding:2px;margin-bottom:12px}.accounting-section-nav a{display:flex;align-items:center;justify-content:center;min-width:0;min-height:40px;padding:8px 10px;text-align:center;white-space:normal}.accounting-section-nav a:last-child{grid-column:1/-1}.accounting-tools-label{margin:2px 0 -12px}.accounting-performance-panel>.dialog-title{align-items:flex-start;flex-direction:column}.accounting-performance-period-label{width:100%}}
+@media(max-width:420px){.accounting-performance-grid{grid-template-columns:1fr}}
 .collection-summaries{display:grid;grid-template-columns:repeat(2,minmax(140px,1fr));gap:10px;align-self:stretch}
 .collections-panel .collection-summary{justify-items:start;align-content:center;text-align:left;gap:2px;padding:10px 13px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2,rgba(120,140,170,.08))}
 .collections-panel .collection-summary b{font-size:23px;line-height:1.1}
