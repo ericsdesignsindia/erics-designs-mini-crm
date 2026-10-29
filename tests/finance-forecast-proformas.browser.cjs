@@ -35,6 +35,8 @@ app.whenReady().then(async () => {
       if(!collectionsHtml.includes('unpaid final invoice')||!collectionsHtml.includes('pending proforma advance'))throw Error('Collections Queue must show separate final-invoice and Proforma-advance counts.');
       if(!collectionsHtml.includes('Final invoices are billed balances')||!collectionsHtml.includes('Proformas are advance-payment requests'))throw Error('Collections Queue must explain how final invoices differ from Proforma advance requests.');
       if(collectionsHtml.includes('ED-P-0003'))throw Error('Collections Queue must hide a Proforma once its final invoice is issued.');
+      db.documents.push({...base,id:'dayly-final',type:'Invoice',number:'ED-0076',status:'Part paid',client:{name:'DaylyBody'},project:'SEO',items:[{qty:1,rate:20000}],payments:[{amount:8500}]},{...base,id:'dayly-advance',type:'Proforma',number:'ED-P-0008',client:{name:'Dayly body Pvt Ltd'},project:'Website UI / SEO'});
+      if(!accountsCollectionsQueue().includes('Possible same account as ED-0076 (SEO). Check whether this advance is for the same work.'))throw Error('A proforma and final invoice with matching normalized client names should be flagged for possible overlap.');
       if(isRateCardQuotation(db.documents.find(item=>item.id==='priced-rate-card-advance')))throw Error('A Proforma inherited a quotation-only rate-card display mode.');
       if(!isRateCardQuotation({type:'Quotation',rateCard:true}))throw Error('A rate-card quotation lost its rate-card display mode.');
       const pricedProforma=db.documents.find(item=>item.id==='priced-rate-card-advance'),preview=documentHTML(pricedProforma);
