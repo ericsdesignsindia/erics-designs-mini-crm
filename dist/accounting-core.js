@@ -15,7 +15,7 @@
     const cashIn=byCurrency(ledger.filter(row=>row.type==='Income'));
     const cashOut=byCurrency(ledger.filter(row=>row.type==='Expense'));
     const openInvoices=(db.documents||[]).filter(document=>document.type==='Invoice'&&document.status!=='Cancelled'&&Number(totals(document).balance||0)>0);
-    const proformaAdvances=(db.documents||[]).filter(document=>document.type==='Proforma'&&document.status!=='Cancelled'&&Number(totals(document).balance||0)>0);
+    const proformaAdvances=(db.documents||[]).filter(document=>document.type==='Proforma'&&!['Draft','Cancelled'].includes(document.status)&&Number(totals(document).balance||0)>0&&!financeInvoiceForProforma(document));
     const vendorBills=(db.vendorBills||[]).filter(bill=>bill.status!=='Paid');
     return {ledger,cashIn,cashOut,netCash:difference(cashIn,cashOut),receivables:byCurrency(openInvoices.map(document=>({currency:document.currency||'INR',amount:totals(document).balance||0}))),advanceRequests:byCurrency(proformaAdvances.map(document=>({currency:document.currency||'INR',amount:totals(document).balance||0}))),payables:byCurrency(vendorBills.map(bill=>({currency:bill.currency||'INR',amount:bill.amount||0}))),openInvoiceCount:openInvoices.length,advanceCount:proformaAdvances.length,payableCount:vendorBills.length};
   };

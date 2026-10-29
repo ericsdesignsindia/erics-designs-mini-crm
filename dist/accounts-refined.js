@@ -117,9 +117,7 @@
     const openProformas = (db.documents || []).filter(item => item.type === 'Proforma'
       && !['Draft', 'Cancelled'].includes(item.status)
       && Number(totals(item).balance || 0) > 0
-      && !(db.documents || []).some(invoice => invoice.type === 'Invoice'
-        && !['Draft', 'Cancelled'].includes(invoice.status)
-        && (invoice.sourceId === item.id || invoice.rootId === item.id)));
+      && !financeInvoiceForProforma(item));
     const receivables = financeSum([...openInvoices, ...openProformas].map(item => ({ amount: Math.max(0, Number(totals(item).balance || 0)), currency: item.currency || 'INR' })));
     const pendingBills = (db.vendorBills || []).filter(item => item.status !== 'Paid');
     const payables = financeSum(pendingBills);
