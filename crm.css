@@ -609,3 +609,13 @@ body[data-theme="dark"] .quick-create-menu,body[data-theme="dark"] .command-pale
 .accounting-tool-group{padding:16px}
 @media(max-width:1050px){.accounting-workflow-panel{grid-template-columns:1fr}.accounting-tools-label,.accounting-tools-menu{grid-column:1}.accounting-metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:720px){.accounting-cash-heading{flex-direction:column}.accounting-balance-grid,.accounting-workflow-grid,.accounting-forecast-values{grid-template-columns:1fr}.accounting-workflow-grid p{min-height:0}.accounting-forecast-panel{grid-template-columns:1fr}.accounting-metric-grid{gap:9px}.accounting-metric-grid>.stat{padding:13px}.accounting-section-nav{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));overflow:visible;padding:2px;margin-bottom:12px}.accounting-section-nav a{display:flex;align-items:center;justify-content:center;min-width:0;min-height:40px;padding:8px 10px;text-align:center;white-space:normal}.accounting-section-nav a:last-child{grid-column:1/-1}.accounting-tools-label{margin:2px 0 -12px}}
+.collection-summaries{display:grid;grid-template-columns:repeat(2,minmax(140px,1fr));gap:10px;align-self:stretch}
+.collections-panel .collection-summary{justify-items:start;align-content:center;text-align:left;gap:2px;padding:10px 13px;border:1px solid var(--line);border-radius:12px;background:var(--surface-2,rgba(120,140,170,.08))}
+.collections-panel .collection-summary b{font-size:23px;line-height:1.1}
+.collections-panel .collection-summary span{max-width:none;font-size:11px}
+.collections-panel .collection-summary small{color:var(--muted);font-size:11px}
+.collections-grid h3{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.collection-section-total{color:var(--accent);font-size:13px;white-space:nowrap}
+.collection-more{margin:10px 0 0;color:var(--muted);font-size:12px}
+@media(max-width:760px){.collection-summaries{width:100%;grid-template-columns:repeat(2,minmax(0,1fr))}.collections-panel .collection-summary{min-width:0;padding:9px}.collections-panel .collection-summary b{font-size:20px}}
+@media(max-width:420px){.collection-summaries{grid-template-columns:1fr}}

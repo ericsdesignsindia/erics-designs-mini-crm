@@ -25,12 +25,16 @@ app.whenReady().then(async () => {
       const forecast=financeForecast(30);
       if(forecast.receivables.INR!==18000)throw Error('Expected two 6,000 Proforma advances plus the linked invoice 6,000 balance; got '+forecast.receivables.INR);
       const accountHtml=accounts();
+      const collectionsHtml=accountsCollectionsQueue();
       if(!accountHtml.includes('Client invoices due'))throw Error('Accounts is missing its Client invoices due summary.');
       if(!accountHtml.includes('onclick="window.openClientInvoiceDues()"')||typeof window.openClientInvoiceDues!=='function')throw Error('Client invoices due summary must open its invoice and Proforma collections list.');
       for(const kind of ['received','paid','bills'])if(!accountHtml.includes("onclick=\"window.openAccountingSummaryDetails('"+kind+"')\""))throw Error('Accounting summary card is missing its '+kind+' drill-down.');
       if(typeof window.openAccountingSummaryDetails!=='function'||typeof window.clearAccountingSummaryFilter!=='function'||typeof window.clearAccountingBillsSummaryFilter!=='function')throw Error('Accounting summary drill-down and reset actions must be available.');
       if(!accountHtml.includes(financeRows({INR:18000})))throw Error('Client invoices due should include open Proforma advances and final invoice balances without double counting.');
       if(!accountHtml.includes('1 unpaid final invoice · 2 pending Proforma advances'))throw Error('Client invoices due should count unpaid final invoices and pending Proforma advances, excluding drafts and cancelled items.');
+      if(!collectionsHtml.includes('unpaid final invoice')||!collectionsHtml.includes('pending proforma advance'))throw Error('Collections Queue must show separate final-invoice and Proforma-advance counts.');
+      if(!collectionsHtml.includes('Final invoices are billed balances')||!collectionsHtml.includes('Proformas are advance-payment requests'))throw Error('Collections Queue must explain how final invoices differ from Proforma advance requests.');
+      if(collectionsHtml.includes('ED-P-0003'))throw Error('Collections Queue must hide a Proforma once its final invoice is issued.');
       if(isRateCardQuotation(db.documents.find(item=>item.id==='priced-rate-card-advance')))throw Error('A Proforma inherited a quotation-only rate-card display mode.');
       if(!isRateCardQuotation({type:'Quotation',rateCard:true}))throw Error('A rate-card quotation lost its rate-card display mode.');
       const pricedProforma=db.documents.find(item=>item.id==='priced-rate-card-advance'),preview=documentHTML(pricedProforma);
