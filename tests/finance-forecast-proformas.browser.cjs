@@ -33,10 +33,12 @@ app.whenReady().then(async () => {
       if(!accountHtml.includes(financeRows({INR:18000})))throw Error('Client invoices due should include open Proforma advances and final invoice balances without double counting.');
       if(!accountHtml.includes('1 unpaid final invoice · 2 pending Proforma advances'))throw Error('Client invoices due should count unpaid final invoices and pending Proforma advances, excluding drafts and cancelled items.');
       if(!collectionsHtml.includes('unpaid final invoice')||!collectionsHtml.includes('pending proforma advance'))throw Error('Collections Queue must show separate final-invoice and Proforma-advance counts.');
-      if(!collectionsHtml.includes('Final invoices are billed balances')||!collectionsHtml.includes('Proformas are advance-payment requests'))throw Error('Collections Queue must explain how final invoices differ from Proforma advance requests.');
+      if(!collectionsHtml.includes('Final invoices are billed balances')||!collectionsHtml.includes('proformas are advance requests'))throw Error('Collections Queue must explain how final invoices differ from Proforma advance requests.');
       if(collectionsHtml.includes('ED-P-0003'))throw Error('Collections Queue must hide a Proforma once its final invoice is issued.');
       db.documents.push({...base,id:'dayly-final',type:'Invoice',number:'ED-0076',status:'Part paid',client:{name:'DaylyBody'},project:'SEO',items:[{qty:1,rate:20000}],payments:[{amount:8500}]},{...base,id:'dayly-advance',type:'Proforma',number:'ED-P-0008',client:{name:'Dayly body Pvt Ltd'},project:'Website UI / SEO'});
-      if(!accountsCollectionsQueue().includes('Possible same account as ED-0076 (SEO). Check whether this advance is for the same work.'))throw Error('A proforma and final invoice with matching normalized client names should be flagged for possible overlap.');
+      const daylyCollections=accountsCollectionsQueue();
+      if(!daylyCollections.includes('Same client account as ED-0076 (SEO). The proforma advance is listed separately from the final invoice balance.'))throw Error('The DaylyBody proforma should be identified as the same client account as its final invoice.');
+      if((daylyCollections.match(/<b>DaylyBody<\/b>/g)||[]).length<2)throw Error('The same account should use one consistent DaylyBody display name across its invoice and proforma.');
       if(isRateCardQuotation(db.documents.find(item=>item.id==='priced-rate-card-advance')))throw Error('A Proforma inherited a quotation-only rate-card display mode.');
       if(!isRateCardQuotation({type:'Quotation',rateCard:true}))throw Error('A rate-card quotation lost its rate-card display mode.');
       const pricedProforma=db.documents.find(item=>item.id==='priced-rate-card-advance'),preview=documentHTML(pricedProforma);
