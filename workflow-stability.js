@@ -28,7 +28,7 @@
       draft.projectValue=projectValue(draft);
       const display=document.getElementById('total');
       if(display){const t=totals(draft);display.innerHTML=`<div class="totalrow"><span>Total project value</span><span>${fmt(draft,t.projectValue)}</span></div><div class="totalrow big"><span>Advance amount required</span><span>${fmt(draft,t.advanceAmount)}</span></div><p class="hint">The advance is editable per service. The full project value remains unchanged.</p>`;}
-      draft.items.forEach((item,index)=>{const line=document.getElementById('lineTotal'+index);if(line)line.textContent=fmt(draft,num(item.proformaAmount));});
+      draft.items.forEach((item,index)=>{const line=document.getElementById('lineTotal'+index);if(line)line.textContent=fmt(draft,num(item.proformaAmount??(num(item.qty)*num(item.rate)*.5)));});
       return;
     }
     return baseUpdate.apply(this,arguments);
