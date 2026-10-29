@@ -17,16 +17,23 @@ app.whenReady().then(async () => {
         {...base,id:'priced-rate-card-advance',type:'Proforma',number:'ED-P-0005',due,rateCard:true},
         {...base,id:'linked-advance',type:'Proforma',number:'ED-P-0003',due},
         {...base,id:'linked-invoice',type:'Invoice',number:'ED-0001',sourceId:'linked-advance',due,items:[{qty:1,rate:12000}],payments:[{amount:6000}]},
+        {...base,id:'draft-invoice',type:'Invoice',number:'ED-0002',status:'Draft',due},
+        {...base,id:'draft-proforma',type:'Proforma',number:'ED-P-0006',status:'Draft',due},
+        {...base,id:'cancelled-proforma',type:'Proforma',number:'ED-P-0007',status:'Cancelled',due},
         {...base,id:'later-advance',type:'Proforma',number:'ED-P-0004',due:later}
       ]};
       const forecast=financeForecast(30);
       if(forecast.receivables.INR!==18000)throw Error('Expected two 6,000 Proforma advances plus the linked invoice 6,000 balance; got '+forecast.receivables.INR);
+      const accountHtml=accounts();
+      if(!accountHtml.includes('Client invoices due'))throw Error('Accounts is missing its Client invoices due summary.');
+      if(!accountHtml.includes(financeRows({INR:18000})))throw Error('Client invoices due should include open Proforma advances and final invoice balances without double counting.');
+      if(!accountHtml.includes('1 unpaid final invoice · 2 pending Proforma advances'))throw Error('Client invoices due should count unpaid final invoices and pending Proforma advances, excluding drafts and cancelled items.');
       if(isRateCardQuotation(db.documents.find(item=>item.id==='priced-rate-card-advance')))throw Error('A Proforma inherited a quotation-only rate-card display mode.');
       if(!isRateCardQuotation({type:'Quotation',rateCard:true}))throw Error('A rate-card quotation lost its rate-card display mode.');
       const pricedProforma=db.documents.find(item=>item.id==='priced-rate-card-advance'),preview=documentHTML(pricedProforma);
       if(preview.includes('RATE CARD'))throw Error('Proforma preview still hides the payable total behind a rate-card label.');
       if(!preview.includes(fmt(pricedProforma,6000)))throw Error('Proforma preview does not show the payable advance amount.');
-      return { expectedINR:forecast.receivables.INR, includesSharedProforma:true, includesPricedRateCardSource:true, excludesUnpricedRateCard:true, avoidsLinkedAdvanceDoubleCount:true, excludesOutsideWindow:true };
+      return { expectedINR:forecast.receivables.INR, accountsDueINR:18000, includesSharedProforma:true, includesPricedRateCardSource:true, excludesUnpricedRateCard:true, avoidsLinkedAdvanceDoubleCount:true, excludesDraftsAndCancelled:true, excludesOutsideWindow:true };
     } catch(error) { return { error:error.stack||error.message }; }
     })()`);
     if (!result || result.error) throw new Error(result?.error || 'Finance forecast verification returned no result.');

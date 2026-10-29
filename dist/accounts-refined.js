@@ -58,8 +58,14 @@
     const monthRows = businessEntries.filter(entry => String(entry.date).slice(0, 7) === month);
     const monthIncome = financeSum(monthRows.filter(entry => entry.type === 'Income'));
     const monthExpense = financeSum(monthRows.filter(entry => entry.type === 'Expense'));
-    const openInvoices = (db.documents || []).filter(item => item.type === 'Invoice' && item.status !== 'Cancelled' && Number(totals(item).balance || 0) > 0);
-    const receivables = financeSum(openInvoices.map(item => ({ amount: totals(item).balance, currency: item.currency || 'INR' })));
+    const openInvoices = (db.documents || []).filter(item => item.type === 'Invoice' && !['Draft', 'Cancelled'].includes(item.status) && Number(totals(item).balance || 0) > 0);
+    const openProformas = (db.documents || []).filter(item => item.type === 'Proforma'
+      && !['Draft', 'Cancelled'].includes(item.status)
+      && Number(totals(item).balance || 0) > 0
+      && !(db.documents || []).some(invoice => invoice.type === 'Invoice'
+        && !['Draft', 'Cancelled'].includes(invoice.status)
+        && (invoice.sourceId === item.id || invoice.rootId === item.id)));
+    const receivables = financeSum([...openInvoices, ...openProformas].map(item => ({ amount: Math.max(0, Number(totals(item).balance || 0)), currency: item.currency || 'INR' })));
     const pendingBills = (db.vendorBills || []).filter(item => item.status !== 'Paid');
     const payables = financeSum(pendingBills);
     const forecast = financeForecast(30);
@@ -92,7 +98,7 @@
       <section class="accounting-metric-grid" aria-label="Accounting summary">
         <article class="stat"><span>Received this month · ${esc(month)}</span><strong>${financeRows(monthIncome)}</strong><small>Invoice payments and other income</small></article>
         <article class="stat"><span>Paid this month · ${esc(month)}</span><strong>${financeRows(monthExpense)}</strong><small>Payments made from CRM funds</small></article>
-        <article class="stat"><span>Client invoices due</span><strong>${financeRows(receivables)}</strong><small>${openInvoices.length} unpaid final invoice${openInvoices.length === 1 ? '' : 's'}</small></article>
+        <article class="stat"><span>Client invoices due</span><strong>${financeRows(receivables)}</strong><small>${openInvoices.length} unpaid final invoice${openInvoices.length === 1 ? '' : 's'} · ${openProformas.length} pending Proforma advance${openProformas.length === 1 ? '' : 's'}</small></article>
         <article class="stat"><span>Supplier bills due</span><strong>${financeRows(payables)}</strong><small>${pendingBills.length} unpaid vendor bill${pendingBills.length === 1 ? '' : 's'}</small></article>
       </section>
       <section class="panel accounting-forecast-panel"><div><div class="eyebrow">NEXT 30 DAYS</div><h2>Expected cash movement</h2><p class="sub">A planning estimate based on due final invoices, shared Proforma advances, vendor bills, and scheduled expenses.</p></div><div class="accounting-forecast-values"><div><span>Expected collections</span><b>${financeRows(forecast.receivables)}</b><button onclick="nav('Proforma invoices')">Review payment requests</button></div><div><span>Planned payments</span><b>${financeRows(forecast.outgoings)}</b><button onclick="document.getElementById('accounts-vendor-bills')?.scrollIntoView({behavior:'smooth',block:'start'})">Review bills</button></div></div></section>
