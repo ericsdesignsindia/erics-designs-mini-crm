@@ -50,6 +50,11 @@
     }
   };
 
+  window.openClientInvoiceDues = function () {
+    window.openAccountsDetails('accounts-reconciliation');
+    document.querySelector('#accounts-reconciliation .collections-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   accounts = function () {
     const month = today().slice(0, 7);
     const ledger = accountLedger().slice().sort((a, b) => String(b.date).localeCompare(String(a.date)));
@@ -98,7 +103,7 @@
       <section class="accounting-metric-grid" aria-label="Accounting summary">
         <article class="stat"><span>Received this month · ${esc(month)}</span><strong>${financeRows(monthIncome)}</strong><small>Invoice payments and other income</small></article>
         <article class="stat"><span>Paid this month · ${esc(month)}</span><strong>${financeRows(monthExpense)}</strong><small>Payments made from CRM funds</small></article>
-        <article class="stat"><span>Client invoices due</span><strong>${financeRows(receivables)}</strong><small>${openInvoices.length} unpaid final invoice${openInvoices.length === 1 ? '' : 's'} · ${openProformas.length} pending Proforma advance${openProformas.length === 1 ? '' : 's'}</small></article>
+        <button type="button" class="stat accounting-due-stat" onclick="window.openClientInvoiceDues()" aria-label="View unpaid final invoices and pending Proforma advances"><span>Client invoices due</span><strong>${financeRows(receivables)}</strong><small>${openInvoices.length} unpaid final invoice${openInvoices.length === 1 ? '' : 's'} · ${openProformas.length} pending Proforma advance${openProformas.length === 1 ? '' : 's'} · View details →</small></button>
         <article class="stat"><span>Supplier bills due</span><strong>${financeRows(payables)}</strong><small>${pendingBills.length} unpaid vendor bill${pendingBills.length === 1 ? '' : 's'}</small></article>
       </section>
       <section class="panel accounting-forecast-panel"><div><div class="eyebrow">NEXT 30 DAYS</div><h2>Expected cash movement</h2><p class="sub">A planning estimate based on due final invoices, shared Proforma advances, vendor bills, and scheduled expenses.</p></div><div class="accounting-forecast-values"><div><span>Expected collections</span><b>${financeRows(forecast.receivables)}</b><button onclick="nav('Proforma invoices')">Review payment requests</button></div><div><span>Planned payments</span><b>${financeRows(forecast.outgoings)}</b><button onclick="document.getElementById('accounts-vendor-bills')?.scrollIntoView({behavior:'smooth',block:'start'})">Review bills</button></div></div></section>
