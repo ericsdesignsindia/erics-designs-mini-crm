@@ -29,7 +29,13 @@
     for (const currency of new Set([...Object.keys(income), ...Object.keys(ownerPayments), ...Object.keys(employeePayments), ...Object.keys(otherExpenses)])) {
       profit[currency] = num(income[currency]) - num(employeePayments[currency]) - num(otherExpenses[currency]);
     }
-    return { income, ownerPayments, employeePayments, otherExpenses, profit, transactionCount: entries.length };
+    const details = entries.map(entry => {
+      if (entry.type === 'Income') return { ...entry, performanceKind: 'income', affectsProfit: true };
+      if (isOwnerPayment(entry)) return { ...entry, performanceKind: 'owner', affectsProfit: false };
+      if (isEmployeePayment(entry)) return { ...entry, performanceKind: 'employee', affectsProfit: true };
+      return { ...entry, performanceKind: 'other', affectsProfit: true };
+    });
+    return { income, ownerPayments, employeePayments, otherExpenses, profit, transactionCount: entries.length, details };
   };
 
   window.accountingPerformanceSummary = performanceSummary;
@@ -49,16 +55,61 @@
     return isOwnerLedgerEntry(entry) ? row.replace(/Employee payment/g, 'Owner profit').replace('<b>Payroll</b>', '<b>Owner distribution</b>') : row;
   };
 
+  let activePerformanceDetails = null;
+  const performanceDetailConfig = {
+    income: { title: 'Income received', note: 'Client invoice payments and other recorded income for this period.', rows: summary => summary.details.filter(entry => entry.performanceKind === 'income') },
+    owner: { title: 'Owner profit paid', note: 'Payments to Tanishka and Eric, shown separately and excluded from expenses.', rows: summary => summary.details.filter(entry => entry.performanceKind === 'owner') },
+    employee: { title: 'Employee payments', note: 'Payments to team members other than the owners. These reduce the profit estimate.', rows: summary => summary.details.filter(entry => entry.performanceKind === 'employee') },
+    other: { title: 'Other expenses', note: 'Business expenses that are not owner distributions or employee payments.', rows: summary => summary.details.filter(entry => entry.performanceKind === 'other') },
+    profit: { title: 'Profit before owner payouts', note: 'Income received less employee payments and other expenses. Owner payouts are excluded.', rows: summary => summary.details.filter(entry => entry.affectsProfit) }
+  };
+
+  const performanceDetailsHtml = (kind, period) => {
+    const config = performanceDetailConfig[kind];
+    if (!config) return '';
+    const summary = performanceSummary(period);
+    const rows = config.rows(summary).map(entry => {
+      const employee = (db.employees || []).find(person => person.id === entry.employeeId);
+      const recipient = employee?.name || entry.employeeName || entry.payee || entry.recipient || entry.counterparty;
+      return recipient && !String(entry.note || '').toLowerCase().includes(String(recipient).toLowerCase())
+        ? { ...entry, note: [entry.note, recipient].filter(Boolean).join(' · ') }
+        : entry;
+    }).sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    const periodLabel = period === 'all' ? 'all recorded time' : period;
+    const ledger = accountLedgerRows(rows).replaceAll('>Open invoice<', '>Edit invoice<');
+    return `<section class="accounting-performance-details" aria-live="polite"><div class="dialog-title"><div><div class="eyebrow">PERFORMANCE DETAILS</div><h3>${esc(config.title)}</h3><p class="sub">${esc(config.note)} Showing ${rows.length} transaction${rows.length === 1 ? '' : 's'} for ${esc(periodLabel)}.</p></div><button type="button" class="smallbtn" onclick="window.closeAccountsPerformanceDetails()">Close details</button></div>${kind === 'profit' ? '<p class="accounting-performance-detail-note">Income rows add to profit; employee payments and other expenses subtract from it.</p>' : ''}${ledger}</section>`;
+  };
+
   const performancePanel = (period = today().slice(0, 7)) => {
     const months = [...new Set([today().slice(0, 7), ...accountLedger().map(entry => String(entry.date || '').slice(0, 7)).filter(value => /^\d{4}-\d{2}$/.test(value))])].sort().reverse();
     const summary = performanceSummary(period);
     const options = months.map(value => `<option value="${value}" ${period === value ? 'selected' : ''}>${esc(value)}</option>`).join('');
-    return `<div class="dialog-title"><div><div class="eyebrow">INCOME, PAYROLL & PROFIT</div><h2>Business performance</h2><p class="sub">Payments to Tanishka and Eric are recorded as owner profit; payments to other team members are expenses.</p></div><label class="accounting-performance-period-label" for="accounts-performance-period">Period<select id="accounts-performance-period" onchange="window.updateAccountsPerformance(this.value)"><option value="all" ${period === 'all' ? 'selected' : ''}>All recorded time</option>${options}</select></label></div><div class="accounting-performance-grid"><div class="accounting-performance-stat"><span>Income received</span><strong>${financeRows(summary.income)}</strong></div><div class="accounting-performance-stat"><span>Owner profit paid</span><strong>${financeRows(summary.ownerPayments)}</strong></div><div class="accounting-performance-stat"><span>Employee payments</span><strong>${financeRows(summary.employeePayments)}</strong></div><div class="accounting-performance-stat"><span>Other expenses</span><strong>${financeRows(summary.otherExpenses)}</strong></div><div class="accounting-performance-stat accounting-performance-profit"><span>Profit before owner payouts</span><strong>${financeRows(summary.profit)}</strong></div></div><p class="hint">Cash-basis estimate: income less employee payments and other business expenses. Owner payments are shown separately and do not reduce profit; all expenses are included even if paid outside CRM funds. Unpaid invoices and bills are excluded; this is not an accrual or tax report.</p>`;
+    return `<div class="dialog-title"><div><div class="eyebrow">INCOME, PAYROLL & PROFIT</div><h2>Business performance</h2><p class="sub">Payments to Tanishka and Eric are recorded as owner profit; payments to other team members are expenses. Select a card to see its transactions.</p></div><label class="accounting-performance-period-label" for="accounts-performance-period">Period<select id="accounts-performance-period" onchange="window.updateAccountsPerformance(this.value)"><option value="all" ${period === 'all' ? 'selected' : ''}>All recorded time</option>${options}</select></label></div><div class="accounting-performance-grid"><button type="button" class="accounting-performance-stat" onclick="window.openAccountsPerformanceDetails('income')"><span>Income received</span><strong>${financeRows(summary.income)}</strong><small>View income details →</small></button><button type="button" class="accounting-performance-stat" onclick="window.openAccountsPerformanceDetails('owner')"><span>Owner profit paid</span><strong>${financeRows(summary.ownerPayments)}</strong><small>View owner payments →</small></button><button type="button" class="accounting-performance-stat" onclick="window.openAccountsPerformanceDetails('employee')"><span>Employee payments</span><strong>${financeRows(summary.employeePayments)}</strong><small>View employee payments →</small></button><button type="button" class="accounting-performance-stat" onclick="window.openAccountsPerformanceDetails('other')"><span>Other expenses</span><strong>${financeRows(summary.otherExpenses)}</strong><small>View expense details →</small></button><button type="button" class="accounting-performance-stat accounting-performance-profit" onclick="window.openAccountsPerformanceDetails('profit')"><span>Profit before owner payouts</span><strong>${financeRows(summary.profit)}</strong><small>View profit calculation →</small></button></div><p class="hint">Cash-basis estimate: income less employee payments and other business expenses. Owner payments are shown separately and do not reduce profit; all expenses are included even if paid outside CRM funds. Unpaid invoices and bills are excluded; this is not an accrual or tax report.</p><div id="accounts-performance-details">${activePerformanceDetails ? performanceDetailsHtml(activePerformanceDetails, period) : ''}</div>`;
   };
 
   window.updateAccountsPerformance = function (period) {
     const target = document.getElementById('accounts-performance-content');
-    if (target) target.innerHTML = performancePanel(period === 'all' ? 'all' : /^\d{4}-\d{2}$/.test(period) ? period : today().slice(0, 7));
+    if (target) {
+      const selectedPeriod = period === 'all' ? 'all' : /^\d{4}-\d{2}$/.test(period) ? period : today().slice(0, 7);
+      target.innerHTML = performancePanel(selectedPeriod);
+      if (activePerformanceDetails) document.getElementById('accounts-performance-details')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  };
+
+  window.openAccountsPerformanceDetails = function (kind) {
+    if (!performanceDetailConfig[kind]) return;
+    activePerformanceDetails = kind;
+    const select = document.getElementById('accounts-performance-period');
+    const target = document.getElementById('accounts-performance-details');
+    if (!target) return;
+    target.innerHTML = performanceDetailsHtml(kind, select?.value || today().slice(0, 7));
+    target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+
+  window.closeAccountsPerformanceDetails = function () {
+    activePerformanceDetails = null;
+    const target = document.getElementById('accounts-performance-details');
+    if (target) target.innerHTML = '';
   };
 
   const cashBreakdown = () => {
