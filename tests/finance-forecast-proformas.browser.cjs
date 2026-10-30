@@ -53,6 +53,7 @@ app.whenReady().then(async () => {
       const performance=window.accountingPerformanceSummary('all');
       if(!performance||typeof performance.profit!=='object')throw Error('Accounts is missing its performance summary.');
       db.documents=[];
+      db.employees=[{id:'owner-tanishka',name:'Tanishka',status:'Active'},{id:'owner-eric',name:'Eric Rodgers',status:'Active'},{id:'employee-1',name:'Team member',status:'Active'}];
       db.accounts=[
         {id:'perf-income-inr',date:today(),type:'Income',currency:'INR',category:'Client payment',amount:20000},
         {id:'perf-income-aed',date:today(),type:'Income',currency:'AED',category:'Client payment',amount:100},
@@ -60,13 +61,18 @@ app.whenReady().then(async () => {
         {id:'perf-payroll-legacy',date:today(),type:'Expense',currency:'INR',category:'Payroll',amount:1000},
         {id:'perf-external-other',date:today(),type:'Expense',currency:'INR',category:'Travel',amount:2000,externalPayment:true},
         {id:'perf-other',date:today(),type:'Expense',currency:'INR',category:'Office',amount:3000},
+        {id:'perf-owner-tanishka',date:today(),type:'Expense',currency:'INR',category:'Payroll',amount:1500,employeeId:'owner-tanishka'},
+        {id:'perf-owner-eric',date:today(),type:'Expense',currency:'INR',category:'Payroll',amount:500,employeeId:'owner-eric',externalPayment:true},
+        {id:'perf-owner-legacy',date:today(),type:'Expense',currency:'INR',category:'Owner profit',amount:250,note:'Owner payment · Tanishka'},
         {id:'perf-old-income',date:'2025-01-01',type:'Income',currency:'INR',category:'Client payment',amount:10000}
       ];
       const monthPerformance=window.accountingPerformanceSummary(today().slice(0,7)),allPerformance=window.accountingPerformanceSummary('all');
-      if(monthPerformance.income.INR!==20000||monthPerformance.employeePayments.INR!==5000||monthPerformance.otherExpenses.INR!==5000||monthPerformance.profit.INR!==10000||monthPerformance.profit.AED!==100)throw Error('Monthly performance must split payroll and other expenses, include externally paid costs in profit, and keep currencies separate.');
-      if(allPerformance.income.INR!==30000||allPerformance.profit.INR!==20000)throw Error('All-time performance must include historical ledger entries.');
+      if(monthPerformance.income.INR!==20000||monthPerformance.ownerPayments.INR!==2250||monthPerformance.employeePayments.INR!==5000||monthPerformance.otherExpenses.INR!==5000||monthPerformance.profit.INR!==10000||monthPerformance.profit.AED!==100)throw Error('Owner payments must be tracked separately as profit distributions, while non-owner payroll and other costs reduce profit.');
+      if(allPerformance.income.INR!==30000||allPerformance.ownerPayments.INR!==2250||allPerformance.profit.INR!==20000)throw Error('All-time performance must include historical income while keeping owner payouts outside profit expenses.');
+      const ownerTransactionRow=accountLedgerRow(db.accounts.find(entry=>entry.id==='perf-owner-tanishka'));
+      if(!ownerTransactionRow.includes('Owner profit')||ownerTransactionRow.includes('Employee payment'))throw Error('Owner payouts should be visibly labeled as owner profit in the transaction list.');
       const performanceHtml=accounts();
-      for(const label of ['Business performance','Income received','Employee payments','Other expenses','Profit estimate','All recorded time'])if(!performanceHtml.includes(label))throw Error('The Accounts performance area is missing '+label+'.');
+      for(const label of ['Business performance','Income received','Owner profit paid','Employee payments','Other expenses','Profit before owner payouts','All recorded time'])if(!performanceHtml.includes(label))throw Error('The Accounts performance area is missing '+label+'.');
       document.body.insertAdjacentHTML('beforeend','<div id="accounts-performance-content"></div>');
       window.updateAccountsPerformance('all');
       if(!document.getElementById('accounts-performance-content').innerHTML.includes('All recorded time'))throw Error('The Accounts performance period selector must update the visible summary.');
@@ -75,7 +81,7 @@ app.whenReady().then(async () => {
       db.vendorBills=[{id:'paid-bill-locked',vendor:'Locked vendor',category:'Office',amount:100,currency:'INR',due:today(),status:'Paid'}];
       window.editVendorBill('paid-bill-locked');
       if(document.querySelector('#recordModal')?.open)throw Error('Editing a paid vendor bill should be blocked to avoid changing totals after recording its payment.');
-      return { forecastExpectedINR:forecast.receivables.INR, accountsDueINR:35500, sameAccountProformaExcluded:true, invoiceTotalINR:20000, advanceReceivedINR:8500, balanceDueINR:11500, includesSharedProforma:true, includesPricedRateCardSource:true, excludesUnpricedRateCard:true, avoidsLinkedAdvanceDoubleCount:true, excludesDraftsAndCancelled:true, excludesOutsideWindow:true, separateMonthlyAdvancePreserved:true, performanceSummaryVerified:true, draftInvoicesExcludedFromSnapshot:true, paidVendorBillsLocked:true };
+      return { forecastExpectedINR:forecast.receivables.INR, accountsDueINR:35500, sameAccountProformaExcluded:true, invoiceTotalINR:20000, advanceReceivedINR:8500, balanceDueINR:11500, includesSharedProforma:true, includesPricedRateCardSource:true, excludesUnpricedRateCard:true, avoidsLinkedAdvanceDoubleCount:true, excludesDraftsAndCancelled:true, excludesOutsideWindow:true, separateMonthlyAdvancePreserved:true, performanceSummaryVerified:true, ownerProfitSeparationVerified:true, ownerTransactionLabelVerified:true, employeeExpenseStillReducesProfit:true, draftInvoicesExcludedFromSnapshot:true, paidVendorBillsLocked:true };
     } catch(error) { return { error:error.stack||error.message }; }
     })()`;
     try { new Function(testScript); } catch (error) { console.error(testScript); throw error; }

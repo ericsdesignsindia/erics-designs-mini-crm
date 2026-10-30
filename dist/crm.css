@@ -596,7 +596,7 @@ body[data-theme="dark"] .quick-create-menu,body[data-theme="dark"] .command-pale
 .accounting-performance-panel{margin:18px 0;scroll-margin-top:16px}
 .accounting-performance-period-label{display:grid;gap:6px;min-width:180px;color:var(--muted);font-size:13px}
 .accounting-performance-period-label select{min-height:42px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--paper);color:var(--ink);font:inherit}
-.accounting-performance-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}
+.accounting-performance-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-top:16px}
 .accounting-performance-stat{display:grid;gap:10px;min-width:0;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--paper);color:var(--muted)}
 .accounting-performance-stat strong{color:var(--ink);font-size:clamp(19px,2vw,26px);overflow-wrap:anywhere}
 .accounting-performance-profit{border-color:color-mix(in srgb,var(--accent) 45%,var(--line));background:color-mix(in srgb,var(--accent) 9%,var(--paper))}

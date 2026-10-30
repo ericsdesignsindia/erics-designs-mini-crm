@@ -8,26 +8,52 @@
     const entries = accountLedger().filter(entry => ['Income', 'Expense'].includes(entry.type)
       && (period === 'all' || String(entry.date).slice(0, 7) === period));
     const expenses = entries.filter(entry => entry.type === 'Expense');
+    const isOwnerName = value => /(^|[^a-z])(tanishka|erics?)(?=$|[^a-z])/i.test(String(value || '').toLowerCase());
+    const isOwnerPayment = entry => {
+      const employee = (db.employees || []).find(person => person.id === entry.employeeId);
+      const recipients = [employee?.name, entry.employeeName, entry.payee, entry.recipient, entry.counterparty];
+      if (recipients.some(isOwnerName)) return true;
+      // Existing manual payroll notes often store the recipient after this label.
+      const note = String(entry.note || '');
+      return /^employee payment\s*[·:-]\s*(?:mr\.?\s*)?(?:tanishka|erics?)(?=$|\s|[·,:-])/i.test(note)
+        || /\b(?:profit distribution|owner payment|owner)\s*[·:-]\s*(?:tanishka|erics?)(?=$|\s|[·,:-])/i.test(note);
+    };
     const isEmployeePayment = entry => Boolean(entry.employeeId)
       || String(entry.category || '').toLowerCase() === 'payroll'
       || /^employee payment\b/i.test(String(entry.note || ''));
     const income = financeSum(entries.filter(entry => entry.type === 'Income'));
-    const employeePayments = financeSum(expenses.filter(isEmployeePayment));
-    const otherExpenses = financeSum(expenses.filter(entry => !isEmployeePayment(entry)));
+    const ownerPayments = financeSum(expenses.filter(isOwnerPayment));
+    const employeePayments = financeSum(expenses.filter(entry => !isOwnerPayment(entry) && isEmployeePayment(entry)));
+    const otherExpenses = financeSum(expenses.filter(entry => !isOwnerPayment(entry) && !isEmployeePayment(entry)));
     const profit = {};
-    for (const currency of new Set([...Object.keys(income), ...Object.keys(employeePayments), ...Object.keys(otherExpenses)])) {
+    for (const currency of new Set([...Object.keys(income), ...Object.keys(ownerPayments), ...Object.keys(employeePayments), ...Object.keys(otherExpenses)])) {
       profit[currency] = num(income[currency]) - num(employeePayments[currency]) - num(otherExpenses[currency]);
     }
-    return { income, employeePayments, otherExpenses, profit, transactionCount: entries.length };
+    return { income, ownerPayments, employeePayments, otherExpenses, profit, transactionCount: entries.length };
   };
 
   window.accountingPerformanceSummary = performanceSummary;
+
+  const isOwnerLedgerEntry = entry => {
+    const employee = (db.employees || []).find(person => person.id === entry.employeeId);
+    const recipient = [employee?.name, entry.employeeName, entry.payee, entry.recipient, entry.counterparty].filter(Boolean).join(' ');
+    const note = String(entry.note || '');
+    return entry.ownerPayment === true
+      || /(^|[^a-z])(tanishka|erics?)(?=$|[^a-z])/i.test(recipient)
+      || /^employee payment\s*[·:-]\s*(?:mr\.?\s*)?(?:tanishka|erics?)(?=$|\s|[·,:-])/i.test(note)
+      || /\b(?:profit distribution|owner payment|owner)\s*[·:-]\s*(?:mr\.?\s*)?(?:tanishka|erics?)(?=$|\s|[·,:-])/i.test(note);
+  };
+  const originalAccountLedgerRow = accountLedgerRow;
+  accountLedgerRow = function (entry) {
+    const row = originalAccountLedgerRow(entry);
+    return isOwnerLedgerEntry(entry) ? row.replace(/Employee payment/g, 'Owner profit').replace('<b>Payroll</b>', '<b>Owner distribution</b>') : row;
+  };
 
   const performancePanel = (period = today().slice(0, 7)) => {
     const months = [...new Set([today().slice(0, 7), ...accountLedger().map(entry => String(entry.date || '').slice(0, 7)).filter(value => /^\d{4}-\d{2}$/.test(value))])].sort().reverse();
     const summary = performanceSummary(period);
     const options = months.map(value => `<option value="${value}" ${period === value ? 'selected' : ''}>${esc(value)}</option>`).join('');
-    return `<div class="dialog-title"><div><div class="eyebrow">INCOME, PAYROLL & PROFIT</div><h2>Business performance</h2><p class="sub">See recorded income, employee payments, other expenses, and the remaining result for one period.</p></div><label class="accounting-performance-period-label" for="accounts-performance-period">Period<select id="accounts-performance-period" onchange="window.updateAccountsPerformance(this.value)"><option value="all" ${period === 'all' ? 'selected' : ''}>All recorded time</option>${options}</select></label></div><div class="accounting-performance-grid"><div class="accounting-performance-stat"><span>Income received</span><strong>${financeRows(summary.income)}</strong></div><div class="accounting-performance-stat"><span>Employee payments</span><strong>${financeRows(summary.employeePayments)}</strong></div><div class="accounting-performance-stat"><span>Other expenses</span><strong>${financeRows(summary.otherExpenses)}</strong></div><div class="accounting-performance-stat accounting-performance-profit"><span>Profit estimate</span><strong>${financeRows(summary.profit)}</strong></div></div><p class="hint">Cash-basis estimate: recorded income minus recorded employee and other expenses, including expenses paid outside CRM funds. Unpaid invoices and bills are excluded; this is not an accrual or tax report.</p>`;
+    return `<div class="dialog-title"><div><div class="eyebrow">INCOME, PAYROLL & PROFIT</div><h2>Business performance</h2><p class="sub">Payments to Tanishka and Eric are recorded as owner profit; payments to other team members are expenses.</p></div><label class="accounting-performance-period-label" for="accounts-performance-period">Period<select id="accounts-performance-period" onchange="window.updateAccountsPerformance(this.value)"><option value="all" ${period === 'all' ? 'selected' : ''}>All recorded time</option>${options}</select></label></div><div class="accounting-performance-grid"><div class="accounting-performance-stat"><span>Income received</span><strong>${financeRows(summary.income)}</strong></div><div class="accounting-performance-stat"><span>Owner profit paid</span><strong>${financeRows(summary.ownerPayments)}</strong></div><div class="accounting-performance-stat"><span>Employee payments</span><strong>${financeRows(summary.employeePayments)}</strong></div><div class="accounting-performance-stat"><span>Other expenses</span><strong>${financeRows(summary.otherExpenses)}</strong></div><div class="accounting-performance-stat accounting-performance-profit"><span>Profit before owner payouts</span><strong>${financeRows(summary.profit)}</strong></div></div><p class="hint">Cash-basis estimate: income less employee payments and other business expenses. Owner payments are shown separately and do not reduce profit; all expenses are included even if paid outside CRM funds. Unpaid invoices and bills are excluded; this is not an accrual or tax report.</p>`;
   };
 
   window.updateAccountsPerformance = function (period) {
