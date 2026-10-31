@@ -4,20 +4,22 @@
 
   const setupAction = (value, label) => `<option value="${value}">${esc(label)}</option>`;
 
+  const isOwnerName = value => /(^|[^a-z])(tanishka|erics?)(?=$|[^a-z])/i.test(String(value || '').toLowerCase());
+  const isOwnerPayment = entry => {
+    if (entry.ownerPayment === true) return true;
+    const employee = (db.employees || []).find(person => person.id === entry.employeeId);
+    const recipients = [employee?.name, entry.employeeName, entry.payee, entry.recipient, entry.counterparty];
+    if (recipients.some(isOwnerName)) return true;
+    // Existing manual payroll notes often store the recipient after this label.
+    const note = String(entry.note || '');
+    return /^employee payment\s*[·:-]\s*(?:mr\.?\s*)?(?:tanishka|erics?)(?=$|\s|[·,:-])/i.test(note)
+      || /\b(?:profit distribution|owner payment|owner)\s*[·:-]\s*(?:mr\.?\s*)?(?:tanishka|erics?)(?=$|\s|[·,:-])/i.test(note);
+  };
+
   const performanceSummary = (period = today().slice(0, 7)) => {
     const entries = accountLedger().filter(entry => ['Income', 'Expense'].includes(entry.type)
       && (period === 'all' || String(entry.date).slice(0, 7) === period));
     const expenses = entries.filter(entry => entry.type === 'Expense');
-    const isOwnerName = value => /(^|[^a-z])(tanishka|erics?)(?=$|[^a-z])/i.test(String(value || '').toLowerCase());
-    const isOwnerPayment = entry => {
-      const employee = (db.employees || []).find(person => person.id === entry.employeeId);
-      const recipients = [employee?.name, entry.employeeName, entry.payee, entry.recipient, entry.counterparty];
-      if (recipients.some(isOwnerName)) return true;
-      // Existing manual payroll notes often store the recipient after this label.
-      const note = String(entry.note || '');
-      return /^employee payment\s*[·:-]\s*(?:mr\.?\s*)?(?:tanishka|erics?)(?=$|\s|[·,:-])/i.test(note)
-        || /\b(?:profit distribution|owner payment|owner)\s*[·:-]\s*(?:tanishka|erics?)(?=$|\s|[·,:-])/i.test(note);
-    };
     const isEmployeePayment = entry => Boolean(entry.employeeId)
       || String(entry.category || '').toLowerCase() === 'payroll'
       || /^employee payment\b/i.test(String(entry.note || ''));
@@ -39,15 +41,10 @@
   };
 
   window.accountingPerformanceSummary = performanceSummary;
+  window.isCrmOwnerPayment = isOwnerPayment;
 
   const isOwnerLedgerEntry = entry => {
-    const employee = (db.employees || []).find(person => person.id === entry.employeeId);
-    const recipient = [employee?.name, entry.employeeName, entry.payee, entry.recipient, entry.counterparty].filter(Boolean).join(' ');
-    const note = String(entry.note || '');
-    return entry.ownerPayment === true
-      || /(^|[^a-z])(tanishka|erics?)(?=$|[^a-z])/i.test(recipient)
-      || /^employee payment\s*[·:-]\s*(?:mr\.?\s*)?(?:tanishka|erics?)(?=$|\s|[·,:-])/i.test(note)
-      || /\b(?:profit distribution|owner payment|owner)\s*[·:-]\s*(?:mr\.?\s*)?(?:tanishka|erics?)(?=$|\s|[·,:-])/i.test(note);
+    return isOwnerPayment(entry);
   };
   const originalAccountLedgerRow = accountLedgerRow;
   accountLedgerRow = function (entry) {
@@ -115,11 +112,12 @@
   const cashBreakdown = () => {
     const balances = () => ({ INR: 0, AED: 0 });
     const opening = { ...balances(), ...(db.openingBalances || {}) };
-    const openingUsed = balances(), income = balances(), operatingUsed = balances(), external = balances();
+    const openingUsed = balances(), income = balances(), operatingUsed = balances(), external = balances(), externalIncome = balances();
     for (const entry of accountLedger()) {
       const currency = entry.currency || 'INR';
       const amount = num(entry.amount);
-      if (entry.externalPayment) external[currency] = (external[currency] || 0) + amount;
+      if (entry.externalPayment && entry.type === 'Income') externalIncome[currency] = (externalIncome[currency] || 0) + amount;
+      else if (entry.externalPayment && entry.type === 'Expense') external[currency] = (external[currency] || 0) + amount;
       else if (entry.type === 'Income') income[currency] = (income[currency] || 0) + amount;
       else if (entry.paymentSource === 'Opening balance') openingUsed[currency] = (openingUsed[currency] || 0) + amount;
       else operatingUsed[currency] = (operatingUsed[currency] || 0) + amount;
@@ -130,8 +128,9 @@
       operatingAvailable[currency] = num(income[currency]) - num(operatingUsed[currency]);
       available[currency] = openingAvailable[currency] + operatingAvailable[currency];
     }
-    return { openingAvailable, operatingAvailable, available, external };
+    return { openingAvailable, operatingAvailable, available, external, externalIncome };
   };
+  window.accountingCashBreakdown = cashBreakdown;
 
   window.runAccountingAction = function (select) {
     const action = select.value;
@@ -243,7 +242,7 @@
       </nav>
       <section class="panel accounting-cash-panel" id="accounts-overview">
         <div class="accounting-cash-heading"><div><div class="eyebrow">BUSINESS CASH AVAILABLE</div><h2 class="${hasDeficit ? 'accounting-deficit' : ''}">${currencySummary(breakdown.available)}</h2><p class="sub">Opening funds + income recorded in Accounts − payments made from CRM funds.</p></div><button onclick="showOpeningBalances()">Set opening funds</button></div>
-        <div class="accounting-balance-grid">${balanceItems('Opening funds remaining', breakdown.openingAvailable, 'Starting cash not yet spent')}${balanceItems('Operating funds remaining', breakdown.operatingAvailable, 'Recorded income less operating payments')}${balanceItems('Paid outside the business account', breakdown.external, 'Reference only; excluded from business cash')}</div>
+        <div class="accounting-balance-grid">${balanceItems('Opening funds remaining', breakdown.openingAvailable, 'Starting cash not yet spent')}${balanceItems('Operating funds remaining', breakdown.operatingAvailable, 'Recorded income less operating payments')}${balanceItems('Paid outside the business account', breakdown.external, 'External expenses; excluded from business cash')}${balanceItems('Income outside CRM funds', breakdown.externalIncome, 'Included in performance; excluded from business cash')}</div>
         <p class="hint">Record an opening balance only for money that was already in the business when you started using this ledger. A negative amount means recorded CRM-funded payments exceed recorded funds.</p>
       </section>
       <section class="panel accounting-workflow-panel" id="accounts-workflow">

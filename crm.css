@@ -566,7 +566,7 @@ body[data-theme="dark"] .quick-create-menu,body[data-theme="dark"] .command-pale
 .accounting-cash-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}
 .accounting-cash-heading h2{font-size:clamp(28px,4vw,40px);line-height:1.12;margin:8px 0}
 .accounting-cash-heading .accounting-deficit{color:var(--danger,#d4584e)}
-.accounting-balance-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:20px 0 10px}
+.accounting-balance-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:20px 0 10px}
 .accounting-balance-item{display:grid;gap:7px;min-width:0;padding:15px;border:1px solid var(--line);border-radius:14px;background:color-mix(in srgb,var(--paper) 75%,var(--bg))}
 .accounting-balance-item>span,.accounting-forecast-values span{font-size:13px;color:var(--muted)}
 .accounting-balance-item strong{font-size:clamp(17px,2vw,22px);overflow-wrap:anywhere}

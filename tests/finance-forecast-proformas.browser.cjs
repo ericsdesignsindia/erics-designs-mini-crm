@@ -10,6 +10,8 @@ app.whenReady().then(async () => {
     const testScript = `(() => { try {
       document.getElementById('erp-auth')?.remove();
       const due=addDays(5), later=addDays(45);
+      const jan31=new Date(2026,0,31),febEnd=addRecurringExpenseMonths(jan31,1,31),marEnd=addRecurringExpenseMonths(febEnd,1,31);
+      if(febEnd.getMonth()!==1||febEnd.getDate()!==28||marEnd.getMonth()!==2||marEnd.getDate()!==31)throw Error('Month-end recurring dates should clamp in February and return to their original day after February.');
       const base={currency:'INR',status:'Accepted',payments:[],tax:0,discount:0,items:[{qty:1,rate:12000,proformaAmount:6000}],client:{name:'Test'}};
       db={...migrate({settings:structuredClone(defaults.settings),documents:[],clients:[],services:[],tasks:[],projects:[],activity:[]}),documents:[
         {...base,id:'advance',type:'Proforma',number:'ED-P-0001',due},
@@ -22,6 +24,8 @@ app.whenReady().then(async () => {
         {...base,id:'cancelled-proforma',type:'Proforma',number:'ED-P-0007',status:'Cancelled',due},
         {...base,id:'later-advance',type:'Proforma',number:'ED-P-0004',due:later}
       ]};
+      if(!window.accountingHasMatchingDocumentIncome({type:'Income',category:'Client payment',date:today(),currency:'INR',amount:6000}))throw Error('Manual client income should detect an invoice payment with the same date, currency, and amount.');
+      if(window.accountingHasMatchingDocumentIncome({type:'Income',category:'Other income',date:today(),currency:'INR',amount:6000}))throw Error('Unrelated income should not trigger the invoice duplicate warning.');
       const forecast=financeForecast(30);
       if(forecast.receivables.INR!==18000)throw Error('Expected two 6,000 Proforma advances plus the linked invoice 6,000 balance; got '+forecast.receivables.INR);
       const accountHtml=accounts();
@@ -63,16 +67,18 @@ app.whenReady().then(async () => {
         {id:'perf-other',date:today(),type:'Expense',currency:'INR',category:'Office',amount:3000},
         {id:'perf-owner-tanishka',date:today(),type:'Expense',currency:'INR',category:'Payroll',amount:1500,employeeId:'owner-tanishka'},
         {id:'perf-owner-eric',date:today(),type:'Expense',currency:'INR',category:'Payroll',amount:500,employeeId:'owner-eric',externalPayment:true},
+        {id:'perf-owner-flag',date:today(),type:'Expense',currency:'INR',category:'Payroll',amount:300,ownerPayment:true,note:'Flagged owner distribution'},
         {id:'perf-owner-legacy',date:today(),type:'Expense',currency:'INR',category:'Owner profit',amount:250,note:'Owner payment · Tanishka'},
         {id:'perf-old-income',date:'2025-01-01',type:'Income',currency:'INR',category:'Client payment',amount:10000}
       ];
       const monthPerformance=window.accountingPerformanceSummary(today().slice(0,7)),allPerformance=window.accountingPerformanceSummary('all');
-      if(monthPerformance.income.INR!==20000||monthPerformance.ownerPayments.INR!==2250||monthPerformance.employeePayments.INR!==5000||monthPerformance.otherExpenses.INR!==5000||monthPerformance.profit.INR!==10000||monthPerformance.profit.AED!==100)throw Error('Owner payments must be tracked separately as profit distributions, while non-owner payroll and other costs reduce profit.');
-      if(allPerformance.income.INR!==30000||allPerformance.ownerPayments.INR!==2250||allPerformance.profit.INR!==20000)throw Error('All-time performance must include historical income while keeping owner payouts outside profit expenses.');
+      if(monthPerformance.income.INR!==20000||monthPerformance.ownerPayments.INR!==2550||monthPerformance.employeePayments.INR!==5000||monthPerformance.otherExpenses.INR!==5000||monthPerformance.profit.INR!==10000||monthPerformance.profit.AED!==100)throw Error('Owner payments must be tracked separately as profit distributions, while non-owner payroll and other costs reduce profit.');
+      if(allPerformance.income.INR!==30000||allPerformance.ownerPayments.INR!==2550||allPerformance.profit.INR!==20000)throw Error('All-time performance must include historical income while keeping owner payouts outside profit expenses.');
       const ownerTransactionRow=accountLedgerRow(db.accounts.find(entry=>entry.id==='perf-owner-tanishka'));
       if(!ownerTransactionRow.includes('Owner profit')||ownerTransactionRow.includes('Employee payment'))throw Error('Owner payouts should be visibly labeled as owner profit in the transaction list.');
       const performanceHtml=accounts();
       for(const label of ['Business performance','Income received','Owner profit paid','Employee payments','Other expenses','Profit before owner payouts','All recorded time'])if(!performanceHtml.includes(label))throw Error('The Accounts performance area is missing '+label+'.');
+      if(!performanceHtml.includes('Income outside CRM funds')||!performanceHtml.includes('External expenses; excluded from business cash'))throw Error('Accounts should separate external income from expenses paid outside CRM funds.');
       for(const kind of ['income','owner','employee','other','profit'])if(!performanceHtml.includes("openAccountsPerformanceDetails('"+kind+"')"))throw Error('The '+kind+' performance card must open its own transaction details.');
       document.body.insertAdjacentHTML('beforeend','<div id="accounts-performance-content"></div>');
       window.updateAccountsPerformance('all');
@@ -85,7 +91,7 @@ app.whenReady().then(async () => {
       if(editedInvoiceId!=='performance-invoice')throw Error('Choosing Edit invoice from the performance details should open that invoice editor.');
       window.openAccountsPerformanceDetails('owner');
       const ownerDetails=document.getElementById('accounts-performance-details').innerHTML;
-      if(!ownerDetails.includes('Tanishka')||ownerDetails.includes('Team member'))throw Error('Owner profit details should list only owner payments.');
+      if(!ownerDetails.includes('Tanishka')||!ownerDetails.includes('Flagged owner distribution')||ownerDetails.includes('Team member'))throw Error('Owner profit details should list explicitly flagged and named owner payments, but not employee payments.');
       window.openAccountsPerformanceDetails('employee');
       const employeeDetails=document.getElementById('accounts-performance-details').innerHTML;
       if(!employeeDetails.includes('Team member')||employeeDetails.includes('Owner payment · Tanishka'))throw Error('Employee details should separate team payments from owner payouts: '+employeeDetails);
@@ -93,6 +99,9 @@ app.whenReady().then(async () => {
       const profitDetails=document.getElementById('accounts-performance-details').innerHTML;
       if(!profitDetails.includes('profit calculation')&&!profitDetails.includes('Income rows add to profit'))throw Error('Profit details should explain which transactions increase and reduce the profit estimate.');
       if(profitDetails.includes('Owner payment · Tanishka'))throw Error('Owner payouts must not appear as transactions contributing to profit.');
+      db.accounts.push({id:'external-income',date:today(),type:'Income',currency:'INR',category:'Other income',amount:700,externalPayment:true});
+      const cashBreakdown=window.accountingCashBreakdown();
+      if(cashBreakdown.external.INR!==2500||cashBreakdown.externalIncome.INR!==700)throw Error('External expenses and external income must be displayed separately.');
       db.documents=[{...base,id:'only-draft-invoice',type:'Invoice',number:'ED-DRAFT',status:'Draft',due,items:[{qty:1,rate:12000}]}];
       if(window.accountingSnapshot().openInvoiceCount!==0)throw Error('Draft invoices must not appear in the accounting summary as money due.');
       db.vendorBills=[{id:'paid-bill-locked',vendor:'Locked vendor',category:'Office',amount:100,currency:'INR',due:today(),status:'Paid'}];
