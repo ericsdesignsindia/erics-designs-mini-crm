@@ -1,0 +1,35 @@
+.payment-reminder-entry{display:flex;align-items:center;justify-content:space-between;gap:20px;margin:18px 0}
+.payment-reminder-entry h2,.payment-reminder-card h3{margin:5px 0}
+.payment-reminder-list{display:grid;gap:14px}
+.payment-reminder-list>.dialog-title{margin:20px 2px 0}
+.payment-reminder-card{margin:0;padding:18px}
+.payment-reminder-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px}
+.payment-reminder-card-head .badge{display:inline-flex;margin-bottom:8px}
+.payment-reminder-card-head .sub{margin:5px 0 0}
+.payment-reminder-balance{display:grid;justify-items:end;gap:5px;min-width:150px}
+.payment-reminder-balance strong{font-size:1.2rem}
+.payment-reminder-balance small,.payment-reminder-completion small,.payment-reminder-stage small{color:var(--muted,#9ca9bd)}
+.payment-reminder-completion,.payment-reminder-next{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:15px;padding:12px 14px;border:1px solid var(--line,#303a4d);border-radius:12px}
+.payment-reminder-completion>div{display:grid;gap:4px}
+.payment-reminder-next{background:rgba(79,125,240,.08)}
+.payment-reminder-next span{color:var(--muted,#9ca9bd)}
+.payment-reminder-stages{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}
+.payment-reminder-stage{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px;border:1px solid var(--line,#303a4d);border-radius:12px;background:rgba(10,15,25,.24)}
+.payment-reminder-stage>div:first-child{display:grid;gap:4px;min-width:0}
+.payment-reminder-stage.is-sent{border-color:rgba(56,190,145,.34)}
+.payment-reminder-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:7px}
+.payment-reminder-guide{margin:18px 0}
+.payment-reminder-timeline{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0}
+.payment-reminder-timeline>div{display:grid;grid-template-columns:30px 1fr;align-items:center;column-gap:9px;row-gap:4px;padding:12px;border:1px solid var(--line,#303a4d);border-radius:12px}
+.payment-reminder-timeline>div>span{grid-row:span 2;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#4f7df0;color:#fff;font-weight:700}
+.payment-reminder-timeline small{color:var(--muted,#9ca9bd)}
+.payment-reminder-guide .hint{margin-bottom:0}
+@media(max-width:760px){
+  .payment-reminder-entry,.payment-reminder-card-head,.payment-reminder-completion,.payment-reminder-next{align-items:stretch;flex-direction:column}
+  .payment-reminder-entry .primary{width:100%}
+  .payment-reminder-balance{justify-items:start}
+  .payment-reminder-stages,.payment-reminder-timeline{grid-template-columns:1fr}
+  .payment-reminder-stage{align-items:flex-start;flex-direction:column}
+  .payment-reminder-actions{justify-content:flex-start;width:100%}
+  .payment-reminder-actions button{flex:1}
+}
