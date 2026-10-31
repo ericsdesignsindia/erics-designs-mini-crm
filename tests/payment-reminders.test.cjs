@@ -3,7 +3,11 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
-const {addCalendarDays,scheduledDates}=require('../payment-reminders.js');
+const {DEFAULT_TEMPLATES,addCalendarDays,scheduledDates}=require('../payment-reminders.js');
+
+test('first reminder uses the requested copy and fixed company name',()=>{
+  assert.equal(DEFAULT_TEMPLATES.stage1,'Hello {{client}},\n\nThis is a friendly reminder that {{amount}} remains outstanding for {{project}} ({{invoice}}). Our records show the payment due date as {{due_date}}.\n\nPlease let us know when we can expect payment, or contact us if you need a copy of the document.\n\nThank you,\n{{company}}');
+});
 
 test('reminder schedule anchors each stage to the prior sent date',()=>{
   assert.equal(addCalendarDays('2026-10-31',1),'2026-11-01');
@@ -19,7 +23,7 @@ test('reminder workspace lists unpaid invoices and proformas without mutating re
   const app={innerHTML:''};
   const saved=[];class FakePdf{constructor(){this.lines=[]}setFillColor(){}rect(){}setTextColor(){}setFont(){}setFontSize(){}text(value){this.lines.push(String(value))}splitTextToSize(value){return String(value).split('\n')}setDrawColor(){}line(){}addPage(){}save(filename){saved.push({filename,lines:this.lines})}}
   const sandbox={
-    window:{jspdf:{jsPDF:FakePdf}},document:{getElementById:id=>id==='app'?app:null},view:'Payment reminders',db:{documents:[invoice,proforma,linkedProforma,linkedInvoice],clients:[],projects:[],settings:{}},
+    window:{jspdf:{jsPDF:FakePdf}},document:{getElementById:id=>id==='app'?app:null},view:'Payment reminders',db:{documents:[invoice,proforma,linkedProforma,linkedInvoice],clients:[{id:'client-1',name:'Canonical Client A'}],projects:[],settings:{businessName:'Wrong setting'}},
     totals:row=>({balance:row.balance}),today:()=> '2026-11-01',fmt:(_row,amount)=>`INR ${amount}`,esc:value=>String(value).replaceAll('&','&amp;'),
     pageHeader:()=>'<header></header>',accounts:()=>'<header>Accounts</header>',render:()=>{},nav:()=>{},
     field:()=>'',modal:()=>{},commitChange:work=>{work();return true},closeSaved:()=>{},val:()=>'',toast:()=>{},confirm:()=>true,console,
@@ -38,9 +42,11 @@ test('reminder workspace lists unpaid invoices and proformas without mutating re
   assert.equal(invoice.paymentReminder.sent.stage1,'2026-11-01');
   sandbox.window.recordPaymentReminderSent('invoice-1','stage2');
   assert.equal(invoice.paymentReminder.sent.stage2,undefined,'later reminders stay blocked until their waiting interval passes');
-  await sandbox.window.generatePaymentReminderPdf('invoice-1','final','Hello {{client}} — {{amount}} for {{invoice}}');
+  await sandbox.window.generatePaymentReminderPdf('invoice-1','final','Hello {{client}} — {{amount}} for {{invoice}} — {{company}}');
   assert.equal(saved[0].filename,'ED-0001-final-payment-reminder.pdf');
-  assert.match(saved[0].lines.join(' '),/Client A/);
+  assert.match(saved[0].lines.join(' '),/Canonical Client A/);
   assert.match(saved[0].lines.join(' '),/INR 1200/);
+  assert.match(saved[0].lines.join(' '),/Erics Designs/);
+  assert.doesNotMatch(saved[0].lines.join(' '),/Wrong setting/);
   assert.equal(invoice.paymentReminder.sent.final,undefined,'PDF generation must not mark a notice sent');
 });
