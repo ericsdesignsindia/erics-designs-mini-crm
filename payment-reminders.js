@@ -106,7 +106,7 @@
       const text=(value,x,y,size=9,style='normal',align='left',color=ink)=>{pdf.setFont('helvetica',style);pdf.setFontSize(size);pdf.setTextColor(...color);pdf.text(Array.isArray(value)?value.map(line=>String(line??'').replace(/₹/g,'INR ')):String(value??'').replace(/₹/g,'INR '),x,y,{align})};
       const rule=y=>{pdf.setDrawColor(...accent);pdf.setLineWidth(.35);pdf.line(margin,y,right,y)};
       let y=47;
-      try{const response=await fetch('./assets/pdf-quotation-logo-clean.png',{cache:'no-store'});if(response.ok){const blob=await response.blob(),logo=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)});pdf.addImage(logo,'PNG',margin,13,Math.min(Number(profile.logoWidth)||70,74),Math.min(Number(profile.logoHeight)||20,20))}}catch{}
+      try{const response=await fetch('./assets/erics-designs-crm-logo.png',{cache:'no-store'});if(response.ok){const blob=await response.blob(),logo=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob)}),logoWidth=Math.min(Number(profile.logoWidth)||70,74),logoHeight=logoWidth*810/2627;pdf.addImage(logo,'PNG',margin,13,logoWidth,logoHeight)}}catch{}
       text(stage==='final'?'FINAL PAYMENT NOTICE':'PAYMENT REMINDER',right,24,17,'bold','right');text(documentRow.number||'ED-0000',right,31,8,'normal','right',muted);rule(y);y+=10;
       text('BILL TO',margin,y,8.5,'bold','left',accent);text('REMINDER DETAILS',right,y,8.5,'bold','right',accent);y+=7;
       text(client.name||'Client',margin,y,10,'bold');y+=5;

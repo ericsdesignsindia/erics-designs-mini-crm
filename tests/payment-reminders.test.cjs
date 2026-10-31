@@ -21,13 +21,14 @@ test('reminder workspace lists unpaid invoices and proformas without mutating re
   const linkedProforma={...proforma,id:'proforma-linked',number:'ED-P-0002'};
   const linkedInvoice={...invoice,id:'invoice-linked',number:'ED-0002',sourceId:'proforma-linked'};
   const app={innerHTML:''},textarea={value:'',addEventListener(){}},filledPreview={textContent:''};let editorHtml='';
-  const saved=[];class FakePdf{constructor(){this.lines=[]}setFillColor(){}rect(){}setTextColor(){}setFont(){}setFontSize(){}text(value){this.lines.push(String(value))}splitTextToSize(value){return String(value).split('\n')}setDrawColor(){}setLineWidth(){}line(){}addPage(){}save(filename){saved.push({filename,lines:this.lines})}}
+  const saved=[];class FakePdf{constructor(){this.lines=[];this.images=[]}setFillColor(){}rect(){}setTextColor(){}setFont(){}setFontSize(){}text(value){this.lines.push(String(value))}splitTextToSize(value){return String(value).split('\n')}setDrawColor(){}setLineWidth(){}line(){}addImage(...args){this.images.push(args)}addPage(){}save(filename){saved.push({filename,lines:this.lines,images:this.images})}}
+  class FakeFileReader{readAsDataURL(){this.result='data:image/png;base64,crm-landscape-logo';this.onload()}}
   const sandbox={
     window:{jspdf:{jsPDF:FakePdf}},document:{getElementById:id=>id==='app'?app:id==='payment-reminder-content'?textarea:id==='payment-reminder-filled-preview'?filledPreview:null},view:'Payment reminders',db:{documents:[invoice,proforma,linkedProforma,linkedInvoice],clients:[{id:'client-1',name:'Canonical Client A',contact:'Accounts',email:'accounts@example.test',phone:'12345'}],projects:[],settings:{businessName:'Wrong setting'}},
     totals:row=>({balance:row.balance}),today:()=> '2026-11-01',fmt:(_row,amount)=>`INR ${amount}`,esc:value=>String(value).replaceAll('&','&amp;'),
     pageHeader:()=>'<header></header>',accounts:()=>'<header>Accounts</header>',render:()=>{},nav:()=>{},
     field:()=>'',modal:(_title,html)=>{editorHtml=html},commitChange:work=>{work();return true},closeSaved:()=>{},val:()=>'',toast:()=>{},confirm:()=>true,console,
-    addEventListener:()=>{}
+    addEventListener:()=>{},fetch:async url=>({ok:url.includes('erics-designs-crm-logo.png'),blob:async()=>({})}),FileReader:FakeFileReader
   };
   vm.runInNewContext(fs.readFileSync(require.resolve('../payment-reminders.js'),'utf8'),sandbox);
   sandbox.render();
@@ -52,6 +53,9 @@ test('reminder workspace lists unpaid invoices and proformas without mutating re
   assert.equal(invoice.paymentReminder.sent.stage2,undefined,'later reminders stay blocked until their waiting interval passes');
   await sandbox.window.generatePaymentReminderPdf('invoice-1','final','Hello {{client}} — {{amount}} for {{invoice}} — {{company}}');
   assert.equal(saved[0].filename,'ED-0001-final-payment-reminder.pdf');
+  assert.equal(saved[0].images[0][0],'data:image/png;base64,crm-landscape-logo','embed the CRM landscape logo');
+  assert.equal(saved[0].images[0][1],'PNG');
+  assert.ok(Math.abs(saved[0].images[0][4]/saved[0].images[0][5]-2627/810)<0.001,'preserve the landscape logo aspect ratio');
   assert.match(saved[0].lines.join(' '),/Canonical Client A/);
   assert.match(saved[0].lines.join(' '),/INR 1200/);
   assert.match(saved[0].lines.join(' '),/OUTSTANDING AMOUNT/);
