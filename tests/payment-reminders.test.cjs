@@ -20,13 +20,13 @@ test('reminder workspace lists unpaid invoices and proformas without mutating re
   const proforma={id:'proforma-1',type:'Proforma',status:'Accepted',number:'ED-P-0001',due:'2026-10-29',project:'Website',client:{id:'client-2',name:'Client B'},items:[{name:'Website'}],payments:[],currency:'INR',balance:3500};
   const linkedProforma={...proforma,id:'proforma-linked',number:'ED-P-0002'};
   const linkedInvoice={...invoice,id:'invoice-linked',number:'ED-0002',sourceId:'proforma-linked'};
-  const app={innerHTML:''};
-  const saved=[];class FakePdf{constructor(){this.lines=[]}setFillColor(){}rect(){}setTextColor(){}setFont(){}setFontSize(){}text(value){this.lines.push(String(value))}splitTextToSize(value){return String(value).split('\n')}setDrawColor(){}line(){}addPage(){}save(filename){saved.push({filename,lines:this.lines})}}
+  const app={innerHTML:''},textarea={value:'',addEventListener(){}},filledPreview={textContent:''};let editorHtml='';
+  const saved=[];class FakePdf{constructor(){this.lines=[]}setFillColor(){}rect(){}setTextColor(){}setFont(){}setFontSize(){}text(value){this.lines.push(String(value))}splitTextToSize(value){return String(value).split('\n')}setDrawColor(){}setLineWidth(){}line(){}addPage(){}save(filename){saved.push({filename,lines:this.lines})}}
   const sandbox={
-    window:{jspdf:{jsPDF:FakePdf}},document:{getElementById:id=>id==='app'?app:null},view:'Payment reminders',db:{documents:[invoice,proforma,linkedProforma,linkedInvoice],clients:[{id:'client-1',name:'Canonical Client A'}],projects:[],settings:{businessName:'Wrong setting'}},
+    window:{jspdf:{jsPDF:FakePdf}},document:{getElementById:id=>id==='app'?app:id==='payment-reminder-content'?textarea:id==='payment-reminder-filled-preview'?filledPreview:null},view:'Payment reminders',db:{documents:[invoice,proforma,linkedProforma,linkedInvoice],clients:[{id:'client-1',name:'Canonical Client A',contact:'Accounts',email:'accounts@example.test',phone:'12345'}],projects:[],settings:{businessName:'Wrong setting'}},
     totals:row=>({balance:row.balance}),today:()=> '2026-11-01',fmt:(_row,amount)=>`INR ${amount}`,esc:value=>String(value).replaceAll('&','&amp;'),
     pageHeader:()=>'<header></header>',accounts:()=>'<header>Accounts</header>',render:()=>{},nav:()=>{},
-    field:()=>'',modal:()=>{},commitChange:work=>{work();return true},closeSaved:()=>{},val:()=>'',toast:()=>{},confirm:()=>true,console,
+    field:()=>'',modal:(_title,html)=>{editorHtml=html},commitChange:work=>{work();return true},closeSaved:()=>{},val:()=>'',toast:()=>{},confirm:()=>true,console,
     addEventListener:()=>{}
   };
   vm.runInNewContext(fs.readFileSync(require.resolve('../payment-reminders.js'),'utf8'),sandbox);
@@ -38,6 +38,14 @@ test('reminder workspace lists unpaid invoices and proformas without mutating re
   assert.match(app.innerHTML,/Final notice/);
   assert.equal(proforma.paymentReminder,undefined,'rendering the queue should not write reminder state');
   assert.equal(typeof sandbox.window.editPaymentReminderContent,'function');
+  sandbox.window.editPaymentReminderContent('invoice-1','stage1');
+  assert.match(editorHtml,/Canonical Client A/);
+  assert.match(editorHtml,/ED-0001/);
+  assert.match(editorHtml,/INR 1200/);
+  assert.match(editorHtml,/Erics Designs/);
+  textarea.value='Hello {{client}} — {{amount}} — {{company}}';
+  sandbox.window.updatePaymentReminderPreview('invoice-1','stage1');
+  assert.equal(filledPreview.textContent,'Hello Canonical Client A — INR 1200 — Erics Designs');
   sandbox.window.recordPaymentReminderSent('invoice-1','stage1');
   assert.equal(invoice.paymentReminder.sent.stage1,'2026-11-01');
   sandbox.window.recordPaymentReminderSent('invoice-1','stage2');
@@ -46,6 +54,8 @@ test('reminder workspace lists unpaid invoices and proformas without mutating re
   assert.equal(saved[0].filename,'ED-0001-final-payment-reminder.pdf');
   assert.match(saved[0].lines.join(' '),/Canonical Client A/);
   assert.match(saved[0].lines.join(' '),/INR 1200/);
+  assert.match(saved[0].lines.join(' '),/OUTSTANDING AMOUNT/);
+  assert.match(saved[0].lines.join(' '),/REMINDER DETAILS/);
   assert.match(saved[0].lines.join(' '),/Erics Designs/);
   assert.doesNotMatch(saved[0].lines.join(' '),/Wrong setting/);
   assert.equal(invoice.paymentReminder.sent.final,undefined,'PDF generation must not mark a notice sent');

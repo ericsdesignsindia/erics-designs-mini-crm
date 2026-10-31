@@ -18,6 +18,14 @@
 .payment-reminder-stage>div:first-child{display:grid;gap:4px;min-width:0}
 .payment-reminder-stage.is-sent{border-color:rgba(56,190,145,.34)}
 .payment-reminder-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:7px}
+.payment-reminder-edit-details,.payment-reminder-filled{grid-column:1/-1;padding:14px;border:1px solid var(--line,#303a4d);border-radius:13px;background:rgba(10,15,25,.3)}
+.payment-reminder-detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:10px}
+.payment-reminder-detail-grid>div{display:grid;align-content:start;gap:4px;min-width:0}
+.payment-reminder-detail-grid small,.payment-reminder-detail-grid span{color:var(--muted,#9ca9bd);overflow-wrap:anywhere}
+.payment-reminder-detail-grid b{overflow-wrap:anywhere}
+.payment-reminder-filled pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0 0;font:inherit;line-height:1.55;color:var(--text,#e9edf5)}
+.payment-reminder-edit-details+.sub{margin-top:0}
+.payment-reminder-filled+.checkline{margin-top:8px}
 .payment-reminder-guide{margin:18px 0}
 .payment-reminder-timeline{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0}
 .payment-reminder-timeline>div{display:grid;grid-template-columns:30px 1fr;align-items:center;column-gap:9px;row-gap:4px;padding:12px;border:1px solid var(--line,#303a4d);border-radius:12px}
@@ -32,4 +40,5 @@
   .payment-reminder-stage{align-items:flex-start;flex-direction:column}
   .payment-reminder-actions{justify-content:flex-start;width:100%}
   .payment-reminder-actions button{flex:1}
+  .payment-reminder-detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
