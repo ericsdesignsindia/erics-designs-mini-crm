@@ -123,7 +123,7 @@ async function pushWorkspace() {
     const result = await api(`/workspaces/${ERP_WORKSPACE}`, { method: 'PUT', body: JSON.stringify({ state: db, revision: Number.isInteger(erpRevision) ? erpRevision : 0 }) });
     erpRevision = result.revision;
     markSynced();
-    setErpStatus('MongoDB sync active', true);
+    setErpStatus(`MongoDB sync active · auto-refresh every ${ERP_AUTO_REFRESH_SECONDS} seconds`, true);
     return true;
   } catch (error) {
     if (error.status === 409 && error.data?.state) {
@@ -177,7 +177,7 @@ async function loadWorkspace() {
     localStorage.setItem(KEY, JSON.stringify(db));
     lastSnapshot = localStorage.getItem(KEY);
     render();
-    setErpStatus('MongoDB sync active', true);
+    setErpStatus(`MongoDB sync active · auto-refresh every ${ERP_AUTO_REFRESH_SECONDS} seconds`, true);
     startWorkspaceAutoRefresh();
   } catch (error) {
     if (error.status === 401) {
@@ -199,7 +199,8 @@ window.addEventListener('online', () => erpDirty ? pushWorkspace() : loadWorkspa
 loadWorkspace();
 
 // Keep cloud data current without interrupting record editing.
-const ERP_AUTO_REFRESH_MS = 45 * 1000;
+const ERP_AUTO_REFRESH_SECONDS = 30;
+const ERP_AUTO_REFRESH_MS = ERP_AUTO_REFRESH_SECONDS * 1000;
 let erpAutoRefreshTimer;
 let erpRefreshInFlight = false;
 
@@ -214,11 +215,11 @@ async function refreshWorkspaceIfChanged(force = false) {
       localStorage.setItem(KEY, JSON.stringify(db));
       lastSnapshot = localStorage.getItem(KEY);
       render();
-      setErpStatus('MongoDB sync active · updated just now', true);
-      toast('CRM updated with the latest cloud data.');
+      setErpStatus(`Cloud data refreshed just now · next check in ${ERP_AUTO_REFRESH_SECONDS} seconds`, true);
+      toast('CRM refreshed with the latest cloud data.');
       return true;
     } else {
-      setErpStatus('MongoDB sync active · checked just now', true);
+      setErpStatus(`Auto-refresh checked just now · next check in ${ERP_AUTO_REFRESH_SECONDS} seconds`, true);
       return false;
     }
   } catch (error) {
@@ -227,11 +228,12 @@ async function refreshWorkspaceIfChanged(force = false) {
       localStorage.removeItem(ERP_TOKEN_KEY);
       setErpStatus('Log in to continue', false);
       showAuth();
-    }
+    } else setErpStatus('Cloud refresh unavailable · retrying automatically', erpOnline);
   } finally {
     erpRefreshInFlight = false;
   }
 }
+window.refreshWorkspaceIfChanged = refreshWorkspaceIfChanged;
 
 async function syncWorkspaceNow() {
   if (!erpToken) { showAuth(); return false; }
