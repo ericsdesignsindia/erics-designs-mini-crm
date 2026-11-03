@@ -21,14 +21,15 @@ function serviceBilling(q,project){
  return `<section class="panel service-billing"><div class="dialog-title"><div><div class="eyebrow">SERVICE-WISE BILLING</div><h2>Separate vouchers for each service</h2><p class="sub">${legacyCompletionPlan?'This quotation uses an older service billing plan. Create 50% advance proformas to use the standard service workflow.':'Each service can be invoiced independently. Any payments recorded on its advance proforma carry forward to that service invoice.'}</p></div>${legacyCompletionPlan&&!proformas.length&&!q.serviceBillingAllocations?.length?`<button class="primary" onclick="processCreateServiceVouchers('${q.id}','service-wise')">Switch to 50% advance proformas</button>`:!legacyCompletionPlan&&!proformas.length&&!q.serviceBillingAllocations?.length?`<button class="primary" onclick="processCreateServiceVouchers('${q.id}','service-wise')">Set service amounts</button>`:''}</div><div class="service-billing-list">${lines}</div></section>`;
 }
 function serviceBillingSwitch(q){
- if(q.status!=='Accepted'||!q.contractConfirmedAt||!['service-wise','service-completion'].includes(q.billingMode)||(q.items||[]).length<1)return '';
+ if(q.status!=='Accepted'||!q.contractConfirmedAt||!['project','service-wise','service-completion'].includes(q.billingMode)||(q.items||[]).length<1)return '';
  const combinedInvoice=db.documents.find(d=>d.type==='Invoice'&&d.rootId===q.id&&d.status!=='Cancelled'&&d.serviceIndex===undefined);
  const combinedProforma=db.documents.find(d=>d.type==='Proforma'&&d.rootId===q.id&&d.status!=='Cancelled'&&d.serviceIndex===undefined);
- const existingServiceProformas=serviceProformas(q),existingServiceInvoices=(q.items||[]).some((_,index)=>serviceDocument(q,'Invoice',index));
+ const existingServiceProformas=serviceProformas(q),existingServiceInvoices=(q.items||[]).filter((_,index)=>serviceDocument(q,'Invoice',index)).length;
  const servicePayments=existingServiceProformas.some(proforma=>(proforma.payments||[]).some(payment=>num(payment.amount)>0));
  const hasPayments=(combinedProforma?.payments||[]).some(payment=>num(payment.amount)>0);
  if(combinedInvoice)return '<p class="hint">This quotation already has a combined final invoice. Its billing cannot be split automatically; keep its current invoice history intact.</p>';
- if(existingServiceInvoices)return '<p class="hint">A service invoice already exists. Keep its billing history intact; any remaining services can continue with the current service billing plan.</p>';
+ if(existingServiceInvoices=== (q.items||[]).length)return '<p class="hint">Every service already has an invoice. Existing invoices and payments are kept unchanged.</p>';
+  if(existingServiceInvoices)return `<div class="service-billing-switch"><div><b>Generate proformas for remaining services</b><p class="hint">Existing service invoices and payments will stay unchanged.</p></div><div class="actions"><button class="primary" onclick="processCreateServiceVouchers('${q.id}','service-wise')">Set up remaining services</button></div></div>`;
  if(q.billingMode==='service-completion')return `<div class="service-billing-switch"><div><b>Update to the standard service advance plan</b><p class="hint">No service invoices have been issued yet. Optional advance proformas can be created for each service.</p></div><div class="actions"><button class="primary" onclick="processCreateServiceVouchers('${q.id}','service-wise')">Generate 50% advance proforma per service</button></div></div>`;
  if(q.billingMode==='service-wise'){
   if(servicePayments)return '<p class="hint">The 50% advance plan is active and payment history is linked to the service proformas.</p>';
@@ -41,9 +42,8 @@ window.processProject=id=>{const quotation=find(id);if(!quotation||!quotation.co
 window.processCreateServiceVouchers=(id)=>{
  const billingMode='service-wise',q=find(id);if(!q||q.status!=='Accepted')return toast('Record quotation approval first.');if(!q.contractConfirmedAt)return processContract(id,'service-wise');
   if(!Array.isArray(q.items)||q.items.length<1)return toast('Add a service to the quotation before enabling separate billing.');
- const existingServiceProformas=serviceProformas(q),existingServiceInvoices=q.items.some((_,index)=>serviceDocument(q,'Invoice',index));
- if(existingServiceInvoices)return toast('A service invoice already exists. Existing invoices and payments are kept unchanged.');
- if(existingServiceProformas.length)return toast('Service billing has already started. Existing invoices and payments are kept unchanged.');
+  const existingServiceProformas=serviceProformas(q),coveredServices=q.items.filter((_,index)=>serviceDocument(q,'Invoice',index)||existingServiceProformas.some(item=>Number(item.serviceIndex)===index)).length;
+  if(coveredServices===q.items.length)return toast('Every service already has its proforma or invoice.');
  const invoice=db.documents.find(d=>d.type==='Invoice'&&d.rootId===q.id&&d.status!=='Cancelled'&&d.serviceIndex===undefined);if(invoice)return toast('A combined final invoice already exists. Keep its billing history intact.');
  const combined=db.documents.find(d=>d.type==='Proforma'&&d.rootId===q.id&&d.status!=='Cancelled'&&d.serviceIndex===undefined);if((combined?.payments||[]).some(payment=>num(payment.amount)>0))return toast('A payment is recorded on the combined proforma. It cannot be split automatically.');
  const baseTotal=q.items.every(item=>Number(item.rate)>0&&!item.rateText&&!q.rateCard)?q.items.reduce((sum,item)=>sum+Number(item.qty||0)*Number(item.rate||0),0):(combined?.projectValue>0?Number(combined.projectValue)/((1-Number(q.discount||0)/100)*(1+Number(q.tax||0)/100)):null);
@@ -58,7 +58,7 @@ window.processCreateServiceVouchers=(id)=>{
   const message=combined?`This will cancel the unpaid combined proforma and replace it with separate 50% advance proformas for ${values.length} services. Ask the client to disregard the cancelled document. Continue?`:`This will enable a separate 50% advance proforma for each of ${values.length} services. Continue?`;
   if(!confirm(message))return;
   let created=0;if(!commitChange(()=>{const cancelledAt=new Date().toISOString();if(combined){combined.status='Cancelled';combined.cancelledAt=cancelledAt;combined.updated=cancelledAt;}q.billingMode=billingMode;q.serviceBillingAllocations=values.map(value=>Math.round(value*100)/100);if(q.contract)q.contract.billingMode=billingMode;created=ClientProcessEngine.prepareServiceProformas(db,q,uid,undefined,q.serviceBillingAllocations)},'Enabled separate service billing for '+(q.client?.name||'client')))return;
-  closeRecord();if(!created)toast('Separate service proformas already exist.');
+  closeRecord();const ready=serviceProformas(q).length;if(created)toast(`${ready} separate service proforma${ready===1?'':'s'} ready.`);else if(ready>=q.items.length)toast('Separate service proformas are already ready.');else toast('Could not create the remaining proformas. Review the service amounts and try again.');
  });
  const total=document.getElementById('serviceBillingAllocationTotal');q.items.forEach((_,index)=>document.getElementById(`serviceBillingAmount${index}`)?.addEventListener('input',()=>{const sum=q.items.reduce((value,__,i)=>value+(Number(document.getElementById(`serviceBillingAmount${i}`)?.value)||0),0);if(total)total.innerHTML=`<b>Allocated subtotal:</b> ${esc(fmt(q,sum))}`;}));
 };
@@ -83,7 +83,7 @@ window.processContract=(id,requestedBillingMode)=>{
   let count=0;
   if(!commitChange(()=>{q.contract={acceptedBy,startDate,completionDate,scope,deliveryMode,billingMode:finalBillingMode};q.billingMode=finalBillingMode;q.contractConfirmedAt=new Date().toISOString();q.updated=q.contractConfirmedAt;if(finalBillingMode==='service-wise')count=ClientProcessEngine.prepareServiceProformas(db,q,uid).length;else if(finalBillingMode!=='service-completion')ClientProcessEngine.prepare(db,q,uid)},finalBillingMode==='service-wise'?'Contract confirmed and separate service proformas created.':finalBillingMode==='service-completion'?'Contract confirmed with its existing service billing plan.':'Contract confirmed and project proforma created.'))return;
   closeRecord();nav('Client Process');
-  if(finalBillingMode==='service-wise')toast(`${count||serviceProformas(q).length} separate service proforma${(count||serviceProformas(q).length)===1?'':'s'} ready.`);
+  if(finalBillingMode==='service-wise'){const ready=serviceProformas(q).length;if(ready<q.items.length){toast(`${ready} of ${q.items.length} service proformas ready. Enter service amounts to create the rest.`);processCreateServiceVouchers(q.id);return}toast(`${ready} separate service proforma${ready===1?'':'s'} ready.`)}
   else if(finalBillingMode==='service-completion')toast('Contract saved. Existing service billing records are preserved.');
  });
  const billingBasis=document.getElementById('contractBillingBasis'),advanceOptions=document.getElementById('contractAdvanceOptions');
