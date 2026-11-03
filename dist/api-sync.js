@@ -204,7 +204,6 @@ async function loadWorkspace() {
 }
 
 window.addEventListener('online', () => erpDirty ? pushWorkspace() : loadWorkspace());
-loadWorkspace();
 
 // Keep cloud data current without interrupting record editing.
 const ERP_AUTO_REFRESH_SECONDS = 30;
@@ -223,6 +222,7 @@ async function refreshWorkspaceIfChanged(force = false) {
       localStorage.setItem(KEY, JSON.stringify(db));
       lastSnapshot = localStorage.getItem(KEY);
       render();
+      document.dispatchEvent(new Event('erp-workspace-loaded'));
       setErpStatus(`Cloud data refreshed just now · next check in ${ERP_AUTO_REFRESH_SECONDS} seconds`, true);
       toast('CRM refreshed with the latest cloud data.');
       return true;
@@ -269,3 +269,4 @@ loadWorkspace = async function () {
   if (erpToken && db) document.dispatchEvent(new Event('erp-workspace-loaded'));
   return result;
 };
+loadWorkspace();
