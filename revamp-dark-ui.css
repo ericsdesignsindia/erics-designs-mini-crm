@@ -744,3 +744,44 @@ body.ea360-interface[data-theme="dark"] .shell>main{
  html body.ea360-interface .shell>aside>#commandBar,
  html body.ea360-interface .command-actions button{transition:none!important}
 }
+
+/* Keep the mobile command bar compact and leave scroll room above the floating nav. */
+@media(max-width:720px){
+ html body.ea360-interface .shell>aside>#commandBar{
+  position:sticky!important;top:8px!important;height:auto!important;min-height:0!important;
+  padding:7px 9px!important;border-radius:16px!important
+ }
+ html body.ea360-interface .commandbar{
+  display:flex!important;flex-direction:row!important;align-items:center!important;gap:5px!important;
+  width:100%!important;height:42px!important;min-width:0!important
+ }
+ html body.ea360-interface .mobile-page-title{display:none!important}
+ html body.ea360-interface .command-search{
+  display:flex!important;flex:1 1 auto!important;width:auto!important;max-width:none!important;min-width:0!important;
+  height:38px!important;min-height:38px!important;padding:0 8px!important
+ }
+ html body.ea360-interface .command-search input{
+  position:static!important;inset:auto!important;display:block!important;flex:1 1 auto!important;
+  width:100%!important;max-width:none!important;min-width:0!important;height:auto!important;
+  padding:0!important;opacity:1!important;cursor:text!important;font-size:12px!important
+ }
+ html body.ea360-interface .command-actions{
+  display:flex!important;flex:0 0 auto!important;flex-wrap:nowrap!important;align-items:center!important;
+  justify-content:flex-end!important;gap:3px!important;width:auto!important;min-width:0!important;overflow:visible!important
+ }
+ html body.ea360-interface .command-actions button{
+  display:grid!important;place-items:center!important;flex:0 0 31px!important;width:31px!important;
+  min-width:31px!important;height:36px!important;min-height:36px!important;padding:0!important
+ }
+ html body.ea360-interface .command-actions .command-new{flex-basis:31px!important;width:31px!important;min-width:31px!important}
+ html body.ea360-interface .command-actions .command-ai span,
+ html body.ea360-interface .command-actions .command-new span{display:none!important}
+ html body.ea360-interface .command-actions .command-logout,
+ html body.ea360-interface .command-actions #erp-logout-button{display:none!important}
+ html body.ea360-interface .shell>main{padding-bottom:calc(148px + env(safe-area-inset-bottom))!important}
+}
+@media(max-width:370px){
+ html body.ea360-interface .command-actions{gap:2px!important}
+ html body.ea360-interface .command-actions button{flex-basis:28px!important;width:28px!important;min-width:28px!important}
+ html body.ea360-interface .command-actions .command-new{flex-basis:28px!important;width:28px!important;min-width:28px!important}
+}
