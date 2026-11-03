@@ -103,6 +103,14 @@ window.erpApi = {
   backups: () => api(`/workspaces/${ERP_WORKSPACE}/backups`),
   restoreBackup: id => api(`/workspaces/${ERP_WORKSPACE}/backups/${encodeURIComponent(id)}/restore`, { method: 'POST' }),
   uploadDriveAttachment: payload => api('/integrations/google-drive/attachments', { method: 'POST', body: JSON.stringify(payload) }),
+  uploadSignedContract: (contractId, payload) => api(`/workspaces/${ERP_WORKSPACE}/contracts/${encodeURIComponent(contractId)}/files`, { method: 'POST', body: JSON.stringify(payload) }),
+  analyzeSignedContract: (contractId, fileId) => api(`/workspaces/${ERP_WORKSPACE}/contracts/${encodeURIComponent(contractId)}/files/${encodeURIComponent(fileId)}`),
+  downloadSignedContract: async (contractId, fileId) => {
+    const auth = erpToken ? { Authorization: `Bearer ${erpToken}` } : {};
+    const response = await fetch(`${ERP_API}/workspaces/${ERP_WORKSPACE}/contracts/${encodeURIComponent(contractId)}/files/${encodeURIComponent(fileId)}?download=1`, { headers: auth });
+    if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error || 'Could not download the signed contract.'); }
+    return response.blob();
+  },
   connectGoogleDrive: () => api('/integrations/google-drive/connect', { method: 'POST' }),
   disconnectGoogleDrive: () => api('/integrations/google-drive', { method: 'DELETE' })
 };

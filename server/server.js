@@ -9,6 +9,7 @@ const fs = require('fs');
 const { randomUUID, createCipheriv, createDecipheriv, createHash, randomBytes, timingSafeEqual } = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { PDFParse } = require('pdf-parse');
 
 const app = express();
 if (process.env.NODE_ENV === 'production' || process.env.TRUST_PROXY === 'true') app.set('trust proxy', 1);
@@ -75,6 +76,59 @@ const backupSchema = new mongoose.Schema({
   stateCiphertext: { type: String, required: true }
 }, { timestamps: true, versionKey: false });
 const Backup = mongoose.model('Backup', backupSchema);
+const signedContractFileSchema = new mongoose.Schema({
+  workspaceId: { type: String, required: true, index: true },
+  contractId: { type: String, required: true, index: true },
+  clientId: { type: String, required: true },
+  filename: { type: String, required: true, maxlength: 180 },
+  size: { type: Number, required: true },
+  ciphertext: { type: String, required: true }
+}, { timestamps: true, versionKey: false });
+const SignedContractFile = mongoose.model('SignedContractFile', signedContractFileSchema);
+
+async function analyzeSignedPdf(bytes) {
+  const parser = new PDFParse({ data: bytes });
+  try {
+    const result = await parser.getText();
+    const text = String(result.text || '').replace(/\u0000/g, '').slice(0, 100000);
+    if (!text.trim()) return { text: '', pageCount: result.pages?.length || 0, suggestions: {} };
+    const afterLabel = label => {
+      const match = text.match(new RegExp(`(?:${label})[^\\n\\r]{0,80}?([₹$€£]\\s?[\\d,]+(?:\\.\\d{1,2})?|(?:INR|AED|USD|EUR|GBP)\\s?[\\d,]+(?:\\.\\d{1,2})?|[\\d,]+(?:\\.\\d{1,2})?\\s?(?:INR|AED|USD|EUR|GBP))`, 'i'));
+      return match?.[1]?.trim() || '';
+    };
+    const afterDateLabel = label => {
+      const match = text.match(new RegExp(`(?:${label})[^\\n\\r]{0,40}?((?:20)?\\d{2}[-/]\\d{1,2}[-/]\\d{1,2}|\\d{1,2}[-/]\\d{1,2}[-/](?:20)?\\d{2}|\\d{1,2}\\s+[A-Za-z]{3,9}\\s+\\d{4})`, 'i'));
+      if (!match) return '';
+      const raw = match[1];
+      const iso = raw.match(/^(20\d{2})[-/](\d{1,2})[-/](\d{1,2})$/);
+      if (iso) return `${iso[1]}-${iso[2].padStart(2,'0')}-${iso[3].padStart(2,'0')}`;
+      const dmy = raw.match(/^(\d{1,2})[-/](\d{1,2})[-/](20\d{2})$/);
+      if (dmy) return `${dmy[3]}-${dmy[2].padStart(2,'0')}-${dmy[1].padStart(2,'0')}`;
+      const parsed = new Date(raw);
+      return Number.isNaN(parsed.getTime()) ? raw : parsed.toISOString().slice(0,10);
+    };
+    const currency = /\bAED\b/i.test(text) ? 'AED' : /\bUSD\b|\$/i.test(text) ? 'USD' : /\bEUR\b|€/i.test(text) ? 'EUR' : /\bGBP\b|£/i.test(text) ? 'GBP' : /\bINR\b|₹|\bRs\.?/i.test(text) ? 'INR' : '';
+    const serviceMatch = text.match(/(?:scope of (?:work|services)|services (?:include|covered)|deliverables?)\s*[:\-]?\s*([^\n]{3,180})/i);
+    const paymentMatch = text.match(/(?:payment terms?|payment schedule|invoicing terms?)\s*[:\-]?\s*([^\n]{3,220})/i);
+    const cadenceMatch = text.match(/\b(monthly|weekly|quarterly|annual(?:ly)?|one[- ]time|once)\b/i);
+    const termMatch = text.match(/\b(\d{1,2})\s*(months?|years?)\b|\b(one|two|three|six|twelve)\s+months?\b/i);
+    return {
+      text, pageCount: result.pages?.length || 0,
+      suggestions: {
+        startDate: afterDateLabel('effective date|commencement date|start date|agreement date'),
+        endDate: afterDateLabel('expiration date|expiry date|end date|completion date|through'),
+        contractValue: afterLabel('total contract value|total fee|contract value|project fee|fixed fee'),
+        advanceAmount: afterLabel('advance payment|advance|deposit|upfront payment'),
+        currency,
+        service: serviceMatch?.[1]?.trim() || '',
+        paymentTerms: paymentMatch?.[1]?.trim() || '',
+        cadence: cadenceMatch?.[1]?.toLowerCase() || '',
+        term: termMatch?.[0] || '',
+        termination: /terminat(?:e|ion)|cancel(?:lation)?/i.test(text) ? 'A termination clause appears in the agreement. Review the full wording before applying.' : ''
+      }
+    };
+  } finally { await parser.destroy(); }
+}
 
 function validateState(state) {
   if (!state || typeof state !== 'object' || Array.isArray(state)) return 'State must be an object.';
@@ -849,6 +903,65 @@ app.post('/api/ai/draft', requireAuth, async (req, res, next) => {
   } catch (error) { return next(error); }
 });
 app.use('/api/workspaces', requireAuth);
+
+app.post('/api/workspaces/:workspaceId/contracts/:contractId/files', requireOwner, async (req, res, next) => {
+  let savedFile;
+  try {
+    const id = workspaceId(req.params.workspaceId);
+    const contractId = recordId(req.params.contractId);
+    const filename = String(req.body.filename || '').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '-').trim().slice(0, 180);
+    const base64 = String(req.body.base64 || '').replace(/^data:application\/pdf;base64,/i, '').replace(/\s/g, '');
+    if (!id || !contractId || !filename || !base64) return res.status(400).json({ error: 'Choose a signed PDF contract to upload.' });
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) return res.status(400).json({ error: 'The selected file is not a valid PDF upload.' });
+    const bytes = Buffer.from(base64, 'base64');
+    if (!bytes.length || bytes.length > 4 * 1024 * 1024) return res.status(400).json({ error: 'Signed PDF files must be 4 MB or smaller.' });
+    if (bytes.subarray(0, 5).toString('ascii') !== '%PDF-') return res.status(400).json({ error: 'The selected file is not a PDF.' });
+    const state = normaliseState((await getWorkspace(id)).state);
+    const contract = state.contracts.find(item => item.id === contractId);
+    if (!contract) return res.status(404).json({ error: 'Create or choose the client contract record before uploading its signed PDF.' });
+    const client = state.clients.find(item => item.id === contract.clientId);
+    if (!client) return res.status(409).json({ error: 'The contract must be linked to a client before uploading.' });
+    const analysis = await analyzeSignedPdf(bytes);
+    const fileId = randomUUID();
+    savedFile = await SignedContractFile.create({
+      workspaceId: id, contractId, clientId: client.id, filename, size: bytes.length,
+      ciphertext: encryptBackup({ base64: bytes.toString('base64') })
+    });
+    const attachment = { id: fileId, storageId: savedFile._id.toString(), filename, size: bytes.length, uploadedAt: new Date().toISOString(), pageCount: analysis.pageCount, analysisAvailable: Boolean(analysis.text.trim()) };
+    await updateWorkspaceState(id, current => {
+      const currentContract = (current.contracts || []).find(item => item.id === contractId);
+      if (!currentContract || currentContract.clientId !== client.id) { const error = new Error('The contract changed during upload. Reload and try again.'); error.status = 409; throw error; }
+      currentContract.signedFiles = Array.isArray(currentContract.signedFiles) ? currentContract.signedFiles : [];
+      currentContract.signedFiles.push(attachment);
+      currentContract.updated = new Date().toISOString();
+      currentContract.signedReviewStatus = 'Review pending';
+    });
+    return res.status(201).json({ attachment, analysis });
+  } catch (error) {
+    if (savedFile?._id) await SignedContractFile.deleteOne({ _id: savedFile._id }).catch(() => {});
+    return next(error);
+  }
+});
+
+app.get('/api/workspaces/:workspaceId/contracts/:contractId/files/:fileId', requireOwner, async (req, res, next) => {
+  try {
+    const id = workspaceId(req.params.workspaceId), contractId = recordId(req.params.contractId), fileId = String(req.params.fileId || '');
+    if (!id || !contractId || !fileId) return res.status(400).json({ error: 'Invalid signed contract file request.' });
+    const contract = (normaliseState((await getWorkspace(id)).state).contracts || []).find(item => item.id === contractId);
+    const meta = contract?.signedFiles?.find(item => item.id === fileId);
+    if (!contract || !meta) return res.status(404).json({ error: 'Signed contract file not found.' });
+    const file = await SignedContractFile.findOne({ _id: meta.storageId, workspaceId: id, contractId, clientId: contract.clientId }).lean();
+    if (!file) return res.status(404).json({ error: 'Signed contract file not found.' });
+    const bytes = Buffer.from(decryptBackup(file.ciphertext).base64, 'base64');
+    if (req.query.download === '1') {
+      const safeName = encodeURIComponent(file.filename).replace(/['()]/g, escape);
+      res.set({ 'Content-Type': 'application/pdf', 'Content-Length': String(bytes.length), 'Content-Disposition': `attachment; filename="signed-contract.pdf"; filename*=UTF-8''${safeName}`, 'Cache-Control': 'private, no-store' });
+      return res.send(bytes);
+    }
+    const analysis = await analyzeSignedPdf(bytes);
+    return res.json({ filename: file.filename, analysis });
+  } catch (error) { return next(error); }
+});
 
 app.get('/api/workspaces/:workspaceId/backups', requireOwner, async (req, res, next) => {
   try {

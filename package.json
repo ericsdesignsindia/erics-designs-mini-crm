@@ -23,7 +23,8 @@
     "express": "^5.1.0",
     "gsap": "^3.13.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.18.0"
+    "mongoose": "^8.18.0",
+    "pdf-parse": "^2.4.5"
   },
   "devDependencies": {
     "@capacitor/cli": "^8.5.2",
