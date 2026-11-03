@@ -1788,6 +1788,7 @@ getPdfProfile=function(type){const key=pdfProfileKey(type);return {...PDF_STUDIO
 function editDocument(id){
   const record=(db.documents||[]).find(item=>item&&item.id===id);
   if(!record){toast('This document is no longer available. Refresh the document list and try again.');return false}
+  if(record.type==='Proforma'&&record.replacedByInvoiceId){toast('This proforma has been replaced. Record further payments on its service invoice.');return false}
   draft=structuredClone(record);
   draft.items=Array.isArray(draft.items)?draft.items.filter(item=>item&&typeof item==='object'):[];
   draft.payments=Array.isArray(draft.payments)?draft.payments.filter(item=>item&&typeof item==='object'):[];
@@ -1805,6 +1806,7 @@ previewOpenDocument=function(){if(previewDoc?.id)editDocument(previewDoc.id);els
 function editDocument(id){
   const record=(db.documents||[]).find(item=>item&&item.id===id);
   if(!record){toast('This document is no longer available. Refresh the document list and try again.');return false}
+  if(record.type==='Proforma'&&record.replacedByInvoiceId){toast('This proforma has been replaced. Record further payments on its service invoice.');return false}
   const selected=structuredClone(record);
   selected.items=Array.isArray(selected.items)?selected.items.filter(item=>item&&typeof item==='object'):[];
   selected.payments=Array.isArray(selected.payments)?selected.payments.filter(item=>item&&typeof item==='object'):[];
