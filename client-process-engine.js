@@ -36,6 +36,18 @@ function isSequentialStepBlocked(project,task){
  const current=tasks.find(item=>item.entry.id===task.id);
  return !!current&&tasks.some(item=>item.order<current.order&&!item.entry.done);
 }
+function resolveClient(clients,quotation){
+ const records=Array.isArray(clients)?clients:[],snapshot=quotation?.client||{},recordId=String(quotation?.clientId||snapshot.id||'').trim();
+ if(recordId)return records.find(client=>String(client.id||'')===recordId)||null;
+ for(const key of ['email','phone','name']){
+  const value=String(snapshot[key]||'').trim();if(!value)continue;
+  const normalised=key==='email'?value.toLowerCase():key==='phone'?value.replace(/[^\d+]/g,''):value.toLowerCase().replace(/\s+/g,' ');
+  const matches=records.filter(client=>{const candidate=String(client[key]||'').trim();if(!candidate)return false;const comparable=key==='email'?candidate.toLowerCase():key==='phone'?candidate.replace(/[^\d+]/g,''):candidate.toLowerCase().replace(/\s+/g,' ');return comparable===normalised});
+  if(matches.length===1)return matches[0];
+  if(matches.length>1)return null;
+ }
+ return null;
+}
 function prepareServiceProformas(state,quote,uuid,now=new Date().toISOString(),allocations){
  if(quote.type!=='Quotation'||!quote.clientApprovedForProcess||!quote.contractConfirmedAt||quote.status!=='Accepted')return [];
  if(!Array.isArray(quote.items)||quote.items.length<1)return [];
@@ -70,5 +82,5 @@ function prepareCompletedServiceInvoice(state,quote,serviceIndex,uuid,now=new Da
  state.documents.push(invoice);return invoice;
 }
 function totalsForEngine(document){const subtotal=(document.items||[]).reduce((sum,item)=>sum+Number(item.proformaAmount??(Number(item.qty||0)*Number(item.rate||0))),0),net=subtotal*(1-Number(document.discount||0)/100);return Math.round(net*(1+Number(document.tax||0)/100)*100)/100}
-if(typeof module!=='undefined')module.exports={prepare,prepareServiceProformas,prepareServiceInvoice,prepareCompletedServiceInvoice,serviceValue,serviceProgressStage,isSequentialStepBlocked};else root.ClientProcessEngine={prepare,prepareServiceProformas,prepareServiceInvoice,prepareCompletedServiceInvoice,serviceValue,serviceProgressStage,isSequentialStepBlocked};
+if(typeof module!=='undefined')module.exports={prepare,prepareServiceProformas,prepareServiceInvoice,prepareCompletedServiceInvoice,serviceValue,serviceProgressStage,isSequentialStepBlocked,resolveClient};else root.ClientProcessEngine={prepare,prepareServiceProformas,prepareServiceInvoice,prepareCompletedServiceInvoice,serviceValue,serviceProgressStage,isSequentialStepBlocked,resolveClient};
 })(typeof window!=='undefined'?window:globalThis);
