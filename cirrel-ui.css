@@ -1,196 +1,434 @@
-/* Cirrel-inspired glass dashboard theme for Eric's Designs CRM.
-   CRM terms, records, routes, and existing actions remain the source of truth. */
-body.ea360-interface[data-theme="dark"]{
-  --cirrel-bg:#080b13;
-  --cirrel-glass:rgba(18,24,40,.76);
-  --cirrel-glass-strong:rgba(16,22,37,.91);
-  --cirrel-border:rgba(183,204,255,.15);
-  --cirrel-border-bright:rgba(126,167,255,.29);
-  --cirrel-blue:#4a83ff;
-  --cirrel-cyan:#31c9ec;
-  --cirrel-green:#35d7ad;
-  --cirrel-purple:#a18aff;
-  --cirrel-amber:#f5bc5d;
-  --cirrel-text:#f4f6fc;
-  --cirrel-muted:#a7b1c5;
-  --revamp-bg:var(--cirrel-bg);
-  --revamp-surface:var(--cirrel-glass-strong);
-  --revamp-card:var(--cirrel-glass);
-  --revamp-card-soft:rgba(22,29,47,.76);
-  --revamp-line:var(--cirrel-border);
-  --revamp-blue:var(--cirrel-blue);
-  --revamp-cyan:var(--cirrel-cyan);
-  --bg:var(--cirrel-bg);
-  --paper:var(--cirrel-glass-strong);
-  --line:var(--cirrel-border);
-  --ink:var(--cirrel-text);
-  --muted:var(--cirrel-muted);
-  background:var(--cirrel-bg)!important;
-  color:var(--cirrel-text)!important;
-  color-scheme:dark;
+/*
+ * Cirrel-inspired CRM skin
+ * -----------------------
+ * Visual-only layer: keep navigation, records, forms, and actions in the CRM.
+ * Layout rules that define the desktop/mobile shells remain in revamp-dark-ui.css.
+ */
+
+/* 1. Theme tokens and ambient canvas */
+body.ea360-interface[data-theme="dark"] {
+  --cirrel-bg: #070a10;
+  --cirrel-surface: rgba(17, 24, 39, .78);
+  --cirrel-surface-raised: rgba(23, 32, 51, .84);
+  --cirrel-surface-deep: rgba(10, 15, 26, .88);
+  --cirrel-line: rgba(176, 197, 239, .15);
+  --cirrel-line-strong: rgba(126, 167, 255, .3);
+  --cirrel-blue: #4387ff;
+  --cirrel-cyan: #30c8ee;
+  --cirrel-green: #31d8aa;
+  --cirrel-gold: #f0b24d;
+  --cirrel-violet: #a58cff;
+  --cirrel-text: #f3f6fc;
+  --cirrel-muted: #a5b0c4;
+  --cirrel-radius: 20px;
+  --cirrel-blur: 22px;
+  --cirrel-shadow: 0 18px 46px rgba(0, 0, 0, .22);
+
+  --revamp-bg: var(--cirrel-bg);
+  --revamp-surface: var(--cirrel-surface-deep);
+  --revamp-card: var(--cirrel-surface);
+  --revamp-card-soft: var(--cirrel-surface-raised);
+  --revamp-line: var(--cirrel-line);
+  --revamp-blue: var(--cirrel-blue);
+  --revamp-cyan: var(--cirrel-cyan);
+  --bg: var(--cirrel-bg);
+  --paper: var(--cirrel-surface-deep);
+  --line: var(--cirrel-line);
+  --ink: var(--cirrel-text);
+  --muted: var(--cirrel-muted);
+
+  color: var(--cirrel-text) !important;
+  color-scheme: dark;
+  background: var(--cirrel-bg) !important;
 }
-body.ea360-interface[data-theme="dark"]::before{
-  content:"";position:fixed;inset:-14vh -10vw;z-index:0;pointer-events:none;
+
+body.ea360-interface[data-theme="dark"]::before {
+  content: "";
+  position: fixed;
+  z-index: 0;
+  inset: -12vh -10vw;
+  pointer-events: none;
   background:
-    radial-gradient(ellipse at 83% 8%,rgba(246,174,78,.19),transparent 25%),
-    radial-gradient(ellipse at 96% 57%,rgba(33,194,224,.16),transparent 29%),
-    radial-gradient(ellipse at 9% 48%,rgba(76,100,255,.16),transparent 28%),
-    radial-gradient(ellipse at 55% 100%,rgba(27,190,143,.12),transparent 29%);
-  filter:blur(26px);animation:cirrel-ambient 24s ease-in-out infinite alternate;
+    radial-gradient(ellipse at 84% 7%, rgba(240, 178, 77, .16), transparent 24%),
+    radial-gradient(ellipse at 99% 54%, rgba(48, 200, 238, .13), transparent 28%),
+    radial-gradient(ellipse at 7% 42%, rgba(67, 135, 255, .17), transparent 30%),
+    radial-gradient(ellipse at 53% 100%, rgba(49, 216, 170, .1), transparent 28%);
+  filter: blur(28px);
+  animation: cirrel-ambient 28s ease-in-out infinite alternate;
 }
-body.ea360-interface[data-theme="dark"] .shell{position:relative;z-index:1;background:transparent!important}
-body.ea360-interface[data-theme="dark"] .shell aside{
-  background:linear-gradient(180deg,rgba(15,21,36,.84),rgba(10,15,27,.78))!important;
-  border-right:1px solid var(--cirrel-border)!important;
-  backdrop-filter:blur(24px) saturate(135%);-webkit-backdrop-filter:blur(24px) saturate(135%);
+
+body.ea360-interface[data-theme="dark"] .shell {
+  position: relative;
+  z-index: 1;
+  background: transparent !important;
 }
-body.ea360-interface[data-theme="dark"] .shell main{background:transparent!important}
-body.ea360-interface[data-theme="dark"] .shell aside nav button{border-radius:12px!important;transition:background .2s ease,border-color .2s ease,color .2s ease,transform .2s ease}
-body.ea360-interface[data-theme="dark"] .shell aside nav button:hover{transform:translateX(2px);background:rgba(131,160,222,.1)!important}
-body.ea360-interface[data-theme="dark"] .shell aside nav button.active{
-  background:linear-gradient(105deg,rgba(55,107,207,.48),rgba(41,73,135,.28))!important;
-  border:1px solid rgba(126,167,255,.28)!important;box-shadow:inset 3px 0 var(--cirrel-blue),0 8px 25px rgba(25,74,174,.16)!important;
+
+body.ea360-interface[data-theme="dark"] .shell > main {
+  background: transparent !important;
 }
-body.ea360-interface[data-theme="dark"] .shell aside nav button.active .nav-icon{color:#a9cbff!important}
-body.ea360-interface[data-theme="dark"] .commandbar,
-body.ea360-interface[data-theme="dark"] .shell>aside>#commandBar{
-  background:rgba(16,22,37,.76)!important;border:1px solid var(--cirrel-border)!important;
-  border-radius:19px!important;box-shadow:0 14px 42px rgba(0,0,0,.25),inset 0 1px rgba(255,255,255,.08)!important;
-  backdrop-filter:blur(24px) saturate(145%)!important;-webkit-backdrop-filter:blur(24px) saturate(145%)!important;
+
+/* 2. Navigation and quick-action glass */
+body.ea360-interface[data-theme="dark"] .shell > aside {
+  background: linear-gradient(180deg, rgba(14, 21, 36, .9), rgba(8, 13, 24, .86)) !important;
+  border-color: var(--cirrel-line) !important;
+  backdrop-filter: blur(var(--cirrel-blur)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--cirrel-blur)) saturate(140%);
 }
-body.ea360-interface[data-theme="dark"] .command-search{background:rgba(27,35,56,.64)!important;border-color:rgba(174,195,241,.16)!important;border-radius:13px!important}
+
+body.ea360-interface[data-theme="dark"] .shell > aside nav button {
+  border-radius: 12px !important;
+  transition: background-color .2s ease, border-color .2s ease, color .2s ease, transform .2s ease;
+}
+
+body.ea360-interface[data-theme="dark"] .shell > aside nav button:hover {
+  transform: translateX(2px);
+  background: rgba(131, 160, 222, .1) !important;
+}
+
+body.ea360-interface[data-theme="dark"] .shell > aside nav button.active {
+  color: #fff !important;
+  background: linear-gradient(105deg, rgba(49, 112, 229, .54), rgba(35, 75, 147, .3)) !important;
+  border: 1px solid var(--cirrel-line-strong) !important;
+  box-shadow: inset 3px 0 var(--cirrel-blue), 0 8px 25px rgba(25, 74, 174, .18) !important;
+}
+
+body.ea360-interface[data-theme="dark"] .shell > aside nav button.active .nav-icon {
+  color: #b4d2ff !important;
+}
+
+body.ea360-interface[data-theme="dark"] .shell > aside > #commandBar,
+body.ea360-interface[data-theme="dark"] .commandbar {
+  background: rgba(15, 22, 37, .78) !important;
+  border: 1px solid var(--cirrel-line) !important;
+  border-radius: 19px !important;
+  box-shadow: 0 14px 42px rgba(0, 0, 0, .26), inset 0 1px rgba(255, 255, 255, .07) !important;
+  backdrop-filter: blur(var(--cirrel-blur)) saturate(145%) !important;
+  -webkit-backdrop-filter: blur(var(--cirrel-blur)) saturate(145%) !important;
+}
+
+body.ea360-interface[data-theme="dark"] .command-search {
+  background: rgba(25, 34, 54, .78) !important;
+  border-color: var(--cirrel-line) !important;
+  border-radius: 13px !important;
+}
+
 body.ea360-interface[data-theme="dark"] .command-actions button,
-body.ea360-interface[data-theme="dark"] #app button:not(.primary):not(.danger):not(.active):not(.nav-icon){transition:transform .18s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease}
+body.ea360-interface[data-theme="dark"] #app button {
+  transition: transform .18s ease, border-color .18s ease, background-color .18s ease, box-shadow .18s ease;
+}
+
 body.ea360-interface[data-theme="dark"] .command-new,
 body.ea360-interface[data-theme="dark"] .primary,
 body.ea360-interface[data-theme="dark"] .mobile-fab,
-body.ea360-interface[data-theme="dark"] .home-primary{
-  background:linear-gradient(125deg,#3978f3,#5792ff)!important;border-color:#74a3ff!important;color:#fff!important;
-  box-shadow:0 8px 25px rgba(54,119,244,.24),inset 0 1px rgba(255,255,255,.22)!important;
+body.ea360-interface[data-theme="dark"] .home-primary {
+  color: #fff !important;
+  background: linear-gradient(125deg, #3478f4, #5794ff) !important;
+  border-color: #75a5ff !important;
+  box-shadow: 0 8px 25px rgba(54, 119, 244, .25), inset 0 1px rgba(255, 255, 255, .2) !important;
 }
+
 body.ea360-interface[data-theme="dark"] .command-new:hover,
 body.ea360-interface[data-theme="dark"] .primary:hover,
-body.ea360-interface[data-theme="dark"] .home-primary:hover{transform:translateY(-1px);box-shadow:0 11px 30px rgba(54,119,244,.32)!important}
+body.ea360-interface[data-theme="dark"] .home-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 11px 30px rgba(54, 119, 244, .34) !important;
+}
 
-/* Translucent, layered surfaces shared across CRM workspaces. */
-body.ea360-interface[data-theme="dark"] .panel,
-body.ea360-interface[data-theme="dark"] .stat,
-body.ea360-interface[data-theme="dark"] .document-card,
-body.ea360-interface[data-theme="dark"] .client-card,
-body.ea360-interface[data-theme="dark"] .department-card,
-body.ea360-interface[data-theme="dark"] .work-queue-panel,
-body.ea360-interface[data-theme="dark"] .recent-work-panel,
-body.ea360-interface[data-theme="dark"] .work-metric,
-body.ea360-interface[data-theme="dark"] .command-card,
-body.ea360-interface[data-theme="dark"] .command-kpi,
-body.ea360-interface[data-theme="dark"] .attention-panel,
-body.ea360-interface[data-theme="dark"] .client360-panel,
-body.ea360-interface[data-theme="dark"] .home-card,
-body.ea360-interface[data-theme="dark"] .home-summary-strip>button,
-body.ea360-interface[data-theme="dark"] .home-work-hero,
-body.ea360-interface[data-theme="dark"] .home-account-totals>button,
-body.ea360-interface[data-theme="dark"] .pipeline .lane,
-body.ea360-interface[data-theme="dark"] .lead-card,
-body.ea360-interface[data-theme="dark"] .client360-grid article,
-body.ea360-interface[data-theme="dark"] .pipeline-step,
-body.ea360-interface[data-theme="dark"] .workflow-overview .workday-hero{
-  background:linear-gradient(145deg,rgba(28,36,57,.79),rgba(17,23,39,.72))!important;
-  border:1px solid var(--cirrel-border)!important;border-radius:20px!important;
-  box-shadow:0 18px 46px rgba(0,0,0,.19),inset 0 1px rgba(255,255,255,.075)!important;
-  backdrop-filter:blur(20px) saturate(130%);-webkit-backdrop-filter:blur(20px) saturate(130%);
+/* 3. Frosted surfaces used across CRM workspaces */
+body.ea360-interface[data-theme="dark"] :is(
+  .panel, .stat, .document-card, .client-card, .department-card,
+  .work-queue-panel, .recent-work-panel, .work-metric, .command-card,
+  .command-kpi, .attention-panel, .client360-panel, .home-card,
+  .home-summary-strip > button, .home-work-hero, .home-account-totals > button,
+  .pipeline .lane, .lead-card, .client360-grid article, .pipeline-step,
+  .workflow-overview .workday-hero
+) {
+  background: linear-gradient(145deg, rgba(28, 37, 59, .84), rgba(16, 23, 39, .78)) !important;
+  border: 1px solid var(--cirrel-line) !important;
+  border-radius: var(--cirrel-radius) !important;
+  box-shadow: var(--cirrel-shadow), inset 0 1px rgba(255, 255, 255, .065) !important;
+  backdrop-filter: blur(18px) saturate(132%);
+  -webkit-backdrop-filter: blur(18px) saturate(132%);
 }
-body.ea360-interface[data-theme="dark"] .home-dashboard{gap:20px!important}
-body.ea360-interface[data-theme="dark"] .home-dashboard-head{align-items:flex-end!important;gap:20px!important;padding:4px 2px 2px}
-body.ea360-interface[data-theme="dark"] .home-dashboard-head h1{font-size:clamp(30px,3vw,44px)!important;letter-spacing:-.045em!important}
-body.ea360-interface[data-theme="dark"] .home-dashboard-head p{font-size:15px!important;color:#aeb9cd!important}
-body.ea360-interface[data-theme="dark"] .home-breadcrumb,
-body.ea360-interface[data-theme="dark"] .home-eyebrow,
-body.ea360-interface[data-theme="dark"] .eyebrow{color:#64cfff!important;letter-spacing:.13em!important}
-body.ea360-interface[data-theme="dark"] .home-header-actions button,
-body.ea360-interface[data-theme="dark"] .home-card-head>button,
-body.ea360-interface[data-theme="dark"] .home-focus-actions button,
-body.ea360-interface[data-theme="dark"] .home-status-foot button,
-body.ea360-interface[data-theme="dark"] .home-open-project{
-  background:rgba(27,35,55,.72)!important;border:1px solid var(--cirrel-border-bright)!important;color:#e9effc!important;border-radius:13px!important;
-}
-body.ea360-interface[data-theme="dark"] .home-summary-strip{gap:12px!important}
-body.ea360-interface[data-theme="dark"] .home-summary-strip>button{min-height:78px;padding:14px 16px!important;border-radius:17px!important}
-body.ea360-interface[data-theme="dark"] .home-overview-grid{grid-template-columns:minmax(0,1.42fr) minmax(320px,.86fr)!important;gap:16px!important}
-body.ea360-interface[data-theme="dark"] .home-secondary-grid,body.ea360-interface[data-theme="dark"] .home-lower-grid{gap:16px!important}
-body.ea360-interface[data-theme="dark"] .home-card{padding:22px!important;border-radius:22px!important}
-body.ea360-interface[data-theme="dark"] .home-work-hero{background:linear-gradient(145deg,rgba(13,19,35,.92),rgba(12,17,31,.78))!important;border-color:rgba(147,173,237,.17)!important}
-body.ea360-interface[data-theme="dark"] .home-work-progress{filter:drop-shadow(0 0 14px rgba(49,201,236,.18))}
-body.ea360-interface[data-theme="dark"] .home-period-switch{background:rgba(11,16,28,.62)!important;border:1px solid var(--cirrel-border)!important;border-radius:15px!important;padding:4px!important}
-body.ea360-interface[data-theme="dark"] .home-period-switch button{border-radius:11px!important}
-body.ea360-interface[data-theme="dark"] .home-period-switch button.active{background:linear-gradient(125deg,#3978f3,#5792ff)!important;color:#fff!important;box-shadow:0 5px 16px rgba(54,119,244,.24)!important}
-body.ea360-interface[data-theme="dark"] .home-focus-item,
-body.ea360-interface[data-theme="dark"] .attention-card,
-body.ea360-interface[data-theme="dark"] .home-allocation-row,
-body.ea360-interface[data-theme="dark"] .home-flow-stage,
-body.ea360-interface[data-theme="dark"] .home-status-bar-row,
-body.ea360-interface[data-theme="dark"] .home-project-table tr{background:rgba(14,20,34,.62)!important;border-color:rgba(176,196,239,.12)!important}
-body.ea360-interface[data-theme="dark"] .home-focus-item:hover,
-body.ea360-interface[data-theme="dark"] .home-allocation-row:hover,
-body.ea360-interface[data-theme="dark"] .home-flow-stage:hover,
-body.ea360-interface[data-theme="dark"] .home-status-bar-row:hover{background:rgba(45,67,111,.44)!important}
 
-/* Tables and controls keep clear contrast over glass. */
-body.ea360-interface[data-theme="dark"] .tablewrap,
-body.ea360-interface[data-theme="dark"] .revamp-table-wrap,
-body.ea360-interface[data-theme="dark"] .home-project-table-wrap,
-body.ea360-interface[data-theme="dark"] .documents-panel .toolbar,
-body.ea360-interface[data-theme="dark"] .toolbar,
-body.ea360-interface[data-theme="dark"] .filter-buttons{
-  background:rgba(14,20,34,.68)!important;border-color:var(--cirrel-border)!important;border-radius:17px!important;
+body.ea360-interface[data-theme="dark"] :is(.attention-card, .home-focus-item, .home-allocation-row, .home-flow-stage, .home-status-bar-row, .home-project-table tr) {
+  background: rgba(12, 19, 32, .68) !important;
+  border-color: rgba(176, 197, 239, .12) !important;
 }
-body.ea360-interface[data-theme="dark"] table th{background:rgba(38,50,77,.76)!important;color:#c3cee2!important}
-body.ea360-interface[data-theme="dark"] table td{border-bottom-color:rgba(177,194,230,.11)!important}
-body.ea360-interface[data-theme="dark"] input,
-body.ea360-interface[data-theme="dark"] select,
-body.ea360-interface[data-theme="dark"] textarea{
-  background:rgba(14,20,34,.74)!important;border-color:rgba(177,194,230,.17)!important;border-radius:12px!important;color:#f2f5fb!important;
+
+body.ea360-interface[data-theme="dark"] :is(.home-focus-item, .home-allocation-row, .home-flow-stage, .home-status-bar-row):hover {
+  background: rgba(43, 67, 113, .48) !important;
 }
-body.ea360-interface[data-theme="dark"] input:focus,
-body.ea360-interface[data-theme="dark"] select:focus,
-body.ea360-interface[data-theme="dark"] textarea:focus{border-color:#70a3ff!important;box-shadow:0 0 0 3px rgba(74,131,255,.2)!important}
+
+/* 4. Dashboard hierarchy and Cirrel-inspired ambient accent */
+body.ea360-interface[data-theme="dark"] .home-dashboard {
+  position: relative;
+  isolation: isolate;
+  gap: 20px !important;
+}
+
+body.ea360-interface[data-theme="dark"] .home-dashboard::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: -30px;
+  right: 7%;
+  width: clamp(130px, 17vw, 250px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle at 35% 30%, rgba(255, 220, 142, .82), rgba(221, 153, 44, .5) 28%, rgba(221, 153, 44, .12) 57%, transparent 72%);
+  filter: blur(7px);
+  opacity: .62;
+}
+
+body.ea360-interface[data-theme="dark"] .home-dashboard-head {
+  align-items: flex-end !important;
+  gap: 20px !important;
+  padding: 4px 2px 2px;
+}
+
+body.ea360-interface[data-theme="dark"] .home-dashboard-head h1 {
+  font-size: clamp(30px, 3vw, 44px) !important;
+  letter-spacing: -.045em !important;
+}
+
+body.ea360-interface[data-theme="dark"] .home-dashboard-head p {
+  color: #aeb9cd !important;
+  font-size: 15px !important;
+}
+
+body.ea360-interface[data-theme="dark"] :is(.home-breadcrumb, .home-eyebrow, .eyebrow) {
+  color: #64cfff !important;
+  letter-spacing: .13em !important;
+}
+
+body.ea360-interface[data-theme="dark"] :is(.home-header-actions button, .home-card-head > button, .home-focus-actions button, .home-status-foot button, .home-open-project) {
+  color: #e9effc !important;
+  background: rgba(27, 35, 55, .76) !important;
+  border: 1px solid var(--cirrel-line-strong) !important;
+  border-radius: 13px !important;
+}
+
+body.ea360-interface[data-theme="dark"] .home-summary-strip {
+  gap: 12px !important;
+}
+
+body.ea360-interface[data-theme="dark"] .home-summary-strip > button {
+  min-height: 78px;
+  padding: 14px 16px !important;
+  border-radius: 17px !important;
+}
+
+body.ea360-interface[data-theme="dark"] .home-overview-grid {
+  grid-template-columns: minmax(0, 1.42fr) minmax(300px, .86fr) !important;
+  gap: 16px !important;
+}
+
+body.ea360-interface[data-theme="dark"] :is(.home-secondary-grid, .home-lower-grid) {
+  gap: 16px !important;
+}
+
+body.ea360-interface[data-theme="dark"] .home-card {
+  padding: 22px !important;
+  border-radius: 22px !important;
+}
+
+body.ea360-interface[data-theme="dark"] .home-work-hero {
+  background: linear-gradient(145deg, rgba(12, 19, 35, .94), rgba(12, 17, 31, .82)) !important;
+  border-color: rgba(147, 173, 237, .18) !important;
+}
+
+body.ea360-interface[data-theme="dark"] .home-work-progress {
+  filter: drop-shadow(0 0 14px rgba(48, 200, 238, .2));
+}
+
+body.ea360-interface[data-theme="dark"] .home-period-switch {
+  padding: 4px !important;
+  background: rgba(10, 15, 27, .68) !important;
+  border: 1px solid var(--cirrel-line) !important;
+  border-radius: 15px !important;
+}
+
+body.ea360-interface[data-theme="dark"] .home-period-switch button {
+  border-radius: 11px !important;
+}
+
+body.ea360-interface[data-theme="dark"] .home-period-switch button.active {
+  color: #fff !important;
+  background: linear-gradient(125deg, #3478f4, #5794ff) !important;
+  box-shadow: 0 5px 16px rgba(54, 119, 244, .26) !important;
+}
+
+/* 5. Tables, forms, and dialogs stay readable above the translucent layers */
+body.ea360-interface[data-theme="dark"] :is(.tablewrap, .revamp-table-wrap, .home-project-table-wrap, .documents-panel .toolbar, .toolbar, .filter-buttons) {
+  background: rgba(12, 18, 31, .76) !important;
+  border-color: var(--cirrel-line) !important;
+  border-radius: 16px !important;
+}
+
+body.ea360-interface[data-theme="dark"] table th {
+  color: #c3cee2 !important;
+  background: rgba(38, 50, 77, .82) !important;
+}
+
+body.ea360-interface[data-theme="dark"] table td {
+  border-bottom-color: rgba(177, 194, 230, .12) !important;
+}
+
+body.ea360-interface[data-theme="dark"] :is(input, select, textarea) {
+  color: #f2f5fb !important;
+  background: rgba(13, 19, 33, .82) !important;
+  border-color: rgba(177, 194, 230, .2) !important;
+  border-radius: 12px !important;
+}
+
+body.ea360-interface[data-theme="dark"] :is(input, select, textarea):focus-visible {
+  border-color: #70a3ff !important;
+  box-shadow: 0 0 0 3px rgba(74, 131, 255, .2) !important;
+  outline: none;
+}
+
 body.ea360-interface[data-theme="dark"] .badge,
-body.ea360-interface[data-theme="dark"] .home-status{border:1px solid rgba(255,255,255,.08);border-radius:999px}
-body.ea360-interface[data-theme="dark"] dialog{background:rgba(15,21,36,.97)!important;backdrop-filter:blur(24px)}
-body.ea360-interface[data-theme="dark"] #mobileNav{
-  background:rgba(12,17,30,.84)!important;border:1px solid rgba(175,197,244,.18)!important;
-  box-shadow:0 12px 40px rgba(0,0,0,.42),inset 0 1px rgba(255,255,255,.08)!important;
-  backdrop-filter:blur(24px) saturate(145%);-webkit-backdrop-filter:blur(24px) saturate(145%);
+body.ea360-interface[data-theme="dark"] .home-status {
+  border: 1px solid rgba(255, 255, 255, .09);
+  border-radius: 999px;
 }
-body.ea360-interface[data-theme="dark"] #mobileNav button.active{background:rgba(60,104,190,.34)!important;color:#8fcaff!important;border-radius:15px!important}
 
-@media(max-width:1100px){
-  body.ea360-interface[data-theme="dark"] .home-overview-grid{grid-template-columns:minmax(0,1fr)!important}
-  body.ea360-interface[data-theme="dark"] .home-focus-card{grid-row:auto}
+body.ea360-interface[data-theme="dark"] dialog {
+  background: rgba(13, 19, 33, .97) !important;
+  border-color: var(--cirrel-line) !important;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 }
-@media(max-width:720px){
-  body.ea360-interface[data-theme="dark"]::before{inset:-5vh -45vw;background:
-    radial-gradient(ellipse at 90% 7%,rgba(246,174,78,.17),transparent 30%),
-    radial-gradient(ellipse at 100% 55%,rgba(33,194,224,.14),transparent 35%),
-    radial-gradient(ellipse at 0% 45%,rgba(76,100,255,.14),transparent 32%),
-    radial-gradient(ellipse at 55% 100%,rgba(27,190,143,.1),transparent 34%);filter:blur(28px)}
-  body.ea360-interface[data-theme="dark"] .shell>aside{background:rgba(12,17,30,.77)!important;border-bottom-color:var(--cirrel-border)!important}
-  body.ea360-interface[data-theme="dark"] .shell>aside>#commandBar{background:rgba(17,23,39,.73)!important;border:1px solid var(--cirrel-border)!important;border-radius:18px!important;padding:8px!important}
-  body.ea360-interface[data-theme="dark"] .command-search{border-radius:13px!important}
-  body.ea360-interface[data-theme="dark"] .home-dashboard{gap:15px!important}
-  body.ea360-interface[data-theme="dark"] .home-dashboard-head{padding:3px 2px 0}
-  body.ea360-interface[data-theme="dark"] .home-dashboard-head h1{font-size:clamp(29px,8vw,36px)!important}
-  body.ea360-interface[data-theme="dark"] .home-dashboard-head p{font-size:14px!important;line-height:1.5}
-  body.ea360-interface[data-theme="dark"] .home-summary-strip{gap:9px!important}
-  body.ea360-interface[data-theme="dark"] .home-summary-strip>button{border-radius:15px!important}
-  body.ea360-interface[data-theme="dark"] .home-card{padding:17px!important;border-radius:20px!important}
-  body.ea360-interface[data-theme="dark"] .home-overview-grid{grid-template-columns:minmax(0,1fr)!important}
-  body.ea360-interface[data-theme="dark"] .home-card-head{align-items:flex-start!important}
-  body.ea360-interface[data-theme="dark"] .home-period-switch{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
-  body.ea360-interface[data-theme="dark"] .home-period-switch button{min-height:42px!important}
-  body.ea360-interface[data-theme="dark"] #mobileNav{inset:auto 10px calc(8px + env(safe-area-inset-bottom))!important;width:calc(100% - 20px)!important;border-radius:24px!important}
+
+/* 6. Smaller screens */
+@media (max-width: 1100px) {
+  body.ea360-interface[data-theme="dark"] .home-overview-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  body.ea360-interface[data-theme="dark"] .home-focus-card {
+    grid-row: auto;
+  }
 }
-@media(prefers-reduced-motion:reduce){
-  body.ea360-interface[data-theme="dark"]::before{animation:none!important}
-  body.ea360-interface[data-theme="dark"] *,body.ea360-interface[data-theme="dark"] *::before,body.ea360-interface[data-theme="dark"] *::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}
+
+@media (max-width: 720px) {
+  body.ea360-interface[data-theme="dark"]::before {
+    inset: -5vh -40vw;
+    background:
+      radial-gradient(ellipse at 90% 7%, rgba(240, 178, 77, .14), transparent 30%),
+      radial-gradient(ellipse at 100% 55%, rgba(48, 200, 238, .12), transparent 35%),
+      radial-gradient(ellipse at 0% 45%, rgba(67, 135, 255, .14), transparent 32%),
+      radial-gradient(ellipse at 55% 100%, rgba(49, 216, 170, .09), transparent 34%);
+    filter: blur(28px);
+  }
+
+  body.ea360-interface[data-theme="dark"] .shell > aside {
+    background: rgba(12, 17, 30, .82) !important;
+    border-bottom-color: var(--cirrel-line) !important;
+  }
+
+  body.ea360-interface[data-theme="dark"] .shell > aside > #commandBar {
+    padding: 8px !important;
+    background: rgba(17, 23, 39, .82) !important;
+    border: 1px solid var(--cirrel-line) !important;
+    border-radius: 18px !important;
+  }
+
+  body.ea360-interface[data-theme="dark"] .command-search {
+    border-radius: 13px !important;
+  }
+
+  body.ea360-interface[data-theme="dark"] .home-dashboard {
+    gap: 15px !important;
+  }
+
+  body.ea360-interface[data-theme="dark"] .home-dashboard::before {
+    top: 0;
+    right: -12px;
+    width: 130px;
+    opacity: .42;
+  }
+
+  body.ea360-interface[data-theme="dark"] .home-dashboard-head {
+    padding: 3px 2px 0;
+  }
+
+  body.ea360-interface[data-theme="dark"] .home-dashboard-head h1 {
+    font-size: clamp(29px, 8vw, 36px) !important;
+  }
+
+  body.ea360-interface[data-theme="dark"] .home-dashboard-head p {
+    color: #aeb9cd !important;
+    font-size: 14px !important;
+    line-height: 1.5;
+  }
+
+  body.ea360-interface[data-theme="dark"] .home-summary-strip {
+    gap: 9px !important;
+  }
+
+  body.ea360-interface[data-theme="dark"] .home-summary-strip > button {
+    border-radius: 15px !important;
+  }
+
+  body.ea360-interface[data-theme="dark"] .home-card {
+    padding: 17px !important;
+    border-radius: 20px !important;
+  }
+
+  body.ea360-interface[data-theme="dark"] .home-overview-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  body.ea360-interface[data-theme="dark"] .home-card-head {
+    align-items: flex-start !important;
+  }
+
+  body.ea360-interface[data-theme="dark"] .home-period-switch {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  body.ea360-interface[data-theme="dark"] .home-period-switch button {
+    min-height: 42px !important;
+  }
+
+  body.ea360-interface[data-theme="dark"] #mobileNav {
+    background: rgba(11, 16, 29, .84) !important;
+    border: 1px solid rgba(175, 197, 244, .2) !important;
+    border-radius: 24px !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .43), inset 0 1px rgba(255, 255, 255, .07) !important;
+    backdrop-filter: blur(24px) saturate(145%);
+    -webkit-backdrop-filter: blur(24px) saturate(145%);
+  }
+
+  body.ea360-interface[data-theme="dark"] #mobileNav button.active {
+    color: #9bd3ff !important;
+    background: rgba(60, 104, 190, .34) !important;
+    border-radius: 15px !important;
+  }
 }
-@keyframes cirrel-ambient{from{transform:translate3d(-1.2%,0,0) scale(1)}to{transform:translate3d(1.2%,1%,0) scale(1.04)}}
+
+/* 7. Motion, focus, and operating-system accessibility preferences */
+@keyframes cirrel-ambient {
+  from { transform: translate3d(-1.2%, 0, 0) scale(1); }
+  to { transform: translate3d(1.2%, 1%, 0) scale(1.04); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.ea360-interface[data-theme="dark"]::before {
+    animation: none !important;
+  }
+
+  body.ea360-interface[data-theme="dark"] *,
+  body.ea360-interface[data-theme="dark"] *::before,
+  body.ea360-interface[data-theme="dark"] *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
