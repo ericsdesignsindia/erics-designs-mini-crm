@@ -855,3 +855,336 @@ body.ea360-interface[data-theme="light"] #app :is(input, select, textarea) { col
   from { transform: translate3d(-1%, 0, 0) scale(1); }
   to { transform: translate3d(1.4%, 1.2%, 0) scale(1.035); }
 }
+
+/* Mobile app shell. These rules only apply below the phone/tablet breakpoint;
+   desktop navigation and desktop spacing remain unchanged. */
+@media (max-width: 720px) {
+  body.ea360-interface {
+    --cirrel-mobile-bar: rgba(11, 17, 30, .88);
+    --cirrel-mobile-border: rgba(198, 215, 249, .17);
+    min-height: 100dvh !important;
+    padding: 0 0 calc(104px + env(safe-area-inset-bottom)) !important;
+    overflow-x: clip !important;
+    overscroll-behavior-y: contain;
+  }
+
+  body.ea360-interface .shell,
+  body.ea360-interface .shell.sidebar-collapsed {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 100dvh !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* Compact branded app header; the full sidebar remains a desktop-only rail. */
+  body.ea360-interface .shell > aside {
+    position: sticky !important;
+    inset: 0 0 auto !important;
+    z-index: 190 !important;
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: calc(7px + env(safe-area-inset-top)) 16px 7px !important;
+    background: var(--cirrel-mobile-bar) !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--cirrel-mobile-border) !important;
+    border-radius: 0 0 18px 18px !important;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, .2) !important;
+    backdrop-filter: blur(24px) saturate(145%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(145%) !important;
+  }
+
+  body.ea360-interface .shell > aside .sidehead {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    min-width: 0 !important;
+    min-height: 36px !important;
+    height: 36px !important;
+    padding: 0 !important;
+    border: 0 !important;
+  }
+
+  body.ea360-interface .shell > aside .brand.brand-logo {
+    display: flex !important;
+    flex: 0 1 auto !important;
+    width: 148px !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.ea360-interface .shell > aside .brand.brand-logo img {
+    display: block !important;
+    width: 100% !important;
+    max-width: 148px !important;
+    max-height: 34px !important;
+    object-fit: contain !important;
+    object-position: left center !important;
+  }
+
+  body.ea360-interface .shell > aside .sidebar-toggle,
+  body.ea360-interface .shell > aside > #nav,
+  body.ea360-interface .shell > aside > footer { display: none !important; }
+
+  body.ea360-interface .shell > main {
+    box-sizing: border-box !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    min-height: calc(100dvh - 52px) !important;
+    margin: 0 !important;
+    padding: 0 14px calc(28px + env(safe-area-inset-bottom)) !important;
+    overflow: visible !important;
+  }
+
+  /* Keep the search and essential utilities in a tidy, reachable app toolbar. */
+  body.ea360-interface .shell > main > #commandBar {
+    position: sticky !important;
+    top: calc(50px + env(safe-area-inset-top)) !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    z-index: 180 !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 0 -14px 14px !important;
+    padding: 8px 14px !important;
+    transform: none !important;
+    background: rgba(7, 11, 20, .3) !important;
+    backdrop-filter: blur(18px) !important;
+    -webkit-backdrop-filter: blur(18px) !important;
+  }
+
+  body.ea360-interface .commandbar {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 7px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 8px !important;
+    border: 1px solid var(--cirrel-mobile-border) !important;
+    border-radius: 17px !important;
+    background: rgba(20, 28, 45, .82) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .2), inset 0 1px rgba(255,255,255,.07) !important;
+    backdrop-filter: blur(24px) saturate(145%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(145%) !important;
+  }
+
+  body.ea360-interface .command-search {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 42px !important;
+    min-height: 42px !important;
+    border-radius: 13px !important;
+  }
+
+  body.ea360-interface .command-search input {
+    min-width: 0 !important;
+    width: 100% !important;
+    font-size: 15px !important;
+  }
+
+  body.ea360-interface .command-actions {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    gap: 7px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+  }
+
+  body.ea360-interface #commandBar .command-actions .command-ai,
+  body.ea360-interface #commandBar .command-actions .command-new,
+  body.ea360-interface #commandBar .command-actions #windows-app-refresh,
+  body.ea360-interface #commandBar .command-actions #erp-logout-button,
+  body.ea360-interface #commandBar .command-actions .command-logout,
+  body.ea360-interface #commandBar .command-actions [aria-label="Log out"] { display: none !important; }
+
+  body.ea360-interface #commandBar .command-actions > button {
+    box-sizing: border-box !important;
+    display: grid !important;
+    place-items: center !important;
+    flex: 0 0 42px !important;
+    width: 42px !important;
+    min-width: 42px !important;
+    height: 42px !important;
+    min-height: 42px !important;
+    padding: 0 !important;
+    border-radius: 13px !important;
+  }
+
+  body.ea360-interface #commandBar .command-actions .command-icon b {
+    top: -4px !important;
+    right: -3px !important;
+  }
+
+  body.ea360-interface #app {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow-wrap: anywhere;
+  }
+
+  body.ea360-interface #app :is(.panel, .card, .home-card, .client360-panel, .work-queue-panel, .recent-work-panel, .accounting-performance-panel) {
+    box-sizing: border-box !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    border-radius: 20px !important;
+  }
+
+  body.ea360-interface #app :is(.actions, .toolbar, .filters, .filter-buttons) {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  body.ea360-interface #app :is(input, select, textarea) {
+    box-sizing: border-box !important;
+    max-width: 100% !important;
+    font-size: 16px !important;
+  }
+
+  body.ea360-interface #app :is(.tablewrap, .revamp-table-wrap, .home-project-table-wrap) {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    overscroll-behavior-x: contain !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body.ea360-interface #app table { max-width: 100% !important; }
+
+  /* App-style floating tab bar with breathing room around the home indicator. */
+  body.ea360-interface #mobileNav {
+    position: fixed !important;
+    inset: auto auto calc(8px + env(safe-area-inset-bottom)) 50% !important;
+    z-index: 500 !important;
+    display: grid !important;
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+    justify-items: stretch !important;
+    gap: 3px !important;
+    box-sizing: border-box !important;
+    width: min(520px, calc(100vw - 24px)) !important;
+    min-width: 0 !important;
+    min-height: 70px !important;
+    padding: 6px 7px !important;
+    transform: translateX(-50%) !important;
+    border: 1px solid var(--cirrel-mobile-border) !important;
+    border-radius: 23px !important;
+    background: rgba(11, 17, 30, .91) !important;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, .42), inset 0 1px rgba(255,255,255,.09) !important;
+    backdrop-filter: blur(26px) saturate(155%) !important;
+    -webkit-backdrop-filter: blur(26px) saturate(155%) !important;
+  }
+
+  body.ea360-interface #mobileNav button {
+    display: grid !important;
+    grid-template-rows: 23px auto !important;
+    place-content: center !important;
+    justify-items: center !important;
+    align-content: center !important;
+    gap: 3px !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 56px !important;
+    min-height: 56px !important;
+    padding: 4px 1px !important;
+    overflow: hidden !important;
+    border: 0 !important;
+    border-radius: 16px !important;
+    background: transparent !important;
+    color: #a8b4ca !important;
+    font-size: 9px !important;
+    font-weight: 650 !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
+  }
+
+  body.ea360-interface #mobileNav button > span,
+  body.ea360-interface #mobileNav .mobile-fab span {
+    display: block !important;
+    color: #dfc87a !important;
+    font-size: 20px !important;
+    line-height: 1 !important;
+  }
+
+  body.ea360-interface #mobileNav button.active {
+    background: rgba(67, 119, 214, .2) !important;
+    color: #a7d9ff !important;
+    box-shadow: inset 0 0 0 1px rgba(120, 173, 255, .13) !important;
+  }
+
+  body.ea360-interface #mobileNav button.active > span { color: #f1d77e !important; }
+
+  body.ea360-interface #mobileNav .mobile-fab {
+    position: static !important;
+    display: grid !important;
+    grid-template-rows: 23px auto !important;
+    place-content: center !important;
+    justify-items: center !important;
+    width: 100% !important;
+    height: 56px !important;
+    min-height: 56px !important;
+    margin: 0 !important;
+    transform: none !important;
+    border: 0 !important;
+    border-radius: 16px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #a8b4ca !important;
+    font-size: 0 !important;
+  }
+
+  body.ea360-interface #mobileNav .mobile-fab::before {
+    content: '+';
+    display: grid;
+    place-items: center;
+    color: #fff !important;
+    font-size: 20px;
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  body.ea360-interface #mobileNav .mobile-fab::after {
+    content: 'Create';
+    color: inherit;
+    font-size: 9px;
+    font-weight: 650;
+    line-height: 1.1;
+  }
+
+  body.ea360-interface[data-theme="light"] { --cirrel-mobile-bar: rgba(245, 248, 255, .94); --cirrel-mobile-border: rgba(75, 101, 150, .17); }
+  body.ea360-interface[data-theme="light"] .commandbar,
+  body.ea360-interface[data-theme="light"] #mobileNav { background: rgba(247, 250, 255, .94) !important; }
+  body.ea360-interface[data-theme="light"] #mobileNav button { color: #53647d !important; }
+  body.ea360-interface[data-theme="light"] #mobileNav button.active { color: #235db2 !important; background: rgba(68, 126, 222, .13) !important; }
+}
+
+@media (max-width: 420px) {
+  body.ea360-interface #app .home-dashboard { gap: 12px !important; }
+  body.ea360-interface #app .home-dashboard-head h1 { font-size: clamp(24px, 7.2vw, 29px) !important; line-height: 1.12 !important; }
+  body.ea360-interface #app .home-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px !important; }
+  body.ea360-interface #app .home-kpi { grid-template-columns: 26px minmax(0, 1fr) !important; gap: 5px 7px !important; padding: 10px 8px !important; }
+  body.ea360-interface #app .home-kpi-icon { width: 26px !important; height: 26px !important; }
+  body.ea360-interface #app .home-kpi-label { font-size: 9px !important; }
+  body.ea360-interface #app .home-kpi > b { font-size: 16px !important; }
+  body.ea360-interface #app .home-kpi > b.home-money { font-size: 12px !important; }
+  body.ea360-interface #app .home-kpi > small { font-size: 9px !important; }
+  body.ea360-interface #mobileNav { width: calc(100vw - 16px) !important; gap: 1px !important; }
+  body.ea360-interface #mobileNav button { font-size: 8px !important; }
+}
