@@ -234,7 +234,7 @@
     const hasDeficit = ['INR', 'AED'].some(currency => num(breakdown.available[currency]) < 0);
     const cashClass = hasDeficit ? 'accounting-cash-card has-deficit' : 'accounting-cash-card';
 
-    const header = pageHeader('Accounts · Cash and commitments.', '<button onclick="exportAccounts()">Export transactions</button><button class="primary" onclick="editAccount(\'expense\')">Record expense</button>', 'A clear place to record money, follow what is due, and review every transaction.');
+    const header = pageHeader('Accounts', '<button onclick="exportAccounts()">Export transactions</button><button class="primary" onclick="editAccount(\'expense\')">Record expense</button>', 'A clear place to record money, follow what is due, and review every transaction.');
 
     return header + `
       <nav class="accounting-section-nav" aria-label="Accounts sections">
