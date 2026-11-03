@@ -37,9 +37,12 @@
     const active=unique([document.querySelector('#nav button.active'),document.querySelector('#mobileNav button.active')]);
 
     context=gsap.context(()=>{
-      if(header.length)gsap.fromTo(header,{autoAlpha:0,y:9},{autoAlpha:1,y:0,duration:.32,ease:'power2.out',overwrite:'auto'});
-      if(cards.length)gsap.fromTo(cards,{autoAlpha:0,y:11},{autoAlpha:1,y:0,duration:.34,delay:.035,stagger:.028,ease:'power2.out',overwrite:'auto'});
-      if(fallback.length)gsap.fromTo(fallback,{autoAlpha:0,y:8},{autoAlpha:1,y:0,duration:.3,stagger:.03,ease:'power2.out',overwrite:'auto'});
+      // Keep controls hit-testable throughout transitions. autoAlpha sets
+      // visibility:hidden at the start, which can make quick taps miss a
+      // card or button immediately after a workspace change.
+      if(header.length)gsap.fromTo(header,{y:9},{y:0,duration:.32,ease:'power2.out',overwrite:'auto'});
+      if(cards.length)gsap.fromTo(cards,{y:11},{y:0,duration:.34,delay:.035,stagger:.028,ease:'power2.out',overwrite:'auto'});
+      if(fallback.length)gsap.fromTo(fallback,{y:8},{y:0,duration:.3,stagger:.03,ease:'power2.out',overwrite:'auto'});
       if(active.length)gsap.fromTo(active,{scale:.97},{scale:1,duration:.24,ease:'back.out(1.6)',overwrite:'auto'});
     },app);
   }
@@ -96,8 +99,8 @@
   const dialogObserver=new MutationObserver(records=>records.forEach(record=>{
     const dialog=record.target;
     if(!(dialog instanceof HTMLDialogElement)||!dialog.open)return;
-    if(allowed())gsap.fromTo(dialog,{autoAlpha:0,y:10,scale:.99},{autoAlpha:1,y:0,scale:1,duration:.22,ease:'power2.out',overwrite:true});
-    else gsap&&gsap.set(dialog,{clearProps:'opacity,visibility,transform'});
+    if(allowed())gsap.fromTo(dialog,{y:10,scale:.99},{y:0,scale:1,duration:.22,ease:'power2.out',overwrite:true});
+    else gsap&&gsap.set(dialog,{clearProps:'transform'});
   }));
   dialogObserver.observe(document.body,{subtree:true,attributes:true,attributeFilter:['open']});
 
@@ -106,7 +109,7 @@
       if(!motionQuery.matches)return;
       if(context){context.revert();context=null}
       gsap&&gsap.globalTimeline&&gsap.globalTimeline.getChildren().forEach(animation=>animation.kill());
-      document.querySelectorAll('dialog[open]').forEach(dialog=>gsap&&gsap.set(dialog,{clearProps:'opacity,visibility,transform'}));
+      document.querySelectorAll('dialog[open]').forEach(dialog=>gsap&&gsap.set(dialog,{clearProps:'transform'}));
     };
     if(motionQuery.addEventListener)motionQuery.addEventListener('change',reduceMotion);
     else if(motionQuery.addListener)motionQuery.addListener(reduceMotion);

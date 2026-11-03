@@ -1,7 +1,20 @@
 /* Project finance: connects delivery work to the recorded money in Accounts. */
 (function(){
   const amount=value=>Number(value||0);
-  const sameClient=(document,client)=>document.client&&(document.client.id===client?.id||String(document.client.name||'').trim().toLowerCase()===String(client?.name||'').trim().toLowerCase());
+  const normalise=value=>String(value||'').trim().toLowerCase().replace(/\s+/g,' ');
+  const sameClient=(document,client)=>{
+    if(!document.client||!client)return false;
+    if(document.client.id&&client.id)return document.client.id===client.id;
+    const name=normalise(document.client.name),matches=(db.clients||[]).filter(item=>normalise(item.name)===name);
+    return Boolean(name&&name===normalise(client.name)&&matches.length<=1);
+  };
+  const belongsToProject=(document,project,client)=>{
+    if(document.projectId)return document.projectId===project.id;
+    const sourceId=project.sourceQuotationId;
+    if(sourceId&&(document.id===sourceId||document.sourceId===sourceId||document.rootId===sourceId))return true;
+    if(document.rootId&&sourceId&&document.rootId===sourceId)return true;
+    return sameClient(document,client)&&normalise(document.project)===normalise(project.name);
+  };
   const money=(currency,value)=>new Intl.NumberFormat(currency==='AED'?'en-AE':'en-IN',{style:'currency',currency:currency||'INR',maximumFractionDigits:2}).format(amount(value));
   const totalsByCurrency=rows=>rows.reduce((out,row)=>{const currency=row.currency||'INR';out[currency]=(out[currency]||0)+amount(row.amount);return out},{});
   const displayTotals=values=>Object.entries(values).map(([currency,value])=>money(currency,value)).join(' · ')||'—';
@@ -17,8 +30,9 @@
   projectWorkspace=function(project){
     const markup=baseProjectWorkspace(project);
     const client=db.clients.find(item=>item.id===project.clientId);
-    const documents=db.documents.filter(item=>sameClient(item,client)&&item.status!=='Cancelled');
-    const quotation=documents.filter(item=>item.type==='Quotation').sort((a,b)=>String(b.updated||b.date).localeCompare(String(a.updated||a.date)))[0];
+    const documents=db.documents.filter(item=>belongsToProject(item,project,client)&&!['Draft','Cancelled'].includes(item.status));
+    const quotations=documents.filter(item=>item.type==='Quotation'&&['Accepted','Sent'].includes(item.status));
+    const quotation=quotations.sort((a,b)=>(a.status==='Accepted'?0:1)-(b.status==='Accepted'?0:1)||String(b.updated||b.date).localeCompare(String(a.updated||a.date)))[0];
     const invoices=documents.filter(item=>item.type==='Invoice');
     const expenses=(db.accounts||[]).filter(item=>item.type==='Expense'&&item.projectId===project.id);
     const quoted=quotation?{[quotation.currency||'INR']:totals(quotation).total}:{};

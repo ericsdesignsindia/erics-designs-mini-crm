@@ -38,7 +38,12 @@ nextNumber=function(type){const prefix=type==='Invoice'?'ED-':type==='Proforma'?
 newDoc=function(type){if(draft&&!confirm('Discard unsaved changes?'))return;draft=null;oldNewDoc(type);draft.type=type;draft.number=nextNumber(type);draft.currency='INR';draft.rateCard=false;draft.terms=type==='Proforma'?'Proforma invoice for the proposed services. This is not a final invoice or a payment receipt.\n'+db.settings.quoteTerms:draft.terms;view=docView(type);render()};
 openDoc=function(id){draft=structuredClone(db.documents.find(d=>d.id===id));view=docView(draft.type);render()};
 function quotationPipelineStage(document){if(STAGES.includes(document?.pipelineStage))return document.pipelineStage;const current=status(document);return current==='Accepted'?'Won':current==='Declined'?'Lost':current==='Sent'?'Proposal sent':''}
-function quotationMatchesClient(document,client){return document?.client&&(document.client.id===client.id||String(document.client.name||'').trim().toLowerCase()===String(client.name||'').trim().toLowerCase())}
+function quotationMatchesClient(document,client){
+  if(!document?.client||!client)return false;
+  if(document.client.id&&client.id)return document.client.id===client.id;
+  const name=String(document.client.name||'').trim().toLowerCase().replace(/\s+/g,' '),matches=db.clients.filter(item=>String(item.name||'').trim().toLowerCase().replace(/\s+/g,' ')===name);
+  return Boolean(name&&name===String(client.name||'').trim().toLowerCase().replace(/\s+/g,' ')&&matches.length===1&&matches[0].id===client.id);
+}
 function isRateCardQuotation(document){return document?.type==='Quotation'&&Boolean(document.rateCard)}
 function quotationAmount(document){const listedValue=(document.items||[]).reduce((sum,item)=>sum+num(item.qty)*num(item.rate),0);return !isRateCardQuotation(document)?totals(document).total:listedValue}
 function applyQuotationToPipeline(document){if(document?.type!=='Quotation'||!['Sent','Accepted'].includes(status(document)))return false;const client=db.clients.find(item=>quotationMatchesClient(document,item));if(!client||client.stage==='Lost')return false;const nextStage=quotationPipelineStage(document),stageRank={'New lead':0,'Contacted':1,'Proposal sent':2,'Won':3};if(!nextStage)return false;let changed=false;if(nextStage==='Won'?client.stage!=='Won':(stageRank[client.stage]??0)<stageRank[nextStage]){client.stage=nextStage;changed=true}return changed}
@@ -1098,7 +1103,25 @@ function financeSum(entries){const values={};for(const entry of entries){const c
 function financeMonthlyExpenses(month){return accountLedger().filter(item=>item.source==='manual'&&item.type==='Expense'&&String(item.date).slice(0,7)===month)}
 function financeAccountKey(name){return String(name||'').toLowerCase().replace(/\b(private\s+limited|pvt\.?\s*ltd\.?|limited|ltd\.?|llp|incorporated|inc\.?|llc)\b/g,'').replace(/[^a-z0-9]/g,'')}
 function financeProjectTokens(project){return String(project||'').toLowerCase().replace(/&/g,' and ').split(/[^a-z0-9]+/).filter(token=>token.length>1&&!['project','service','services','work','the','and','for','with','ui','ux','design','website','web'].includes(token))}
-function financeInvoiceForProforma(proforma,invoices=(db.documents||[])){return invoices.find(invoice=>{if(invoice.type!=='Invoice'||['Draft','Cancelled'].includes(invoice.status))return false;if(invoice.sourceId===proforma.id||invoice.rootId===proforma.id)return true;if(financeAccountKey(invoice.client?.name)!==financeAccountKey(proforma.client?.name))return false;const advanceTokens=[...new Set(financeProjectTokens(proforma.project))].sort(),invoiceTokens=[...new Set(financeProjectTokens(invoice.project))].sort();if(!advanceTokens.length||advanceTokens.length!==invoiceTokens.length||advanceTokens.some((token,index)=>token!==invoiceTokens[index]))return false;const advanceMonth=String(proforma.due||'').slice(0,7),invoiceMonth=String(invoice.due||'').slice(0,7);return !advanceMonth||!invoiceMonth||advanceMonth===invoiceMonth})}
+function financeInvoiceForProforma(proforma,invoices=(db.documents||[])){
+  const activeInvoices=invoices.filter(invoice=>invoice.type==='Invoice'&&!['Draft','Cancelled'].includes(invoice.status));
+  const explicitlyLinked=activeInvoices.find(invoice=>invoice.sourceId===proforma.id||invoice.rootId===proforma.id);
+  if(explicitlyLinked)return explicitlyLinked;
+  const legacyMatch=(advance,invoice)=>{
+    if(advance.client?.id&&invoice.client?.id&&advance.client.id!==invoice.client.id)return false;
+    if(financeAccountKey(invoice.client?.name)!==financeAccountKey(advance.client?.name))return false;
+    const advanceTokens=[...new Set(financeProjectTokens(advance.project))].sort(),invoiceTokens=[...new Set(financeProjectTokens(invoice.project))].sort();
+    if(!advanceTokens.length||advanceTokens.length!==invoiceTokens.length||advanceTokens.some((token,index)=>token!==invoiceTokens[index]))return false;
+    const advanceMonth=String(advance.due||'').slice(0,7),invoiceMonth=String(invoice.due||'').slice(0,7);
+    return Boolean(advanceMonth&&invoiceMonth&&advanceMonth===invoiceMonth);
+  };
+  const possibleInvoices=activeInvoices.filter(invoice=>legacyMatch(proforma,invoice));
+  if(possibleInvoices.length!==1)return null;
+  const matchingInvoice=possibleInvoices[0];
+  const allAdvances=(db.documents||[]).filter(item=>item.type==='Proforma'&&!['Draft','Cancelled'].includes(item.status));
+  const possibleAdvances=allAdvances.filter(advance=>legacyMatch(advance,matchingInvoice));
+  return possibleAdvances.length===1&&possibleAdvances[0].id===proforma.id?matchingInvoice:null;
+}
 function addRecurringExpenseMonths(date,months,anchorDay=date.getDate()){
   const next=new Date(date.getFullYear(),date.getMonth()+months,1);
   next.setDate(Math.min(anchorDay,new Date(next.getFullYear(),next.getMonth()+1,0).getDate()));

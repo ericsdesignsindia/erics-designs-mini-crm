@@ -78,11 +78,35 @@ const Backup = mongoose.model('Backup', backupSchema);
 
 function validateState(state) {
   if (!state || typeof state !== 'object' || Array.isArray(state)) return 'State must be an object.';
-  for (const key of ['documents', 'clients', 'services']) {
-    if (!Array.isArray(state[key])) return `State must include a ${key} array.`;
-  }
+  const requiredCollections = ['documents', 'clients', 'services'];
+  const optionalCollections = ['projects', 'tasks', 'activity', 'accounts', 'employees', 'vendorBills', 'recurringExpenses', 'budgets', 'documentTemplates', 'contracts', 'followUps', 'milestones'];
+  for (const key of requiredCollections) if (!Array.isArray(state[key])) return `State must include a ${key} array.`;
   if (!state.settings || typeof state.settings !== 'object' || Array.isArray(state.settings)) return 'State must include settings.';
-  if (state.documents.length > 10000 || state.clients.length > 10000) return 'Workspace limit exceeded.';
+  const collectionKeys = [...requiredCollections, ...optionalCollections];
+  for (const key of optionalCollections) if (state[key] !== undefined && !Array.isArray(state[key])) return `State ${key} must be an array.`;
+  for (const key of collectionKeys) {
+    const rows = state[key];
+    if (!Array.isArray(rows)) continue;
+    if (rows.length > 10000) return `Workspace ${key} limit exceeded.`;
+    if (rows.some((row, index) => !row || typeof row !== 'object' || Array.isArray(row))) return `Workspace ${key} contains an invalid record.`;
+  }
+  const validAmount = value => value === undefined || value === null || value === '' || (Number.isFinite(Number(value)) && Number(value) >= 0);
+  for (const [index, record] of state.documents.entries()) {
+    if (record.payments !== undefined && !Array.isArray(record.payments)) return `Document ${index + 1} payments must be an array.`;
+    if (record.items !== undefined && !Array.isArray(record.items)) return `Document ${index + 1} items must be an array.`;
+    for (const [itemIndex, item] of (record.items || []).entries()) {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) return `Document ${index + 1} contains an invalid line item.`;
+      for (const field of ['qty', 'rate', 'proformaAmount']) if (!validAmount(item[field])) return `Document ${index + 1} line ${itemIndex + 1} has an invalid ${field}.`;
+    }
+    for (const [paymentIndex, payment] of (record.payments || []).entries()) {
+      if (!payment || typeof payment !== 'object' || Array.isArray(payment) || !Number.isFinite(Number(payment.amount)) || Number(payment.amount) <= 0) return `Document ${index + 1} payment ${paymentIndex + 1} must have an amount greater than zero.`;
+    }
+  }
+  for (const key of ['accounts', 'vendorBills', 'recurringExpenses']) {
+    for (const [index, record] of (state[key] || []).entries()) {
+      if (record.amount !== undefined && !validAmount(record.amount)) return `Workspace ${key} record ${index + 1} has an invalid amount.`;
+    }
+  }
   return null;
 }
 
