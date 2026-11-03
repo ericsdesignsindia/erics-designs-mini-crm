@@ -972,6 +972,56 @@ app.get('/api/workspaces/:workspaceId/backups', requireOwner, async (req, res, n
   } catch (error) { return next(error); }
 });
 
+// Search protected restore points for one specifically requested document. This
+// never changes the current workspace and returns only a small review summary.
+app.get('/api/workspaces/:workspaceId/backups/documents/:documentNumber', requireOwner, async (req, res, next) => {
+  try {
+    const id = workspaceId(req.params.workspaceId);
+    const number = String(req.params.documentNumber || '').trim().toUpperCase();
+    if (!id || !/^ED-[A-Z0-9-]{3,36}$/.test(number)) return res.status(400).json({ error: 'Enter a valid document number.' });
+    const backups = await Backup.find({ workspaceId: id }).sort({ createdAt: -1 }).limit(30).lean();
+    const matches = [];
+    for (const backup of backups) {
+      const state = decryptBackup(backup.stateCiphertext);
+      const document = (state.documents || []).find(item => String(item.number || '').toUpperCase() === number);
+      if (!document) continue;
+      const subtotal = (document.items || []).reduce((sum, item) => sum + Number(item.qty || 1) * Number(item.rate || 0), 0);
+      const total = subtotal * (1 - Number(document.discount || 0) / 100) * (1 + Number(document.tax || 0) / 100);
+      const sourceProforma = (state.documents || []).find(item => item.type === 'Proforma' && (item.id === document.sourceProformaId || item.id === document.sourceId || item.replacedByInvoiceId === document.id));
+      matches.push({
+        backupId: backup._id.toString(), createdAt: backup.createdAt, reason: backup.reason,
+        document: { id: document.id, number: document.number, type: document.type, status: document.status, date: document.date, due: document.due, project: document.project, clientName: document.client?.name || '', currency: document.currency || 'INR', total: Number.isFinite(total) ? Math.round(total * 100) / 100 : 0, sourceProformaNumber: sourceProforma?.number || '' }
+      });
+    }
+    return res.json({ number, matches });
+  } catch (error) { return next(error); }
+});
+
+// Restore a single missing document into the current workspace. All other
+// current records remain untouched, and the current state is backed up first.
+app.post('/api/workspaces/:workspaceId/backups/:backupId/documents/:documentNumber/restore', requireOwner, async (req, res, next) => {
+  try {
+    const id = workspaceId(req.params.workspaceId);
+    const number = String(req.params.documentNumber || '').trim().toUpperCase();
+    if (!id || !mongoose.isValidObjectId(req.params.backupId) || !/^ED-[A-Z0-9-]{3,36}$/.test(number)) return res.status(400).json({ error: 'Invalid document recovery request.' });
+    const backup = await Backup.findOne({ _id: req.params.backupId, workspaceId: id }).lean();
+    if (!backup) return res.status(404).json({ error: 'Restore point not found.' });
+    const backupState = decryptBackup(backup.stateCiphertext);
+    const source = (backupState.documents || []).find(item => String(item.number || '').toUpperCase() === number);
+    if (!source) return res.status(404).json({ error: `${number} is not in this restore point.` });
+    const current = await getWorkspace(id);
+    const state = normaliseState(structuredClone(current.state));
+    if (state.documents.some(item => item.number === number)) return res.status(409).json({ error: `${number} is already present in the current workspace.` });
+    if (state.documents.some(item => item.id === source.id)) return res.status(409).json({ error: 'A different document already uses the recovered record ID.' });
+    state.documents.push(structuredClone(source));
+    const invalid = validateState(state);
+    if (invalid) return res.status(409).json({ error: 'This document cannot be merged safely with the current workspace.' });
+    await Backup.create({ workspaceId: id, reason: `Automatic restore point before restoring ${number}`, stateCiphertext: encryptBackup(current.state) });
+    const updated = await saveState(current, state);
+    return res.json({ ok: true, number, revision: updated.revision, restoredFrom: backup._id.toString(), updatedAt: updated.updatedAt });
+  } catch (error) { return next(error); }
+});
+
 app.post('/api/workspaces/:workspaceId/backups/:backupId/restore', requireOwner, async (req, res, next) => {
   try {
     const id = workspaceId(req.params.workspaceId);
