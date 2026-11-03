@@ -2,7 +2,7 @@
 /* Keep the total project value and the advance requested as separate values. */
 function prepare(state,quote,uuid,now=new Date().toISOString()){
  if(quote.type!=='Quotation'||!quote.clientApprovedForProcess||!quote.contractConfirmedAt||quote.status!=='Accepted')return null;
- if(quote.billingMode==='service-wise'||quote.billingMode==='service-completion')return null;
+ if(['service-wise','service-completion','service-upfront'].includes(quote.billingMode))return null;
  const existing=state.documents.find(d=>d.rootId===quote.id&&d.type==='Proforma'&&d.status!=='Cancelled');if(existing)return existing;
  const projectValue=(quote.items||[]).reduce((a,i)=>a+Number(i.qty||0)*Number(i.rate||0),0)*(1-Number(quote.discount||0)/100)*(1+Number(quote.tax||0)/100);
  if(!(projectValue>0)||(quote.items||[]).some(i=>!(Number(i.rate)>0)||i.rateText))return null;
@@ -25,6 +25,7 @@ function serviceProgressStage(quote,documents,totals){
  if(allInvoicesPaid)return 7;
  if(outstanding)return 6;
  if(quote.billingMode==='service-completion')return invoices.length?5:3;
+ if(quote.billingMode==='service-upfront')return invoices.length?5:3;
  const allAdvancesPaid=items.length>0&&serviceDocs.every(record=>record.proforma&&totals(record.proforma).paid+0.005>=totals(record.proforma).total);
  if(allAdvancesPaid)return 5;
  if(serviceDocs.some(record=>record.proforma))return 4;
@@ -81,6 +82,31 @@ function prepareCompletedServiceInvoice(state,quote,serviceIndex,uuid,now=new Da
  delete invoice.portalToken;delete invoice.acceptedAt;delete invoice.clientApprovedForProcess;delete invoice.workCompletedAt;delete invoice.advancePercent;delete invoice.serviceBillingAllocations;
  state.documents.push(invoice);return invoice;
 }
+function prepareUpfrontServiceInvoices(state,quote,uuid,now=new Date().toISOString(),allocations){
+ if(quote?.type!=='Quotation'||quote.status!=='Accepted'||!quote.clientApprovedForProcess||!quote.contractConfirmedAt||!Array.isArray(quote.items)||!quote.items.length)return [];
+ if((state.documents||[]).some(document=>document.type==='Invoice'&&document.rootId===quote.id&&document.serviceIndex===undefined&&document.status!=='Cancelled'))return [];
+ const combined=(state.documents||[]).find(document=>document.type==='Proforma'&&document.rootId===quote.id&&document.serviceIndex===undefined&&document.status!=='Cancelled');
+ if(combined&&(combined.payments||[]).some(payment=>Number(payment.amount)>0))return [];
+ const values=(allocations||quote.serviceBillingAllocations||(quote.rateCard?[]:quote.items.map(item=>Number(item.qty||0)*Number(item.rate||0)))).map(Number);
+ if(values.length!==quote.items.length||values.some(value=>!Number.isFinite(value)||value<=0))return [];
+ quote.billingMode='service-upfront';quote.serviceBillingAllocations=values.map(value=>Math.round(value*100)/100);const created=[];
+ for(let index=0;index<quote.items.length;index++){
+  const existing=(state.documents||[]).find(document=>document.type==='Invoice'&&document.rootId===quote.id&&Number(document.serviceIndex)===index&&document.status!=='Cancelled');
+  if(existing)continue;
+  const proforma=(state.documents||[]).find(document=>document.type==='Proforma'&&document.rootId===quote.id&&Number(document.serviceIndex)===index&&document.status!=='Cancelled');
+  if(proforma){
+   const invoice=prepareServiceInvoice(state,quote,proforma,uuid,now);
+   if(invoice){invoice.billingMode='service-upfront';invoice.due=now.slice(0,10);invoice.terms=`Full payment is due before work begins for ${invoice.serviceName}. Payments already received on the advance proforma have been credited to this invoice.\n${quote.business?.invoiceTerms||state.settings?.invoiceTerms||'Thank you for choosing Eric’s Designs.'}`;created.push(invoice)}
+   continue;
+  }
+  const item=quote.items[index],quantity=Number(item.qty||0)||1,serviceName=item.name||`Service ${index+1}`;
+  const invoice={...JSON.parse(JSON.stringify(quote)),id:uuid(),type:'Invoice',number:nextNumber(state,'Invoice'),sourceId:quote.id,sourceQuotationId:quote.id,rootId:quote.id,serviceIndex:index,serviceName,billingMode:'service-upfront',status:'Draft',date:now.slice(0,10),due:now.slice(0,10),payments:[],projectValue:serviceValue(quote,item,index),advanceAmount:0,updated:now,items:[{...JSON.parse(JSON.stringify(item)),rate:values[index]/quantity,rateText:''}],terms:`Full payment is due before work begins for ${serviceName}. This is a final invoice, not a proforma advance request.\n${quote.business?.invoiceTerms||state.settings?.invoiceTerms||'Thank you for choosing Eric’s Designs.'}`};
+  delete invoice.portalToken;delete invoice.acceptedAt;delete invoice.clientApprovedForProcess;delete invoice.workCompletedAt;delete invoice.advancePercent;delete invoice.serviceBillingAllocations;
+  state.documents.push(invoice);created.push(invoice);
+ }
+ if(combined){combined.status='Cancelled';combined.cancelledAt=now;combined.cancelReason='Replaced by separate full-payment service invoices';combined.updated=now}
+ return created;
+}
 function totalsForEngine(document){const subtotal=(document.items||[]).reduce((sum,item)=>sum+Number(item.proformaAmount??(Number(item.qty||0)*Number(item.rate||0))),0),net=subtotal*(1-Number(document.discount||0)/100);return Math.round(net*(1+Number(document.tax||0)/100)*100)/100}
-if(typeof module!=='undefined')module.exports={prepare,prepareServiceProformas,prepareServiceInvoice,prepareCompletedServiceInvoice,serviceValue,serviceProgressStage,isSequentialStepBlocked,resolveClient};else root.ClientProcessEngine={prepare,prepareServiceProformas,prepareServiceInvoice,prepareCompletedServiceInvoice,serviceValue,serviceProgressStage,isSequentialStepBlocked,resolveClient};
+if(typeof module!=='undefined')module.exports={prepare,prepareServiceProformas,prepareServiceInvoice,prepareCompletedServiceInvoice,prepareUpfrontServiceInvoices,serviceValue,serviceProgressStage,isSequentialStepBlocked,resolveClient};else root.ClientProcessEngine={prepare,prepareServiceProformas,prepareServiceInvoice,prepareCompletedServiceInvoice,prepareUpfrontServiceInvoices,serviceValue,serviceProgressStage,isSequentialStepBlocked,resolveClient};
 })(typeof window!=='undefined'?window:globalThis);
