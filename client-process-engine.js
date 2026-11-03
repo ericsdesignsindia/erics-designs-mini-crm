@@ -31,10 +31,9 @@ function serviceProgressStage(quote,documents,totals){
  return 3;
 }
 function isSequentialStepBlocked(project,task){
- if(!project||!task)return false;
- const tasks=(project.tasks||[]).map((entry,index)=>({entry,index,order:Number(entry.sequence)||Number(entry.serviceIndex??index)+1}));
- const current=tasks.find(item=>item.entry.id===task.id);
- return !!current&&tasks.some(item=>item.order<current.order&&!item.entry.done);
+ // Service delivery is independent across all projects. Keep this legacy
+ // helper exported for older callers, but never gate one service on another.
+ return false;
 }
 function resolveClient(clients,quotation){
  const records=Array.isArray(clients)?clients:[],snapshot=quotation?.client||{},recordId=String(quotation?.clientId||snapshot.id||'').trim();
