@@ -1460,3 +1460,87 @@ body.ea360-interface[data-theme="light"] #app :is(input, select, textarea) { col
     overflow-wrap: normal !important;
   }
 }
+
+/* Mobile shell: keep the brand and command bar pinned while the document scrolls. */
+@media (max-width: 720px) {
+  html:has(body.ea360-interface) {
+    height: auto !important;
+    min-height: 100% !important;
+    overflow-x: clip !important;
+    overflow-y: auto !important;
+    scroll-padding-top: calc(112px + env(safe-area-inset-top)) !important;
+  }
+
+  body.ea360-interface {
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow-x: clip !important;
+    overflow-y: visible !important;
+    overscroll-behavior-y: auto !important;
+  }
+
+  body.ea360-interface .shell,
+  body.ea360-interface .shell.sidebar-collapsed {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow: visible !important;
+  }
+
+  body.ea360-interface .shell > aside {
+    position: -webkit-sticky !important;
+    position: sticky !important;
+    top: 0 !important;
+    inset: auto 0 auto !important;
+    z-index: 190 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  body.ea360-interface .shell > main {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: calc(100dvh - 100px) !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  body.ea360-interface .shell > main > #commandBar {
+    position: -webkit-sticky !important;
+    position: sticky !important;
+    top: calc(42px + env(safe-area-inset-top)) !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    z-index: 180 !important;
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    margin: 4px -14px 10px !important;
+    transform: none !important;
+    scroll-margin-top: calc(112px + env(safe-area-inset-top)) !important;
+  }
+
+  body.ea360-interface #app {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    overflow: visible !important;
+  }
+
+  body.ea360-interface #mobileNav {
+    position: fixed !important;
+    inset: auto 10px calc(8px + env(safe-area-inset-bottom)) !important;
+    z-index: 200 !important;
+  }
+
+  body.ea360-interface .shell > main {
+    padding-bottom: calc(132px + env(safe-area-inset-bottom)) !important;
+  }
+}
