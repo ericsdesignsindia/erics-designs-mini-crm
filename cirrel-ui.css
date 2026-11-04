@@ -1468,7 +1468,7 @@ body.ea360-interface[data-theme="light"] #app :is(input, select, textarea) { col
     min-height: 100% !important;
     overflow-x: clip !important;
     overflow-y: auto !important;
-    scroll-padding-top: calc(112px + env(safe-area-inset-top)) !important;
+    scroll-padding-top: calc(148px + env(safe-area-inset-top)) !important;
   }
 
   body.ea360-interface {
@@ -1514,7 +1514,9 @@ body.ea360-interface[data-theme="light"] #app :is(input, select, textarea) { col
   body.ea360-interface .shell > main > #commandBar {
     position: -webkit-sticky !important;
     position: sticky !important;
-    top: calc(42px + env(safe-area-inset-top)) !important;
+    /* The brand strip is 50px tall before the device safe area. Keep the
+       toolbar directly below it instead of letting the two sticky layers overlap. */
+    top: calc(54px + env(safe-area-inset-top)) !important;
     right: auto !important;
     bottom: auto !important;
     left: auto !important;
@@ -1524,7 +1526,7 @@ body.ea360-interface[data-theme="light"] #app :is(input, select, textarea) { col
     min-width: 0 !important;
     margin: 4px -14px 10px !important;
     transform: none !important;
-    scroll-margin-top: calc(112px + env(safe-area-inset-top)) !important;
+    scroll-margin-top: calc(148px + env(safe-area-inset-top)) !important;
   }
 
   body.ea360-interface #app {
@@ -1536,8 +1538,18 @@ body.ea360-interface[data-theme="light"] #app :is(input, select, textarea) { col
 
   body.ea360-interface #mobileNav {
     position: fixed !important;
-    inset: auto 10px calc(8px + env(safe-area-inset-bottom)) !important;
+    top: auto !important;
+    right: 12px !important;
+    bottom: calc(8px + env(safe-area-inset-bottom)) !important;
+    left: 12px !important;
     z-index: 200 !important;
+    box-sizing: border-box !important;
+    width: calc(100% - 24px) !important;
+    max-width: none !important;
+    margin: 0 !important;
+    transform: none !important;
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    overflow: visible !important;
   }
 
   body.ea360-interface .shell > main {
