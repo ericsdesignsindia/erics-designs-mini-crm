@@ -16,8 +16,8 @@
   const periodDays={Weekly:7,Monthly:30,Quarterly:90};
   const dashboardName=()=>{
     const name=String(window.crmCurrentUser?.username||window.crmCurrentUser?.displayName||'').trim();
-    if(!name)return 'Eric';
-    return crmAdminDisplayName(name)||'Eric';
+    if(!name)return 'Eric Rodgers';
+    return crmAdminDisplayName(name)||'Eric Rodgers';
   };
   const currentPeriod=()=>periodDays[window.crmHomePeriod]?window.crmHomePeriod:'Weekly';
   const projectDate=project=>project.updatedAt||project.updated||project.createdAt||project.created||'';
