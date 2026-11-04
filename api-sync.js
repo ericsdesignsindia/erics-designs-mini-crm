@@ -14,6 +14,7 @@ let erpRetryTimer;
 let erpOnline = false;
 let erpDirty = localStorage.getItem(ERP_DIRTY_KEY) === '1';
 let erpConflict = false;
+window.crmCurrentUser = null;
 // A remembered device keeps only the expiring access token; the password is never stored by the CRM.
 let erpToken = localStorage.getItem(ERP_TOKEN_KEY) || '';
 
@@ -165,6 +166,12 @@ async function loadWorkspace() {
   }
   try {
     await api('/health');
+    try {
+      window.crmCurrentUser = await api('/admin/me');
+    } catch (identityError) {
+      if (identityError.status === 401) throw identityError;
+      window.crmCurrentUser = null;
+    }
     let remote = await api(`/workspaces/${ERP_WORKSPACE}`);
     if (erpDirty) {
       const localRevision = Number.isInteger(erpRevision) ? erpRevision : Number(localStorage.getItem(ERP_REVISION_KEY));
