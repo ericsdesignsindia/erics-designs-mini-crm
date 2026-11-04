@@ -1578,7 +1578,7 @@ nav=function(name){if(name==='Jarvis'){showJarvisAssistant();return}navWithJarvi
 
 /* Local-time greeting: keeps the dashboard in step with the device clock. */
 function crmGreeting(date=new Date()){const hour=date.getHours();if(hour>=22||hour<5)return 'Good night';if(hour<12)return 'Good morning';if(hour<18)return 'Good afternoon';return 'Good evening'}
-function crmAdminDisplayName(username){const value=String(username||'').trim();const key=value.toLowerCase().replace(/[^a-z0-9]/g,'');if(key==='ericrodgers555')return 'Eric Rodgers';if(key==='tanishka'||key==='tanishkaalphonso'||key.includes('tanishka'))return 'Tanishka Alphonso';return value.replace(/[._-]+/g,' ').split(/\s+/).filter(Boolean).map(part=>part.charAt(0).toUpperCase()+part.slice(1)).join(' ')}
+function crmAdminDisplayName(username){const value=String(username||'').trim();const key=value.toLowerCase().replace(/[^a-z0-9]/g,'');if(key==='eric'||key.startsWith('ericrodgers'))return 'Eric Rodgers';if(key==='tanishka'||key==='tanishkaalphonso'||key.includes('tanishka'))return 'Tanishka Alphonso';return value.replace(/[._-]+/g,' ').split(/\s+/).filter(Boolean).map(part=>part.charAt(0).toUpperCase()+part.slice(1)).join(' ')}
 
 /* WhatsApp Business connection status in Settings. */
 async function refreshWhatsAppStatus(){const el=document.getElementById('whatsappStatus');if(!el)return;try{const status=await erpApi.whatsappStatus();el.textContent=status.configured?`Connected to WhatsApp Business phone ${status.phoneNumberId}. Invoice PDFs can be sent directly.`:'Setup needed. Add your WhatsApp Business API credentials in Render.'}catch(error){el.textContent='Sign in as the owner to check WhatsApp Business status.'}}

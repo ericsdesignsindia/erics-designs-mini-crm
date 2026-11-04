@@ -6,7 +6,7 @@
   const crmAdminDisplayName=username=>{
     const value=String(username||'').trim();
     const key=value.toLowerCase().replace(/[^a-z0-9]/g,'');
-    if(key==='ericrodgers555')return 'Eric Rodgers';
+    if(key==='eric'||key.startsWith('ericrodgers'))return 'Eric Rodgers';
     if(key==='tanishka'||key==='tanishkaalphonso'||key.includes('tanishka'))return 'Tanishka Alphonso';
     return value.replace(/[._-]+/g,' ').split(/\s+/).filter(Boolean).map(part=>part.charAt(0).toUpperCase()+part.slice(1)).join(' ');
   };
