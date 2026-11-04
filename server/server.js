@@ -33,6 +33,7 @@ const backupSecretFile = path.join(__dirname, '..', '.backup-secret');
 const frontendUrl = String(process.env.FRONTEND_URL || 'https://ericsdesignsindia.github.io/erics-designs-mini-crm/').replace(/\/?$/, '/');
 const googleRedirectUri = process.env.GOOGLE_REDIRECT_URI || `http://localhost:${port}/api/integrations/google-drive/callback`;
 const gmailRedirectUri = process.env.GMAIL_REDIRECT_URI || `http://localhost:${port}/api/integrations/gmail/callback`;
+const metaAdsRedirectUri = process.env.META_ADS_REDIRECT_URI || `https://erics-designs-mini-crm.onrender.com/api/integrations/meta-ads/callback`;
 const jwtSecret = process.env.JWT_SECRET || (fs.existsSync(secretFile)
   ? fs.readFileSync(secretFile, 'utf8').trim()
   : (() => { const secret = randomUUID() + randomUUID(); fs.writeFileSync(secretFile, secret, { mode: 0o600 }); return secret; })());
@@ -70,6 +71,11 @@ const gmailIntegrationSchema = new mongoose.Schema({
   accountEmail: { type: String, trim: true }, tokenCiphertext: { type: String, required: true }, connectedAt: { type: Date, default: Date.now }, updatedAt: { type: Date, default: Date.now }
 }, { versionKey: false });
 const GmailIntegration = mongoose.model('GmailIntegration', gmailIntegrationSchema);
+const metaAdsIntegrationSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, required: true, unique: true, index: true },
+  accountName: { type: String, trim: true }, tokenCiphertext: { type: String, required: true }, connectedAt: { type: Date, default: Date.now }, updatedAt: { type: Date, default: Date.now }
+}, { versionKey: false });
+const MetaAdsIntegration = mongoose.model('MetaAdsIntegration', metaAdsIntegrationSchema);
 const backupSchema = new mongoose.Schema({
   workspaceId: { type: String, required: true, index: true },
   reason: { type: String, default: 'automatic daily restore point' },
@@ -365,6 +371,44 @@ function metaLeadConfig() {
   return { configured: Boolean(process.env.META_VERIFY_TOKEN && process.env.META_APP_SECRET && process.env.META_PAGE_ACCESS_TOKEN) };
 }
 
+function metaAdsConfig() {
+  return { configured: Boolean(process.env.META_APP_SECRET && process.env.GOOGLE_TOKEN_ENCRYPTION_KEY), redirectUri: metaAdsRedirectUri };
+}
+
+async function metaAdsRequest(url, token) {
+  const target = new URL(url);
+  target.searchParams.set('access_token', token);
+  const response = await fetch(target);
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok || result.error) {
+    const error = new Error(result?.error?.message || 'Meta Ads could not return campaign data.');
+    error.status = response.status || 502;
+    throw error;
+  }
+  return result;
+}
+
+async function metaAdsPages(url, token, maxPages = 3) {
+  const rows = [];
+  let next = url;
+  for (let page = 0; next && page < maxPages; page++) {
+    const result = await metaAdsRequest(next, token);
+    rows.push(...(Array.isArray(result.data) ? result.data : []));
+    next = result.paging?.next || '';
+  }
+  return rows;
+}
+
+async function metaAdsToken(userId) {
+  const integration = await MetaAdsIntegration.findOne({ userId });
+  if (!integration) { const error = new Error('Connect Meta Ads in Settings before syncing campaigns.'); error.status = 409; throw error; }
+  const tokens = decryptIntegration(integration.tokenCiphertext);
+  if (!tokens.access_token || (tokens.expiry_date && Number(tokens.expiry_date) <= Date.now() + 60000)) {
+    const error = new Error('The Meta Ads connection expired. Reconnect Meta Ads in Settings.'); error.status = 401; throw error;
+  }
+  return tokens.access_token;
+}
+
 async function metaPageSubscription() {
   if (!process.env.META_PAGE_ACCESS_TOKEN) return false;
   const appId = String(process.env.META_APP_ID || '1428706729188935');
@@ -609,6 +653,80 @@ app.get('/api/integrations/meta-leads/status', requireAuth, requireOwner, async 
     const configured = metaLeadConfig().configured;
     return res.json({ configured, pageConnected: configured ? await metaPageSubscription() : false, webhookUrl: `${baseUrl}/api/integrations/meta-leads/webhook` });
   } catch (error) { return next(error); }
+});
+
+app.get('/api/integrations/meta-ads/status', requireAuth, requireOwner, async (req, res, next) => {
+  try {
+    const config = metaAdsConfig();
+    const integration = await MetaAdsIntegration.findOne({ userId: req.user.sub }).lean();
+    return res.json({ configured: config.configured, connected: Boolean(integration), accountName: integration?.accountName || '', redirectUri: config.redirectUri, lastConnectedAt: integration?.connectedAt || null });
+  } catch (error) { return next(error); }
+});
+
+app.post('/api/integrations/meta-ads/connect', requireAuth, requireOwner, async (req, res, next) => {
+  try {
+    const config = metaAdsConfig();
+    if (!config.configured) return res.status(503).json({ error: 'Meta Ads connection setup is incomplete. Add the Meta app secret and token encryption settings on Render first.' });
+    const state = jwt.sign({ purpose: 'meta-ads', sub: req.user.sub }, jwtSecret, { expiresIn: '10m' });
+    const version = String(process.env.META_GRAPH_VERSION || 'v26.0');
+    const params = new URLSearchParams({ client_id: process.env.META_APP_ID || '1428706729188935', redirect_uri: config.redirectUri, response_type: 'code', scope: 'ads_read,read_insights', state });
+    return res.json({ authorizationUrl: `https://www.facebook.com/${version}/dialog/oauth?${params}` });
+  } catch (error) { return next(error); }
+});
+
+app.get('/api/integrations/meta-ads/callback', async (req, res) => {
+  const done = (status, message) => res.redirect(`${frontendUrl}?metaAds=${encodeURIComponent(status)}&message=${encodeURIComponent(message)}`);
+  try {
+    if (req.query.error) return done('denied', 'Meta Ads access was not granted.');
+    const state = jwt.verify(String(req.query.state || ''), jwtSecret);
+    if (state.purpose !== 'meta-ads' || !req.query.code) return done('error', 'The Meta Ads connection link is invalid or expired.');
+    const config = metaAdsConfig();
+    if (!config.configured) return done('error', 'Meta Ads is not configured on the server.');
+    const version = String(process.env.META_GRAPH_VERSION || 'v26.0');
+    const tokenUrl = new URL(`https://graph.facebook.com/${version}/oauth/access_token`);
+    tokenUrl.search = new URLSearchParams({ client_id: process.env.META_APP_ID || '1428706729188935', client_secret: process.env.META_APP_SECRET, redirect_uri: config.redirectUri, code: String(req.query.code) }).toString();
+    const tokenResponse = await fetch(tokenUrl);
+    const shortToken = await tokenResponse.json().catch(() => ({}));
+    if (!tokenResponse.ok || !shortToken.access_token) return done('error', shortToken?.error?.message || 'Meta could not complete the Ads connection.');
+    let tokens = { ...shortToken, expiry_date: Date.now() + Number(shortToken.expires_in || 3600) * 1000 };
+    const exchangeUrl = new URL(`https://graph.facebook.com/${version}/oauth/access_token`);
+    exchangeUrl.search = new URLSearchParams({ grant_type: 'fb_exchange_token', client_id: process.env.META_APP_ID || '1428706729188935', client_secret: process.env.META_APP_SECRET, fb_exchange_token: shortToken.access_token }).toString();
+    const exchangeResponse = await fetch(exchangeUrl);
+    const extended = await exchangeResponse.json().catch(() => ({}));
+    if (exchangeResponse.ok && extended.access_token) tokens = { ...extended, expiry_date: Date.now() + Number(extended.expires_in || 5184000) * 1000 };
+    const profile = await metaAdsRequest(`https://graph.facebook.com/${version}/me?fields=id,name`, tokens.access_token);
+    await MetaAdsIntegration.findOneAndUpdate({ userId: state.sub }, { userId: state.sub, accountName: String(profile.name || ''), tokenCiphertext: encryptIntegration(tokens), connectedAt: new Date(), updatedAt: new Date() }, { upsert: true, new: true, runValidators: true });
+    return done('connected', 'Meta Ads is connected. You can now sync campaign reporting in Marketing.');
+  } catch (_error) { return done('error', 'Meta Ads could not be connected. Check the Meta app callback settings and try again.'); }
+});
+
+app.post('/api/integrations/meta-ads/sync', requireAuth, requireOwner, async (req, res, next) => {
+  try {
+    const token = await metaAdsToken(req.user.sub);
+    const version = String(process.env.META_GRAPH_VERSION || 'v26.0');
+    const accounts = await metaAdsPages(`https://graph.facebook.com/${version}/me/adaccounts?fields=id,name,account_status,currency,timezone_name&limit=100`, token, 5);
+    const results = [];
+    for (const account of accounts) {
+      const accountId = String(account.id || '');
+      if (!/^act_\d+$/.test(accountId)) continue;
+      const [campaigns, insights] = await Promise.all([
+        metaAdsPages(`https://graph.facebook.com/${version}/${encodeURIComponent(accountId)}/campaigns?fields=id,name,status,effective_status,objective,daily_budget,lifetime_budget&limit=100`, token, 5),
+        metaAdsPages(`https://graph.facebook.com/${version}/${encodeURIComponent(accountId)}/insights?level=campaign&date_preset=last_30d&fields=campaign_id,campaign_name,spend,impressions,clicks,actions&limit=500`, token, 5)
+      ]);
+      const insightByCampaign = new Map(insights.map(item => [String(item.campaign_id || ''), item]));
+      results.push({ accountId, name: String(account.name || 'Meta Ads account'), currency: String(account.currency || 'INR'), accountStatus: Number(account.account_status || 0), campaigns: campaigns.map(campaign => {
+        const insight = insightByCampaign.get(String(campaign.id)) || {};
+        const actions = Array.isArray(insight.actions) ? insight.actions : [];
+        const leadAction = actions.find(action => ['lead', 'onsite_conversion.lead_grouped', 'offsite_conversion.fb_pixel_lead'].includes(String(action.action_type || '').toLowerCase()));
+        return { id: String(campaign.id), name: String(campaign.name || 'Untitled campaign'), status: String(campaign.effective_status || campaign.status || 'UNKNOWN'), objective: String(campaign.objective || ''), dailyBudget: Number(campaign.daily_budget || 0) / 100, lifetimeBudget: Number(campaign.lifetime_budget || 0) / 100, spend: Number(insight.spend || 0), impressions: Number(insight.impressions || 0), clicks: Number(insight.clicks || 0), leads: Number(leadAction?.value || 0) };
+      }) });
+    }
+    return res.json({ accounts: results, period: 'last_30d', syncedAt: new Date().toISOString() });
+  } catch (error) { return next(error); }
+});
+
+app.delete('/api/integrations/meta-ads', requireAuth, requireOwner, async (req, res, next) => {
+  try { await MetaAdsIntegration.deleteOne({ userId: req.user.sub }); return res.json({ ok: true }); } catch (error) { return next(error); }
 });
 
 app.post('/api/integrations/meta-leads/subscribe-page', requireAuth, requireOwner, async (_req, res, next) => {

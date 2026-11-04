@@ -20,5 +20,13 @@ services:
         value: https://erics-designs-mini-crm.onrender.com/api/integrations/google-drive/callback
       - key: GOOGLE_TOKEN_ENCRYPTION_KEY
         generateValue: true
+      - key: META_APP_ID
+        value: 1428706729188935
+      - key: META_APP_SECRET
+        sync: false
+      - key: META_ADS_REDIRECT_URI
+        value: https://erics-designs-mini-crm.onrender.com/api/integrations/meta-ads/callback
+      - key: META_GRAPH_VERSION
+        value: v26.0
       - key: FRONTEND_URL
         value: https://ericsdesignsindia.github.io/erics-designs-mini-crm/
