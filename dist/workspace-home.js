@@ -3,13 +3,21 @@
 /* Live delivery-first Overview inspired by the project dashboard reference. */
 (()=>{
   const escv=value=>typeof esc==='function'?esc(String(value??'')):String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+  const crmAdminDisplayName=username=>{
+    const value=String(username||'').trim();
+    const key=value.toLowerCase().replace(/[^a-z0-9]/g,'');
+    if(key==='ericrodgers555')return 'Eric Rodgers';
+    if(key==='tanishka'||key==='tanishkaalphonso'||key.includes('tanishka'))return 'Tanishka Alphonso';
+    return value.replace(/[._-]+/g,' ').split(/\s+/).filter(Boolean).map(part=>part.charAt(0).toUpperCase()+part.slice(1)).join(' ');
+  };
+  window.crmAdminDisplayName=crmAdminDisplayName;
   const dateOf=value=>{if(!value)return null;const date=new Date(value);return Number.isNaN(date.getTime())?null:date};
   const localDay=()=>{const value=new Date();value.setHours(0,0,0,0);return value};
   const periodDays={Weekly:7,Monthly:30,Quarterly:90};
   const dashboardName=()=>{
     const name=String(window.crmCurrentUser?.displayName||window.crmCurrentUser?.username||'').trim();
     if(!name)return 'Eric';
-    return name.replace(/[._-]+/g,' ').split(/\s+/).filter(Boolean).map(part=>part.charAt(0).toUpperCase()+part.slice(1)).join(' ')||'Eric';
+    return crmAdminDisplayName(name)||'Eric';
   };
   const currentPeriod=()=>periodDays[window.crmHomePeriod]?window.crmHomePeriod:'Weekly';
   const projectDate=project=>project.updatedAt||project.updated||project.createdAt||project.created||'';
