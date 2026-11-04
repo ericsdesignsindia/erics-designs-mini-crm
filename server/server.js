@@ -372,7 +372,10 @@ function metaLeadConfig() {
 }
 
 function metaAdsConfig() {
-  return { configured: Boolean(process.env.META_APP_SECRET && process.env.GOOGLE_TOKEN_ENCRYPTION_KEY), redirectUri: metaAdsRedirectUri };
+  const missing = [];
+  if (!process.env.META_APP_SECRET) missing.push('META_APP_SECRET');
+  if (!process.env.GOOGLE_TOKEN_ENCRYPTION_KEY) missing.push('GOOGLE_TOKEN_ENCRYPTION_KEY');
+  return { configured: missing.length === 0, missing, redirectUri: metaAdsRedirectUri };
 }
 
 async function metaAdsRequest(url, token) {
@@ -659,14 +662,14 @@ app.get('/api/integrations/meta-ads/status', requireAuth, requireOwner, async (r
   try {
     const config = metaAdsConfig();
     const integration = await MetaAdsIntegration.findOne({ userId: req.user.sub }).lean();
-    return res.json({ configured: config.configured, connected: Boolean(integration), accountName: integration?.accountName || '', redirectUri: config.redirectUri, lastConnectedAt: integration?.connectedAt || null });
+    return res.json({ configured: config.configured, missing: config.missing, connected: Boolean(integration), accountName: integration?.accountName || '', redirectUri: config.redirectUri, lastConnectedAt: integration?.connectedAt || null });
   } catch (error) { return next(error); }
 });
 
 app.post('/api/integrations/meta-ads/connect', requireAuth, requireOwner, async (req, res, next) => {
   try {
     const config = metaAdsConfig();
-    if (!config.configured) return res.status(503).json({ error: 'Meta Ads connection setup is incomplete. Add the Meta app secret and token encryption settings on Render first.' });
+    if (!config.configured) return res.status(503).json({ error: `Meta Ads connection setup is incomplete on Render. Missing settings: ${config.missing.join(', ')}.` });
     const state = jwt.sign({ purpose: 'meta-ads', sub: req.user.sub }, jwtSecret, { expiresIn: '10m' });
     const version = String(process.env.META_GRAPH_VERSION || 'v26.0');
     const params = new URLSearchParams({ client_id: process.env.META_APP_ID || '1428706729188935', redirect_uri: config.redirectUri, response_type: 'code', scope: 'ads_read,read_insights', state });
