@@ -89,6 +89,15 @@ function prepareBundledServiceProforma(state,quote,indices,uuid,now=new Date().t
  for(const entry of selected)if(entry.existing){entry.existing.status='Cancelled';entry.existing.cancelledAt=now;entry.existing.cancelReason=`Replaced by combined Proforma ${p.number}`;entry.existing.replacedByDocumentId=id;entry.existing.updated=now;}
  state.documents.push(p);return p;
 }
+function replaceUnpaidServiceInvoiceWithProforma(state,quote,invoice,uuid,now=new Date().toISOString()){
+ if(!invoice||invoice.type!=='Invoice'||invoice.status==='Cancelled'||invoice.rootId!==quote?.id||quote.status!=='Accepted'||!quote.contractConfirmedAt||quote.billingMode!=='service-wise')return null;
+ const indices=[...new Set((invoice.serviceIndices||[]).map(Number))].sort((a,b)=>a-b),paid=(invoice.payments||[]).reduce((sum,payment)=>sum+Number(payment.amount||0),0);
+ if(indices.length<2||paid>0||invoice.status==='Paid'||totalsForEngine(invoice)<=0)return null;
+ const original=JSON.parse(JSON.stringify(invoice));invoice.status='Cancelled';invoice.cancelledAt=now;invoice.cancelReason='Replaced by combined advance Proforma';invoice.updated=now;
+ const proforma=prepareBundledServiceProforma(state,quote,indices,uuid,now);
+ if(!proforma){for(const key of Object.keys(invoice))delete invoice[key];Object.assign(invoice,original);return null;}
+ invoice.replacedByProformaId=proforma.id;return proforma;
+}
 function prepareServiceInvoice(state,quote,proforma,uuid,now=new Date().toISOString()){
  if(!proforma||proforma.type!=='Proforma'||proforma.rootId!==quote.id||proforma.status==='Cancelled')return null;
  const bundledIndices=Array.isArray(proforma.serviceIndices)?[...new Set(proforma.serviceIndices.map(Number))].sort((a,b)=>a-b):[];
@@ -141,5 +150,5 @@ function prepareUpfrontServiceInvoices(state,quote,uuid,now=new Date().toISOStri
  return created;
 }
 function totalsForEngine(document){const subtotal=(document.items||[]).reduce((sum,item)=>sum+Number(item.proformaAmount??(Number(item.qty||0)*Number(item.rate||0))),0),net=subtotal*(1-Number(document.discount||0)/100);return Math.round(net*(1+Number(document.tax||0)/100)*100)/100}
-if(typeof module!=='undefined')module.exports={prepare,prepareServiceProformas,prepareBundledServiceProforma,prepareServiceInvoice,prepareCompletedServiceInvoice,prepareUpfrontServiceInvoices,serviceValue,serviceProgressStage,isSequentialStepBlocked,resolveClient};else root.ClientProcessEngine={prepare,prepareServiceProformas,prepareBundledServiceProforma,prepareServiceInvoice,prepareCompletedServiceInvoice,prepareUpfrontServiceInvoices,serviceValue,serviceProgressStage,isSequentialStepBlocked,resolveClient};
+if(typeof module!=='undefined')module.exports={prepare,prepareServiceProformas,prepareBundledServiceProforma,replaceUnpaidServiceInvoiceWithProforma,prepareServiceInvoice,prepareCompletedServiceInvoice,prepareUpfrontServiceInvoices,serviceValue,serviceProgressStage,isSequentialStepBlocked,resolveClient};else root.ClientProcessEngine={prepare,prepareServiceProformas,prepareBundledServiceProforma,replaceUnpaidServiceInvoiceWithProforma,prepareServiceInvoice,prepareCompletedServiceInvoice,prepareUpfrontServiceInvoices,serviceValue,serviceProgressStage,isSequentialStepBlocked,resolveClient};
 })(typeof window!=='undefined'?window:globalThis);
