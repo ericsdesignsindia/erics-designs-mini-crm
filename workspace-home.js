@@ -15,7 +15,7 @@
   const localDay=()=>{const value=new Date();value.setHours(0,0,0,0);return value};
   const periodDays={Weekly:7,Monthly:30,Quarterly:90};
   const dashboardName=()=>{
-    const name=String(window.crmCurrentUser?.displayName||window.crmCurrentUser?.username||'').trim();
+    const name=String(window.crmCurrentUser?.username||window.crmCurrentUser?.displayName||'').trim();
     if(!name)return 'Eric';
     return crmAdminDisplayName(name)||'Eric';
   };
