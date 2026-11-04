@@ -26,6 +26,7 @@ const origins = [...new Set([
   ...configuredOrigins,
   'https://ericsdesignsindia.github.io',
   'https://erics-designs-mini-crm.onrender.com',
+  'https://crm.ericsdesigns.in',
   'capacitor://localhost', 'ionic://localhost', 'http://localhost', 'https://localhost'
 ])];
 const secretFile = path.join(__dirname, '..', '.auth-secret');
@@ -33,7 +34,12 @@ const backupSecretFile = path.join(__dirname, '..', '.backup-secret');
 const frontendUrl = String(process.env.FRONTEND_URL || 'https://ericsdesignsindia.github.io/erics-designs-mini-crm/').replace(/\/?$/, '/');
 const googleRedirectUri = process.env.GOOGLE_REDIRECT_URI || `http://localhost:${port}/api/integrations/google-drive/callback`;
 const gmailRedirectUri = process.env.GMAIL_REDIRECT_URI || `http://localhost:${port}/api/integrations/gmail/callback`;
-const metaAdsRedirectUri = process.env.META_ADS_REDIRECT_URI || `https://erics-designs-mini-crm.onrender.com/api/integrations/meta-ads/callback`;
+const defaultMetaAdsRedirectUri = 'https://crm.ericsdesigns.in/api/integrations/meta-ads/callback';
+const configuredMetaAdsRedirectUri = String(process.env.META_ADS_REDIRECT_URI || '').trim();
+// Migrate the previous Render hostname to the verified first-party CRM domain.
+const metaAdsRedirectUri = !configuredMetaAdsRedirectUri || configuredMetaAdsRedirectUri.includes('erics-designs-mini-crm.onrender.com')
+  ? defaultMetaAdsRedirectUri
+  : configuredMetaAdsRedirectUri;
 const jwtSecret = process.env.JWT_SECRET || (fs.existsSync(secretFile)
   ? fs.readFileSync(secretFile, 'utf8').trim()
   : (() => { const secret = randomUUID() + randomUUID(); fs.writeFileSync(secretFile, secret, { mode: 0o600 }); return secret; })());

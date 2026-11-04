@@ -11,7 +11,7 @@ services:
       - key: BACKUP_ENCRYPTION_KEY
         generateValue: true
       - key: ALLOWED_ORIGINS
-        value: https://ericsdesignsindia.github.io,capacitor://localhost,ionic://localhost,http://localhost,https://localhost
+        value: https://ericsdesignsindia.github.io,https://crm.ericsdesigns.in,capacitor://localhost,ionic://localhost,http://localhost,https://localhost
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
@@ -25,7 +25,7 @@ services:
       - key: META_APP_SECRET
         sync: false
       - key: META_ADS_REDIRECT_URI
-        value: https://erics-designs-mini-crm.onrender.com/api/integrations/meta-ads/callback
+        value: https://crm.ericsdesigns.in/api/integrations/meta-ads/callback
       - key: META_GRAPH_VERSION
         value: v26.0
       - key: FRONTEND_URL
