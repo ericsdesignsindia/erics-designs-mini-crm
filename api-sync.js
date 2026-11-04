@@ -16,7 +16,10 @@ let erpDirty = localStorage.getItem(ERP_DIRTY_KEY) === '1';
 let erpConflict = false;
 window.crmCurrentUser = null;
 // A remembered device keeps only the expiring access token; the password is never stored by the CRM.
-let erpToken = localStorage.getItem(ERP_TOKEN_KEY) || '';
+let erpToken = localStorage.getItem(ERP_TOKEN_KEY) || sessionStorage.getItem(ERP_TOKEN_KEY) || '';
+// A short-lived sessionStorage handoff keeps a remembered or current login
+// alive when an automatically detected release reloads this tab.
+sessionStorage.removeItem(ERP_TOKEN_KEY);
 
 function setErpStatus(text, online) {
   erpOnline = online;
@@ -117,7 +120,7 @@ window.erpApi = {
   connectGoogleDrive: () => api('/integrations/google-drive/connect', { method: 'POST' }),
   disconnectGoogleDrive: () => api('/integrations/google-drive', { method: 'DELETE' })
 };
-window.erpAuth = { logout: () => { erpToken = ''; localStorage.removeItem(ERP_TOKEN_KEY); location.reload(); }, login: () => { erpToken = ''; showAuth(); } };
+window.erpAuth = { logout: () => { erpToken = ''; localStorage.removeItem(ERP_TOKEN_KEY); sessionStorage.removeItem(ERP_TOKEN_KEY); location.reload(); }, login: () => { erpToken = ''; showAuth(); } };
 
 function rememberRevision() { if (Number.isInteger(erpRevision)) localStorage.setItem(ERP_REVISION_KEY, String(erpRevision)); }
 function scheduleSyncRetry() {
@@ -126,7 +129,7 @@ function scheduleSyncRetry() {
   erpRetryTimer = setTimeout(() => pushWorkspace(), 20 * 1000);
 }
 function markUnsynced() { erpDirty = true; localStorage.setItem(ERP_DIRTY_KEY, '1'); scheduleSyncRetry(); }
-function markSynced() { erpDirty = false; erpConflict = false; clearTimeout(erpRetryTimer); localStorage.removeItem(ERP_DIRTY_KEY); rememberRevision(); }
+function markSynced() { erpDirty = false; erpConflict = false; clearTimeout(erpRetryTimer); localStorage.removeItem(ERP_DIRTY_KEY); rememberRevision(); applyCRMReleaseWhenSafe?.(); }
 
 async function pushWorkspace() {
   if (erpConflict) return false;
@@ -266,7 +269,68 @@ function startWorkspaceAutoRefresh() {
 }
 
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) refreshWorkspaceIfChanged();
+  if (!document.hidden) {
+    refreshWorkspaceIfChanged();
+    checkForCRMRelease();
+  }
+});
+
+// The cloud workspace timer above refreshes records. This separate, lightweight
+// check detects newly deployed app code and refreshes this tab once it is safe.
+const CRM_RELEASE_CHECK_MS = 15 * 1000;
+let crmReleaseId = '';
+let crmReleasePending = false;
+let crmReleaseNoticeShown = false;
+let crmReleaseCheckInFlight = false;
+
+async function checkForCRMRelease() {
+  if (crmReleaseCheckInFlight || document.hidden) return;
+  crmReleaseCheckInFlight = true;
+  try {
+    const response = await fetch(`./crm-build.json?check=${Date.now()}`, {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache' }
+    });
+    if (!response.ok) return;
+    const release = await response.json();
+    if (!release.id) return;
+    if (!crmReleaseId) {
+      crmReleaseId = release.id;
+      return;
+    }
+    if (release.id !== crmReleaseId) {
+      crmReleasePending = true;
+      applyCRMReleaseWhenSafe();
+    }
+  } catch (_) {
+    // Temporary network failures should not interrupt CRM work.
+  } finally {
+    crmReleaseCheckInFlight = false;
+  }
+}
+
+function applyCRMReleaseWhenSafe() {
+  if (!crmReleasePending || document.hidden) return;
+  const editing = typeof recordDraft !== 'undefined' && !!recordDraft;
+  const modalOpen = !!document.querySelector('dialog[open]');
+  if (editing || modalOpen || erpDirty || erpConflict) {
+    if (!crmReleaseNoticeShown) {
+      if (typeof toast === 'function') toast('A CRM update is ready. Save or close your current work to apply it.');
+      crmReleaseNoticeShown = true;
+    }
+    return;
+  }
+  if (erpToken) sessionStorage.setItem(ERP_TOKEN_KEY, erpToken);
+  location.reload();
+}
+
+setInterval(checkForCRMRelease, CRM_RELEASE_CHECK_MS);
+document.addEventListener('DOMContentLoaded', checkForCRMRelease, { once: true });
+document.addEventListener('erp-workspace-loaded', applyCRMReleaseWhenSafe);
+document.addEventListener('close', applyCRMReleaseWhenSafe, true);
+window.addEventListener('focus', () => {
+  checkForCRMRelease();
+  applyCRMReleaseWhenSafe();
 });
 
 

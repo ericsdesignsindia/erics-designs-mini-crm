@@ -1,6 +1,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const root = path.join(__dirname, '..');
 const dist = path.join(root, 'dist');
 const files = [
@@ -18,6 +19,17 @@ fs.mkdirSync(dist, { recursive: true });
 for (const name of files) fs.copyFileSync(path.join(root, name), path.join(dist, name));
 fs.mkdirSync(path.join(dist, 'assets'), { recursive: true });
 for (const name of assetFiles) fs.copyFileSync(path.join(root, 'assets', name), path.join(dist, 'assets', name));
+
+// Publish a content fingerprint so open browser tabs can detect each release,
+// including changes to markup that do not alter a script URL.
+const releaseHash = crypto.createHash('sha256');
+for (const name of [...files, ...assetFiles.map(name => path.join('assets', name))].sort()) {
+  releaseHash.update(name);
+  releaseHash.update(fs.readFileSync(path.join(root, name)));
+}
+const releaseManifest = `${JSON.stringify({ id: releaseHash.digest('hex').slice(0, 20) })}\n`;
+fs.writeFileSync(path.join(root, 'crm-build.json'), releaseManifest);
+fs.writeFileSync(path.join(dist, 'crm-build.json'), releaseManifest);
 
 // Keep deployment output complete for every local script, stylesheet, icon, and
 // other file referenced by the HTML entry points. A missing static file can
