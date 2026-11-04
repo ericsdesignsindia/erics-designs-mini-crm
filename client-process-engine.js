@@ -50,6 +50,7 @@ function resolveClient(clients,quotation){
 }
 function prepareServiceProformas(state,quote,uuid,now=new Date().toISOString(),allocations){
  if(quote.type!=='Quotation'||!quote.clientApprovedForProcess||!quote.contractConfirmedAt||quote.status!=='Accepted')return [];
+ if((quote.serviceProformaBundles||[]).some(bundle=>!bundle.proformaId))return [];
  if(!Array.isArray(quote.items)||quote.items.length<1)return [];
  const values=(allocations||quote.serviceBillingAllocations||(quote.rateCard?[]:quote.items.map(item=>Number(item.qty||0)*Number(item.rate||0)))).map(Number);
  if(values.length!==quote.items.length||values.some(value=>!Number.isFinite(value)||value<=0))return [];
@@ -114,6 +115,7 @@ function prepareCompletedServiceInvoice(state,quote,serviceIndex,uuid,now=new Da
 }
 function prepareUpfrontServiceInvoices(state,quote,uuid,now=new Date().toISOString(),allocations){
  if(quote?.type!=='Quotation'||quote.status!=='Accepted'||!quote.clientApprovedForProcess||!quote.contractConfirmedAt||!Array.isArray(quote.items)||!quote.items.length)return [];
+ if((quote.serviceProformaBundles||[]).some(bundle=>!bundle.proformaId))return [];
  if((state.documents||[]).some(document=>document.type==='Proforma'&&document.rootId===quote.id&&document.status!=='Cancelled'&&(document.serviceIndices||[]).length>1))return [];
  if((state.documents||[]).some(document=>document.type==='Invoice'&&document.rootId===quote.id&&document.serviceIndex===undefined&&document.status!=='Cancelled'))return [];
  const combined=(state.documents||[]).find(document=>document.type==='Proforma'&&document.rootId===quote.id&&document.serviceIndex===undefined&&document.status!=='Cancelled');
