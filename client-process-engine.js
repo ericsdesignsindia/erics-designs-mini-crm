@@ -18,8 +18,8 @@ function serviceBaseValue(quote,item,index){const allocated=Number(quote.service
 function serviceValue(quote,item,index=(quote.items||[]).indexOf(item)){const subtotal=serviceBaseValue(quote,item,index),discount=subtotal*Number(quote.discount||0)/100,net=subtotal-discount,tax=net*Number(quote.tax||0)/100;return Math.round((net+tax)*100)/100}
 function serviceProgressStage(quote,documents,totals){
  const items=quote.items||[],docs=documents||[],serviceDocs=items.map((_,index)=>({
-  proforma:docs.find(document=>document.type==='Proforma'&&document.status!=='Cancelled'&&document.rootId===quote.id&&Number(document.serviceIndex)===index),
-  invoice:docs.find(document=>document.type==='Invoice'&&document.status!=='Cancelled'&&document.rootId===quote.id&&Number(document.serviceIndex)===index)
+  proforma:docs.find(document=>document.type==='Proforma'&&document.status!=='Cancelled'&&document.rootId===quote.id&&(Number(document.serviceIndex)===index||document.serviceIndices?.map(Number).includes(index))),
+  invoice:docs.find(document=>document.type==='Invoice'&&document.status!=='Cancelled'&&document.rootId===quote.id&&(Number(document.serviceIndex)===index||document.serviceIndices?.map(Number).includes(index)))
  }));
  const invoices=serviceDocs.map(record=>record.invoice).filter(Boolean),outstanding=invoices.some(invoice=>totals(invoice).balance>0.005),allServicesInvoiced=items.length>0&&invoices.length===items.length,allInvoicesPaid=allServicesInvoiced&&invoices.every(invoice=>totals(invoice).balance<=0.005);
  if(allInvoicesPaid)return 7;
@@ -57,7 +57,7 @@ function prepareServiceProformas(state,quote,uuid,now=new Date().toISOString(),a
  quote.billingMode='service-wise';quote.serviceBillingAllocations=values.map(value=>Math.round(value*100)/100);const created=[];
  (quote.items||[]).forEach((item,index)=>{
   if((state.documents||[]).some(d=>d.type==='Invoice'&&d.rootId===quote.id&&d.serviceIndex===index&&d.status!=='Cancelled'))return;
-   if((state.documents||[]).some(d=>d.type==='Proforma'&&d.rootId===quote.id&&d.serviceIndex===index&&d.status!=='Cancelled'))return;
+   if((state.documents||[]).some(d=>d.type==='Proforma'&&d.rootId===quote.id&&d.status!=='Cancelled'&&(Number(d.serviceIndex)===index||d.serviceIndices?.map(Number).includes(index))))return;
   const qty=Number(item.qty||0)||1,rate=values[index]/qty,allocatedItem={...JSON.parse(JSON.stringify(item)),rate,rateText:'',proformaAmount:Math.round(values[index]*50)/100};
   const p={...JSON.parse(JSON.stringify(quote)),id:uuid(),type:'Proforma',number:nextNumber(state,'Proforma'),rootId:quote.id,sourceId:quote.id,serviceIndex:index,serviceName:item.name||`Service ${index+1}`,billingMode:'service-wise',status:'Draft',date:now.slice(0,10),due:new Date(Date.parse(now)+7*86400000).toISOString().slice(0,10),payments:[],advancePercent:50,projectValue:serviceValue(quote,item,index),advanceAmount:Math.round(serviceValue(quote,item,index)*50)/100,rateCard:false,updated:now,items:[allocatedItem]};
   delete p.portalToken;delete p.acceptedAt;delete p.clientApprovedForProcess;delete p.workCompletedAt;
@@ -66,9 +66,39 @@ function prepareServiceProformas(state,quote,uuid,now=new Date().toISOString(),a
  });
  return created;
 }
+function prepareBundledServiceProforma(state,quote,indices,uuid,now=new Date().toISOString()){
+ if(quote?.type!=='Quotation'||quote.status!=='Accepted'||!quote.clientApprovedForProcess||!quote.contractConfirmedAt||quote.billingMode!=='service-wise')return null;
+ const serviceIndices=[...new Set((indices||[]).map(Number))].sort((a,b)=>a-b);if(serviceIndices.length<2||serviceIndices.some(index=>!Number.isInteger(index)||!quote.items?.[index]))return null;
+ const selected=[];
+ for(const index of serviceIndices){
+  if((state.documents||[]).some(document=>document.type==='Invoice'&&document.status!=='Cancelled'&&document.rootId===quote.id&&(Number(document.serviceIndex)===index||document.serviceIndices?.map(Number).includes(index))))return null;
+  if((state.documents||[]).some(document=>document.type==='Proforma'&&document.status!=='Cancelled'&&document.rootId===quote.id&&document.serviceIndices?.map(Number).includes(index)))return null;
+  const existing=(state.documents||[]).find(document=>document.type==='Proforma'&&document.status!=='Cancelled'&&document.rootId===quote.id&&Number(document.serviceIndex)===index);
+  if(existing&&(existing.payments||[]).some(payment=>Number(payment.amount)>0))return null;
+  const item=quote.items[index],qty=Number(item.qty||0)||1;
+  const line=existing?.items?.[0]?JSON.parse(JSON.stringify(existing.items[0])):{...JSON.parse(JSON.stringify(item)),rate:serviceBaseValue(quote,item,index)/qty,rateText:'',proformaAmount:Math.round(serviceBaseValue(quote,item,index)*50)/100};
+  line.serviceIndex=index;line.serviceName=item.name||`Service ${index+1}`;line.proformaAmount=Number(line.proformaAmount??Math.round(serviceValue(quote,item,index)*50)/100);
+  selected.push({index,item,line,existing,value:serviceValue(quote,item,index)});
+ }
+ const projectValue=Math.round(selected.reduce((sum,entry)=>sum+entry.value,0)*100)/100,advanceAmount=Math.round(projectValue*50)/100;
+ if(!(projectValue>0)||!(advanceAmount>0))return null;
+ const id=uuid(),p={...JSON.parse(JSON.stringify(quote)),id,type:'Proforma',number:nextNumber(state,'Proforma'),rootId:quote.id,sourceId:quote.id,serviceIndices,status:'Draft',date:now.slice(0,10),due:new Date(Date.parse(now)+7*86400000).toISOString().slice(0,10),payments:[],advancePercent:50,projectValue,advanceAmount,rateCard:false,billingMode:'service-wise',serviceNames:selected.map(entry=>entry.item.name||`Service ${entry.index+1}`),updated:now,items:selected.map(entry=>entry.line)};
+ delete p.serviceIndex;delete p.serviceName;delete p.portalToken;delete p.acceptedAt;delete p.clientApprovedForProcess;delete p.workCompletedAt;
+ p.terms=`Combined 50% advance Proforma for: ${p.serviceNames.join(', ')}. The advance will be credited toward the final service invoice for these services.\n${quote.terms||''}`;
+ for(const entry of selected)if(entry.existing){entry.existing.status='Cancelled';entry.existing.cancelledAt=now;entry.existing.cancelReason=`Replaced by combined Proforma ${p.number}`;entry.existing.replacedByDocumentId=id;entry.existing.updated=now;}
+ state.documents.push(p);return p;
+}
 function prepareServiceInvoice(state,quote,proforma,uuid,now=new Date().toISOString()){
- if(!proforma||proforma.type!=='Proforma'||proforma.rootId!==quote.id||proforma.serviceIndex===undefined||proforma.status==='Cancelled')return null;
- const existing=(state.documents||[]).find(d=>d.type==='Invoice'&&d.rootId===quote.id&&d.serviceIndex===proforma.serviceIndex&&d.status!=='Cancelled');if(existing)return existing;
+ if(!proforma||proforma.type!=='Proforma'||proforma.rootId!==quote.id||proforma.status==='Cancelled')return null;
+ const bundledIndices=Array.isArray(proforma.serviceIndices)?[...new Set(proforma.serviceIndices.map(Number))].sort((a,b)=>a-b):[];
+ if(bundledIndices.length>1){
+  const existing=(state.documents||[]).find(document=>document.type==='Invoice'&&document.rootId===quote.id&&document.status!=='Cancelled'&&bundledIndices.every(index=>document.serviceIndices?.map(Number).includes(index)));if(existing)return existing;
+  const paid=(proforma.payments||[]).reduce((sum,payment)=>sum+Number(payment.amount||0),0),items=(proforma.items||[]).map(item=>{const copy={...JSON.parse(JSON.stringify(item))};delete copy.proformaAmount;return copy;}),serviceNames=proforma.serviceNames||items.map((item,index)=>item.serviceName||item.name||`Service ${bundledIndices[index]+1}`),invoice={...JSON.parse(JSON.stringify(proforma)),id:uuid(),type:'Invoice',number:nextNumber(state,'Invoice'),sourceId:proforma.id,sourceProformaId:proforma.id,rootId:quote.id,serviceIndices:bundledIndices,serviceNames,serviceName:serviceNames.join(' + '),billingMode:'service-wise',status:'Draft',date:now.slice(0,10),due:new Date(Date.parse(now)+7*86400000).toISOString().slice(0,10),payments:(proforma.payments||[]).map(payment=>({...JSON.parse(JSON.stringify(payment)),sourceProformaId:proforma.id})),updated:now,items,terms:`Combined service invoice for ${serviceNames.join(', ')}. Full value: ${quote.currency||'INR'} ${Number(proforma.projectValue||0).toFixed(2)}. Advance received: ${quote.currency||'INR'} ${paid.toFixed(2)}.\n${quote.business?.invoiceTerms||state.settings?.invoiceTerms||'Thank you for choosing Eric’s Designs.'}`};
+  for(const key of ['portalToken','acceptedAt','clientApprovedForProcess','workCompletedAt','advancePercent','advanceAmount'])delete invoice[key];
+  proforma.status='Cancelled';proforma.cancelledAt=now;proforma.cancelReason='Replaced by combined final service invoice';proforma.replacedByInvoiceId=invoice.id;state.documents.push(invoice);return invoice;
+ }
+ if(proforma.serviceIndex===undefined)return null;
+ const existing=(state.documents||[]).find(d=>d.type==='Invoice'&&d.rootId===quote.id&&(Number(d.serviceIndex)===Number(proforma.serviceIndex)||d.serviceIndices?.map(Number).includes(Number(proforma.serviceIndex)))&&d.status!=='Cancelled');if(existing)return existing;
  const paid=(proforma.payments||[]).reduce((sum,payment)=>sum+Number(payment.amount||0),0);
   const serviceIndex=proforma.serviceIndex,fullSubtotal=(proforma.items||[]).reduce((sum,item)=>sum+Number(item.qty||0)*Number(item.rate||0),0),fullNet=fullSubtotal*(1-Number(proforma.discount||0)/100),fullValue=Math.round(fullNet*(1+Number(proforma.tax||0)/100)*100)/100,invoice={...JSON.parse(JSON.stringify(proforma)),id:uuid(),type:'Invoice',number:nextNumber(state,'Invoice'),sourceId:proforma.id,sourceProformaId:proforma.id,rootId:quote.id,serviceIndex,serviceName:proforma.serviceName,billingMode:'service-wise',status:'Draft',date:now.slice(0,10),due:new Date(Date.parse(now)+7*86400000).toISOString().slice(0,10),payments:(proforma.payments||[]).map(payment=>({...JSON.parse(JSON.stringify(payment)),sourceProformaId:proforma.id})),updated:now,terms:`Service invoice for ${proforma.serviceName}. Full service value: ${quote.currency||'INR'} ${fullValue.toFixed(2)}. Advance received: ${quote.currency||'INR'} ${paid.toFixed(2)}.\n${quote.business?.invoiceTerms||state.settings?.invoiceTerms||'Thank you for choosing Eric’s Designs.'}`};
  delete invoice.proformaAmount;invoice.items=invoice.items.map(item=>{const copy={...item};delete copy.proformaAmount;return copy});proforma.status='Cancelled';proforma.cancelledAt=now;proforma.cancelReason='Replaced by final service invoice';proforma.replacedByInvoiceId=invoice.id;state.documents.push(invoice);return invoice;
@@ -84,6 +114,7 @@ function prepareCompletedServiceInvoice(state,quote,serviceIndex,uuid,now=new Da
 }
 function prepareUpfrontServiceInvoices(state,quote,uuid,now=new Date().toISOString(),allocations){
  if(quote?.type!=='Quotation'||quote.status!=='Accepted'||!quote.clientApprovedForProcess||!quote.contractConfirmedAt||!Array.isArray(quote.items)||!quote.items.length)return [];
+ if((state.documents||[]).some(document=>document.type==='Proforma'&&document.rootId===quote.id&&document.status!=='Cancelled'&&(document.serviceIndices||[]).length>1))return [];
  if((state.documents||[]).some(document=>document.type==='Invoice'&&document.rootId===quote.id&&document.serviceIndex===undefined&&document.status!=='Cancelled'))return [];
  const combined=(state.documents||[]).find(document=>document.type==='Proforma'&&document.rootId===quote.id&&document.serviceIndex===undefined&&document.status!=='Cancelled');
  if(combined&&(combined.payments||[]).some(payment=>Number(payment.amount)>0))return [];
@@ -108,5 +139,5 @@ function prepareUpfrontServiceInvoices(state,quote,uuid,now=new Date().toISOStri
  return created;
 }
 function totalsForEngine(document){const subtotal=(document.items||[]).reduce((sum,item)=>sum+Number(item.proformaAmount??(Number(item.qty||0)*Number(item.rate||0))),0),net=subtotal*(1-Number(document.discount||0)/100);return Math.round(net*(1+Number(document.tax||0)/100)*100)/100}
-if(typeof module!=='undefined')module.exports={prepare,prepareServiceProformas,prepareServiceInvoice,prepareCompletedServiceInvoice,prepareUpfrontServiceInvoices,serviceValue,serviceProgressStage,isSequentialStepBlocked,resolveClient};else root.ClientProcessEngine={prepare,prepareServiceProformas,prepareServiceInvoice,prepareCompletedServiceInvoice,prepareUpfrontServiceInvoices,serviceValue,serviceProgressStage,isSequentialStepBlocked,resolveClient};
+if(typeof module!=='undefined')module.exports={prepare,prepareServiceProformas,prepareBundledServiceProforma,prepareServiceInvoice,prepareCompletedServiceInvoice,prepareUpfrontServiceInvoices,serviceValue,serviceProgressStage,isSequentialStepBlocked,resolveClient};else root.ClientProcessEngine={prepare,prepareServiceProformas,prepareBundledServiceProforma,prepareServiceInvoice,prepareCompletedServiceInvoice,prepareUpfrontServiceInvoices,serviceValue,serviceProgressStage,isSequentialStepBlocked,resolveClient};
 })(typeof window!=='undefined'?window:globalThis);
