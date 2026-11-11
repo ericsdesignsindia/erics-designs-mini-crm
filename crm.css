@@ -644,4 +644,4 @@ body[data-theme="dark"] .quick-create-menu,body[data-theme="dark"] .command-pale
 .accounting-forecast-values>.accounting-forecast-overdue{grid-column:1/-1;border-color:rgba(239,104,104,.45)}
 .accounting-forecast-overdue b{color:#ef6868}
 .accounting-forecast-values small{color:var(--muted)}
-#backupStatus.backup-warning{color:#ef6868!important;font-weight:600}
+body #app #backupStatus.backup-warning{color:#ef6868!important;-webkit-text-fill-color:#ef6868;font-weight:600}
