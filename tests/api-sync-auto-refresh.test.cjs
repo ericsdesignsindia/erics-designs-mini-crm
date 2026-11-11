@@ -7,6 +7,7 @@ const vm = require('node:vm');
 test('CRM auto-refresh checks cloud revisions and protects active edits', async () => {
   const source = fs.readFileSync(path.join(__dirname, '..', 'api-sync.js'), 'utf8');
   const storage = new Map([['erics-designs-erp-token', 'test-token']]);
+  const sessionStore = new Map();
   const requests = [];
   const toasts = [];
   const intervals = [];
@@ -21,12 +22,20 @@ test('CRM auto-refresh checks cloud revisions and protects active edits', async 
       hidden: false,
       querySelector: () => footer,
       getElementById: () => null,
-      addEventListener: (name, handler) => { handlers[name] = handler; }
+      addEventListener: (name, handler) => { handlers[name] = handler; },
+      dispatchEvent: () => true
     },
+    Event: class { constructor(type) { this.type = type; } },
     localStorage: {
       getItem: key => storage.get(key) ?? null,
       setItem: (key, value) => storage.set(key, String(value)),
       removeItem: key => storage.delete(key)
+    },
+    // api-sync.js also reads a short-lived login handoff from sessionStorage.
+    sessionStorage: {
+      getItem: key => sessionStore.get(key) ?? null,
+      setItem: (key, value) => sessionStore.set(key, String(value)),
+      removeItem: key => sessionStore.delete(key)
     },
     fetch: async (url, options = {}) => {
       requests.push({ url, options });
@@ -58,8 +67,8 @@ test('CRM auto-refresh checks cloud revisions and protects active edits', async 
   vm.runInContext(source, context, { filename: 'api-sync.js' });
   await new Promise(resolve => setImmediate(resolve));
 
-  assert.equal(intervals.length, 1);
-  assert.equal(intervals[0].delay, 30_000);
+  // api-sync.js also schedules a separate release check, so look for the 30-second workspace refresh.
+  assert.equal(intervals.filter(item => item.delay === 30_000).length, 1);
   assert.match(footer.innerHTML, /auto-refresh every 30 seconds/i);
   assert.equal(renders, 1);
 

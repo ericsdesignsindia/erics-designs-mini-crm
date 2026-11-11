@@ -639,3 +639,9 @@ body[data-theme="dark"] .quick-create-menu,body[data-theme="dark"] .command-pale
 .collection-covered-note{display:grid;gap:5px;margin:14px 0;padding:12px 14px;border:1px solid rgba(69,128,220,.34);border-radius:12px;background:rgba(69,128,220,.08);color:var(--muted);font-size:12px;line-height:1.5}.collection-covered-note b{color:var(--text)}
 @media(max-width:760px){.collection-summaries{width:100%;grid-template-columns:repeat(2,minmax(0,1fr))}.collections-panel .collection-summary{min-width:0;padding:9px}.collections-panel .collection-summary b{font-size:20px}}
 @media(max-width:420px){.collection-summaries{grid-template-columns:1fr}}
+
+/* Past-due collections and backup health warnings (2026-11-11). */
+.accounting-forecast-values>.accounting-forecast-overdue{grid-column:1/-1;border-color:rgba(239,104,104,.45)}
+.accounting-forecast-overdue b{color:#ef6868}
+.accounting-forecast-values small{color:var(--muted)}
+#backupStatus.backup-warning{color:#ef6868;font-weight:600}

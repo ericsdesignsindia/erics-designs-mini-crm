@@ -230,8 +230,8 @@ async function saveState(workspace, state) {
   try {
     await createAutomaticBackup(updated);
   } catch (backupError) {
-    // A backup failure must never block a CRM save. The server log keeps the issue visible.
-    console.error('Automatic backup failed:', backupError.message);
+    // A backup failure must never block a CRM save. Settings shows the failure to the owner.
+    recordBackupFailure(backupError);
   }
   return updated;
 }
@@ -272,10 +272,19 @@ function decryptBackup(value) {
   const raw = Buffer.from(value, 'base64'); const decipher = createDecipheriv('aes-256-gcm', backupKey(), raw.subarray(0, 12));
   decipher.setAuthTag(raw.subarray(12, 28)); return JSON.parse(Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]).toString('utf8'));
 }
+// Remember the most recent automatic backup failure so the owner sees it in Settings,
+// not only in the server log. Saves are never blocked by a failed backup.
+let lastAutomaticBackupFailure = null;
+function recordBackupFailure(error) {
+  lastAutomaticBackupFailure = { message: String(error?.message || 'Unknown backup error').slice(0, 200), at: new Date().toISOString() };
+  console.error('Automatic backup failed:', lastAutomaticBackupFailure.message);
+}
+function backupEncryptionConfigured() { return Boolean(process.env.BACKUP_ENCRYPTION_KEY) || process.env.NODE_ENV !== 'production'; }
 async function createAutomaticBackup(workspace) {
   const latest = await Backup.findOne({ workspaceId: workspace.workspaceId }).sort({ createdAt: -1 }).lean();
   if (latest && Date.now() - new Date(latest.createdAt).getTime() < 24 * 60 * 60 * 1000) return;
   await Backup.create({ workspaceId: workspace.workspaceId, stateCiphertext: encryptBackup(workspace.state) });
+  lastAutomaticBackupFailure = null;
   const expired = await Backup.find({ workspaceId: workspace.workspaceId }).sort({ createdAt: -1 }).skip(30).select('_id').lean();
   if (expired.length) await Backup.deleteMany({ _id: { $in: expired.map(item => item._id) } });
 }
@@ -1095,7 +1104,10 @@ app.get('/api/workspaces/:workspaceId/backups', requireOwner, async (req, res, n
     const id = workspaceId(req.params.workspaceId);
     if (!id) return res.status(400).json({ error: 'Invalid workspace id.' });
     const backups = await Backup.find({ workspaceId: id }).sort({ createdAt: -1 }).limit(30).lean();
-    return res.json({ backups: backups.map(backup => ({ id: backup._id.toString(), createdAt: backup.createdAt, reason: backup.reason })), retention: 30 });
+    return res.json({
+      backups: backups.map(backup => ({ id: backup._id.toString(), createdAt: backup.createdAt, reason: backup.reason })), retention: 30,
+      health: { encryptionConfigured: backupEncryptionConfigured(), lastFailure: lastAutomaticBackupFailure }
+    });
   } catch (error) { return next(error); }
 });
 
@@ -1197,7 +1209,7 @@ app.put('/api/workspaces/:workspaceId', async (req, res, next) => {
       const current = await Workspace.findOne({ workspaceId: id }).lean();
       return res.status(409).json({ error: 'A newer workspace version exists.', revision: current?.revision ?? 0, state: current?.state, updatedAt: current?.updatedAt });
     }
-    try { await createAutomaticBackup(workspace); } catch (backupError) { console.error('Automatic backup failed:', backupError.message); }
+    try { await createAutomaticBackup(workspace); } catch (backupError) { recordBackupFailure(backupError); }
     return res.json({ ok: true, workspaceId: workspace.workspaceId, revision: workspace.revision, updatedAt: workspace.updatedAt });
   } catch (error) { return next(error); }
 });
