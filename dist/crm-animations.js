@@ -39,11 +39,13 @@
     context=gsap.context(()=>{
       // Keep controls hit-testable throughout transitions. autoAlpha sets
       // visibility:hidden at the start, which can make quick taps miss a
-      // card or button immediately after a workspace change.
-      if(header.length)gsap.fromTo(header,{y:9},{y:0,duration:.32,ease:'power2.out',overwrite:'auto'});
-      if(cards.length)gsap.fromTo(cards,{y:11},{y:0,duration:.34,delay:.035,stagger:.028,ease:'power2.out',overwrite:'auto'});
-      if(fallback.length)gsap.fromTo(fallback,{y:8},{y:0,duration:.3,stagger:.03,ease:'power2.out',overwrite:'auto'});
-      if(active.length)gsap.fromTo(active,{scale:.97},{scale:1,duration:.24,ease:'back.out(1.6)',overwrite:'auto'});
+      // card or button immediately after a workspace change. clearProps removes
+      // the finished identity transform so cards do not keep a stacking context
+      // that can trap dropdown menus or fixed-position children.
+      if(header.length)gsap.fromTo(header,{y:9},{y:0,duration:.32,ease:'power2.out',overwrite:'auto',clearProps:'transform'});
+      if(cards.length)gsap.fromTo(cards,{y:11},{y:0,duration:.34,delay:.035,stagger:.028,ease:'power2.out',overwrite:'auto',clearProps:'transform'});
+      if(fallback.length)gsap.fromTo(fallback,{y:8},{y:0,duration:.3,stagger:.03,ease:'power2.out',overwrite:'auto',clearProps:'transform'});
+      if(active.length)gsap.fromTo(active,{scale:.97},{scale:1,duration:.24,ease:'back.out(1.6)',overwrite:'auto',clearProps:'transform'});
     },app);
   }
 
@@ -83,7 +85,7 @@
   document.addEventListener('pointerout',event=>{
     if(!allowed()||event.pointerType==='touch')return;
     const el=event.target.closest(buttons);
-    if(el&&!el.contains(event.relatedTarget))gsap.to(el,{y:0,scale:1,duration:.16,ease:'power1.out',overwrite:true});
+    if(el&&!el.contains(event.relatedTarget))gsap.to(el,{y:0,scale:1,duration:.16,ease:'power1.out',overwrite:true,clearProps:'transform'});
   });
   document.addEventListener('pointerdown',event=>{
     if(!allowed())return;
@@ -93,13 +95,13 @@
   document.addEventListener('pointerup',event=>{
     if(!allowed())return;
     const el=event.target.closest(buttons);
-    if(el)gsap.to(el,{scale:1,duration:.14,ease:'power1.out',overwrite:true});
+    if(el)gsap.to(el,{scale:1,duration:.14,ease:'power1.out',overwrite:true,clearProps:el.matches(':hover')?'':'transform'});
   });
 
   const dialogObserver=new MutationObserver(records=>records.forEach(record=>{
     const dialog=record.target;
     if(!(dialog instanceof HTMLDialogElement)||!dialog.open)return;
-    if(allowed())gsap.fromTo(dialog,{y:10,scale:.99},{y:0,scale:1,duration:.22,ease:'power2.out',overwrite:true});
+    if(allowed())gsap.fromTo(dialog,{y:10,scale:.99},{y:0,scale:1,duration:.22,ease:'power2.out',overwrite:true,clearProps:'transform'});
     else gsap&&gsap.set(dialog,{clearProps:'transform'});
   }));
   dialogObserver.observe(document.body,{subtree:true,attributes:true,attributeFilter:['open']});
