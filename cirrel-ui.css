@@ -1721,3 +1721,9 @@ html body.ea360-interface #app#app :is(.scheduler-day > header span, .scheduler-
   font-size: 12px !important;
 }
 html body.ea360-interface #app#app .client-card-stage { font-size: 11px !important; }
+
+/* FINDING-003 (design review 2026-11-11): color-scheme was "normal", so on the
+   dark theme native controls (select menus, date pickers, scrollbars,
+   autofill) rendered light. Match the browser's built-in UI to the theme. */
+html:has(> body[data-theme="dark"]) { color-scheme: dark; }
+html:has(> body[data-theme="light"]) { color-scheme: light; }
