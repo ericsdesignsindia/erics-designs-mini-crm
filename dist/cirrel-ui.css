@@ -1688,3 +1688,42 @@ html body.ea360-interface #app#app #accountRows table td:nth-child(4) { min-widt
     min-width: 0 !important;
   }
 }
+
+/* FINDING-001 (design review 2026-11-11): the desktop month grid used
+   repeat(7, 1fr); 1fr cannot shrink below its content, so wide event cards
+   pushed the seven columns to ~1680px inside a ~730px grid and only Monday
+   and Tuesday were visible. minmax(0, 1fr) keeps seven equal columns; event
+   text truncates with an ellipsis (each event already has a title tooltip). */
+@media (min-width: 761px) {
+  .scheduler-grid.month { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .scheduler-grid.month .scheduler-day { min-width: 0; }
+  .scheduler-grid.month .scheduler-event { min-width: 0; max-width: 100%; overflow: hidden; }
+  .scheduler-grid.month .scheduler-event :is(b, span, small) {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* FINDING-002 (design review 2026-11-11): on desktop the Overview cards and
+   the month calendar rendered labels, table headers and event text at
+   9-10px (about 80 items on Calendar, 60 on Overview). Floor them at 12px;
+   pipeline stage chips (uppercase) at 11px. Phones already had this floor. */
+html body.ea360-interface #app#app :is(.home-card, .home-summary-strip, .home-dashboard-head) :is(
+  small, th, .home-eyebrow, .home-status, .home-open-project,
+  .home-flow-stage span, .home-allocation-row span, .home-project-tabs button,
+  .home-focus-actions button, .home-status-foot span, .home-project-toolbar span, .home-card-head button
+) {
+  font-size: 12px !important;
+}
+html body.ea360-interface #app#app :is(.scheduler-day > header span, .scheduler-event span, .scheduler-event b, .scheduler-more) {
+  font-size: 12px !important;
+}
+html body.ea360-interface #app#app .client-card-stage { font-size: 11px !important; }
+
+/* FINDING-003 (design review 2026-11-11): color-scheme was "normal", so on the
+   dark theme native controls (select menus, date pickers, scrollbars,
+   autofill) rendered light. Match the browser's built-in UI to the theme. */
+html:has(> body[data-theme="dark"]) { color-scheme: dark; }
+html:has(> body[data-theme="light"]) { color-scheme: light; }
