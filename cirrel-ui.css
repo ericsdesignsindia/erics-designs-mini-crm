@@ -1705,3 +1705,19 @@ html body.ea360-interface #app#app #accountRows table td:nth-child(4) { min-widt
     white-space: nowrap;
   }
 }
+
+/* FINDING-002 (design review 2026-11-11): on desktop the Overview cards and
+   the month calendar rendered labels, table headers and event text at
+   9-10px (about 80 items on Calendar, 60 on Overview). Floor them at 12px;
+   pipeline stage chips (uppercase) at 11px. Phones already had this floor. */
+html body.ea360-interface #app#app :is(.home-card, .home-summary-strip, .home-dashboard-head) :is(
+  small, th, .home-eyebrow, .home-status, .home-open-project,
+  .home-flow-stage span, .home-allocation-row span, .home-project-tabs button,
+  .home-focus-actions button, .home-status-foot span, .home-project-toolbar span, .home-card-head button
+) {
+  font-size: 12px !important;
+}
+html body.ea360-interface #app#app :is(.scheduler-day > header span, .scheduler-event span, .scheduler-event b, .scheduler-more) {
+  font-size: 12px !important;
+}
+html body.ea360-interface #app#app .client-card-stage { font-size: 11px !important; }
