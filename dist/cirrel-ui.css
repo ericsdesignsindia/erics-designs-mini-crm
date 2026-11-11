@@ -122,8 +122,9 @@ body.ea360-interface[data-theme="dark"] .primary,
 body.ea360-interface[data-theme="dark"] .mobile-fab,
 body.ea360-interface[data-theme="dark"] .home-primary {
   color: #fff !important;
-  background: linear-gradient(125deg, #3478f4, #5794ff) !important;
-  border-color: #75a5ff !important;
+  /* Darker blue keeps white button text at 4.6:1 or better (WCAG AA). */
+  background: linear-gradient(125deg, #2f5fd6, #3c6ee6) !important;
+  border-color: #6f9bff !important;
   box-shadow: 0 8px 25px rgba(54, 119, 244, .25), inset 0 1px rgba(255, 255, 255, .2) !important;
 }
 
@@ -1554,5 +1555,47 @@ body.ea360-interface[data-theme="light"] #app :is(input, select, textarea) { col
 
   body.ea360-interface .shell > main {
     padding-bottom: calc(132px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* Accessibility pass (2026-11-11).
+   - A solid, high-contrast keyboard focus ring on every theme.
+   - Phones only: 44px tap height for in-page controls and a 12px floor for
+     the small dashboard labels that rendered at 8-10px. Desktop is unchanged. */
+html body.ea360-interface :focus-visible {
+  outline: 3px solid #9cc2ff !important;
+  outline-offset: 2px !important;
+}
+
+/* In-page primary buttons were solid #4c7df0 (3.8:1 with white text) via a
+   higher-specificity grista rule. #3464dc gives 5.25:1 in both themes. */
+html body.ea360-interface #app#app :is(button.primary, .primary, .home-primary) {
+  background: #3464dc !important;
+  border-color: #6f9bff !important;
+  color: #fff !important;
+}
+html body.ea360-interface #app#app :is(button.primary, .primary, .home-primary):hover {
+  background: #2f5fd6 !important;
+}
+
+@media (max-width: 760px) {
+  html body.ea360-interface #app#app :is(button, select, .smallbtn, a.button) {
+    min-height: 44px !important;
+  }
+
+  /* #app#app raises specificity above the layered theme rules that pin these sizes. */
+  html body.ea360-interface #app#app :is(
+    small,
+    .home-eyebrow, .home-status, .home-open-project, .home-status-foot,
+    .home-breadcrumb :is(span, b),
+    .home-header-actions button,
+    .home-allocation-row span,
+    .home-flow-stage span,
+    .home-project-tabs button,
+    .home-project-toolbar span,
+    .home-card-head button,
+    .home-focus-actions button
+  ) {
+    font-size: 12px !important;
   }
 }
