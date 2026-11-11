@@ -1599,3 +1599,92 @@ html body.ea360-interface #app#app :is(button.primary, .primary, .home-primary):
     font-size: 12px !important;
   }
 }
+
+/* Layout pass (2026-11-11), checked at 1280px and 375px.
+   1. Page headers that start with a breadcrumb were a three-column flex row,
+      leaving the breadcrumb stranded on the left and pushing the title right.
+      Breadcrumb now sits on its own row, title left, actions right. The
+      eyebrow repeated the breadcrumb, so it is hidden in these headers. */
+html body.ea360-interface #app#app > header:has(> .workspace-breadcrumb) {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  grid-template-areas: "crumb crumb" "title actions" !important;
+  align-items: end !important;
+  gap: 10px 20px !important;
+}
+html body.ea360-interface #app#app > header > .workspace-breadcrumb {
+  grid-area: crumb;
+  justify-self: start;
+  margin: 0 !important;
+}
+html body.ea360-interface #app#app > header:has(> .workspace-breadcrumb) > .actions {
+  grid-area: actions;
+  justify-self: end;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+html body.ea360-interface #app#app > header:has(> .workspace-breadcrumb) > div:not(.workspace-breadcrumb):not(.actions) {
+  grid-area: title;
+  min-width: 0;
+}
+html body.ea360-interface #app#app > header:has(> .workspace-breadcrumb) .eyebrow {
+  display: none !important;
+}
+
+/* 2. Document card footers: amount on its own line, every action in one
+      wrapping row instead of a stacked column beside a lone Remind button. */
+html body.ea360-interface #app#app .document-card-foot {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 8px !important;
+}
+html body.ea360-interface #app#app .document-card-foot > strong { flex: 1 0 100%; }
+html body.ea360-interface #app#app .document-card-foot > div { display: contents !important; }
+
+/* 3. Status labels never break mid-word ("ACCEPTE / D", "Proposal / sent"). */
+html body.ea360-interface #app#app :is(.badge, .client-card-stage) {
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+html body.ea360-interface #app#app .lead-card-top > .client-card-stage { flex-shrink: 0; }
+html body.ea360-interface #app#app .lead-card-top > strong { min-width: 0; }
+
+/* 4. Tables: action groups sized to their content, wide screens keep
+      Review / WhatsApp / Delete on one line, and the Accounts reference
+      column gets room so rows are not 200px tall. */
+html body.ea360-interface #app#app table .ledger-actions { min-width: 0 !important; }
+html body.ea360-interface #app#app #accountRows table td:nth-child(4) { min-width: 200px; }
+@media (min-width: 1100px) {
+  html body.ea360-interface #app#app table td:last-child > .actions { flex-wrap: nowrap !important; }
+}
+
+/* 5. Phones: the logo bar was 375px wide plus a 10px margin (cut off on the
+      right) and stayed pinned while the search bar slid 26px underneath it.
+      The logo bar now scrolls away; only the search bar stays pinned. */
+@media (max-width: 760px) {
+  html body.ea360-interface #app#app > header:has(> .workspace-breadcrumb) {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-areas: "crumb" "title" "actions" !important;
+  }
+  html body.ea360-interface #app#app > header:has(> .workspace-breadcrumb) > .actions {
+    justify-self: stretch;
+    justify-content: stretch;
+  }
+  html body.ea360-interface #app#app > header:has(> .workspace-breadcrumb) > .actions > * { flex: 1 1 0; }
+  html body.ea360-interface .shell > aside {
+    position: relative !important;
+    top: auto !important;
+    width: auto !important;
+    max-width: calc(100% - 20px) !important;
+  }
+  html body.ea360-interface #commandBar#commandBar { top: calc(8px + env(safe-area-inset-top)) !important; }
+  html body.ea360-interface #app#app .toolbar > input {
+    flex: 1 0 100% !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+}

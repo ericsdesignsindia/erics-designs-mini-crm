@@ -75,10 +75,12 @@
   accountLedgerRows = function (rows) {
     const table = baseLedgerRows(rows);
     if (!rows.length) return table;
-    return table.replace(/<td>(.*?)<\/td>(<\/tr>)/gs, (cell, content, end) => {
+    // Match only the row's final cell. The content may not contain another <td>;
+    // otherwise the match starts at the first cell and wraps the Date column.
+    return table.replace(/<td>((?:(?!<td>)[\s\S])*?)<\/td>(<\/tr>)/g, (cell, content, end) => {
       if (!/smallbtn|Receipt PDF|Edit receipt|Edit transaction/.test(content)) return cell;
       if (content.trim() === '—') return cell;
-      return `<td><div class="ledger-actions">${content}</div>${end}`;
+      return `<td><div class="ledger-actions">${content}</div></td>${end}`;
     });
   };
 
