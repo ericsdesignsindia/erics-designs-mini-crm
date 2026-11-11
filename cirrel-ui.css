@@ -1688,3 +1688,20 @@ html body.ea360-interface #app#app #accountRows table td:nth-child(4) { min-widt
     min-width: 0 !important;
   }
 }
+
+/* FINDING-001 (design review 2026-11-11): the desktop month grid used
+   repeat(7, 1fr); 1fr cannot shrink below its content, so wide event cards
+   pushed the seven columns to ~1680px inside a ~730px grid and only Monday
+   and Tuesday were visible. minmax(0, 1fr) keeps seven equal columns; event
+   text truncates with an ellipsis (each event already has a title tooltip). */
+@media (min-width: 761px) {
+  .scheduler-grid.month { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .scheduler-grid.month .scheduler-day { min-width: 0; }
+  .scheduler-grid.month .scheduler-event { min-width: 0; max-width: 100%; overflow: hidden; }
+  .scheduler-grid.month .scheduler-event :is(b, span, small) {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
