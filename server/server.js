@@ -13,6 +13,35 @@ const { PDFParse } = require('pdf-parse');
 
 const app = express();
 if (process.env.NODE_ENV === 'production' || process.env.TRUST_PROXY === 'true') app.set('trust proxy', 1);
+app.disable('x-powered-by');
+
+// Security headers for every response (pages, assets and API).
+// Enforced: no framing (clickjacking), no plugins, no <base> hijack, no MIME sniffing.
+// The full content policy runs in report-only mode first: the CRM relies on inline
+// onclick handlers and inline scripts, so violations are logged in the browser
+// console instead of blocking anything until the policy has been proven clean.
+const contentSecurityPolicyReportOnly = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "img-src 'self' data: blob: https://quickchart.io",
+  "connect-src 'self' https://erics-designs-mini-crm.onrender.com https://crm.ericsdesigns.in",
+  "frame-src 'self' blob: data:",
+  "form-action 'self'"
+].join('; ');
+app.use((req, res, next) => {
+  res.set({
+    'Content-Security-Policy': "frame-ancestors 'none'; object-src 'none'; base-uri 'self'",
+    'Content-Security-Policy-Report-Only': contentSecurityPolicyReportOnly,
+    'X-Frame-Options': 'DENY',
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'camera=(), geolocation=(), payment=()'
+  });
+  if (req.secure) res.set('Strict-Transport-Security', 'max-age=31536000');
+  next();
+});
 const port = Number(process.env.PORT || 4000);
 const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/erics_designs_erp';
 const configuredOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5500,http://127.0.0.1:5500,http://localhost:4000,http://127.0.0.1:4000,https://ericsdesignsindia.github.io')
@@ -46,7 +75,10 @@ const jwtSecret = process.env.JWT_SECRET || (fs.existsSync(secretFile)
 
 app.use(cors({ origin(origin, callback) {
   if (!origin || origins.includes(origin)) return callback(null, true);
-  return callback(new Error('Origin is not allowed by this local ERP API.'));
+  // Still refuse the request, but as a 403 rather than an unhandled 500.
+  const error = new Error('Origin is not allowed by this ERP API.');
+  error.status = 403;
+  return callback(error);
 }}));
 // A 4 MB file becomes roughly 5.4 MB after browser base64 encoding, so accept a little headroom.
 app.use(express.json({ limit: '6mb', verify(req, _res, buffer) { req.rawBody = buffer; } }));
@@ -1325,8 +1357,10 @@ app.use('/api', (_req, res) => res.status(404).json({ error: 'API route not foun
 app.use(express.static(path.join(__dirname, '..', 'dist')));
 
 app.use((error, _req, res, _next) => {
-  console.error(error);
   const status = error.status || 500;
+  // Full stack traces only for server faults; client errors (4xx) get one line.
+  if (status >= 500) console.error(error);
+  else console.warn(`${status} ${error.message}`);
   res.status(status).json({ error: status < 500 ? (error.message || 'The request could not be completed.') : 'The ERP API could not complete this request.' });
 });
 
