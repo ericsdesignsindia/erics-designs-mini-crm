@@ -1727,3 +1727,38 @@ html body.ea360-interface #app#app .client-card-stage { font-size: 11px !importa
    autofill) rendered light. Match the browser's built-in UI to the theme. */
 html:has(> body[data-theme="dark"]) { color-scheme: dark; }
 html:has(> body[data-theme="light"]) { color-scheme: light; }
+
+/* Sync review (2026-11-12): shown only when this device has changes that also
+   changed in the cloud, or a recovery copy that needs a decision. */
+.sync-review-button {
+  position: fixed;
+  right: 16px; /* the left edge is under the fixed sidebar on desktop */
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 19; /* below toasts (20) so a notice is never covered */
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid #f0b54a;
+  background: #3a2a0c;
+  color: #ffd98a;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+}
+@media (max-width: 760px) {
+  .sync-review-button { bottom: calc(96px + env(safe-area-inset-bottom)); }
+}
+dialog.sync-review { max-width: 640px; }
+.sync-review-list { display: grid; gap: 10px; margin: 14px 0; }
+.sync-review-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line, rgba(255, 255, 255, .12));
+  border-radius: 10px;
+}
+.sync-review-row small { display: block; margin-top: 4px; color: var(--muted, #9aa4b8); }
+.sync-review-row .actions { display: flex; flex-wrap: wrap; gap: 8px; }

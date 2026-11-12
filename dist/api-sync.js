@@ -7,6 +7,10 @@ const ERP_TOKEN_KEY = 'erics-designs-erp-token';
 const ERP_DIRTY_KEY = 'erics-designs-erp-unsynced';
 const ERP_REVISION_KEY = 'erics-designs-erp-revision';
 const ERP_RECOVERY_KEY = 'erics-designs-erp-local-recovery';
+// The workspace exactly as this device last synced it: the common ancestor for merges.
+const ERP_BASE_KEY = 'erics-designs-erp-sync-base';
+// This device's versions of records that were also changed in the cloud, kept for review.
+const ERP_REVIEW_KEY = 'erics-designs-erp-sync-review';
 const savedRevision = localStorage.getItem(ERP_REVISION_KEY);
 let erpRevision = /^\d+$/.test(savedRevision || '') ? Number(savedRevision) : null;
 let erpSyncTimer;
@@ -135,19 +139,83 @@ function scheduleSyncRetry() {
 function markUnsynced() { erpDirty = true; localStorage.setItem(ERP_DIRTY_KEY, '1'); scheduleSyncRetry(); }
 function markSynced() { erpDirty = false; erpConflict = false; clearTimeout(erpRetryTimer); localStorage.removeItem(ERP_DIRTY_KEY); rememberRevision(); applyCRMReleaseWhenSafe?.(); }
 
+function saveSyncBase(stateText) {
+  try { localStorage.setItem(ERP_BASE_KEY, typeof stateText === 'string' ? stateText : JSON.stringify(stateText)); } catch (_) { localStorage.removeItem(ERP_BASE_KEY); }
+}
+function readSyncBase() {
+  try { const text = localStorage.getItem(ERP_BASE_KEY); return text ? JSON.parse(text) : null; } catch (_) { return null; }
+}
+function pendingSyncReview() {
+  try { const list = JSON.parse(localStorage.getItem(ERP_REVIEW_KEY) || '[]'); return Array.isArray(list) ? list : []; } catch (_) { return []; }
+}
+function savePendingSyncReview(list) {
+  if (list.length) localStorage.setItem(ERP_REVIEW_KEY, JSON.stringify(list)); else localStorage.removeItem(ERP_REVIEW_KEY);
+  updateSyncReviewBanner();
+}
+
+// Merge this device's unsynced edits onto a newer cloud workspace. Returns false
+// when there is no common ancestor (an older session), so the caller falls back
+// to keeping a full recovery copy.
+function mergeIntoCloud(remoteState, remoteRevision) {
+  const base = readSyncBase();
+  if (!base || !window.crmSyncMerge || typeof migrate !== 'function') return false;
+  const remote = migrate(JSON.parse(JSON.stringify(remoteState)));
+  const { state, conflicts } = window.crmSyncMerge.mergeWorkspace(base, db, remote);
+  db = migrate(state);
+  erpRevision = remoteRevision;
+  rememberRevision();
+  saveSyncBase(remote);
+  localStorage.setItem(KEY, JSON.stringify(db));
+  lastSnapshot = localStorage.getItem(KEY);
+  if (conflicts.length) {
+    const savedAt = new Date().toISOString();
+    savePendingSyncReview([...pendingSyncReview(), ...conflicts.map(item => ({ ...item, savedAt }))]);
+  }
+  if (typeof render === 'function') render();
+  if (typeof toast === 'function') toast(conflicts.length
+    ? `Merged with cloud changes. ${conflicts.length} item${conflicts.length === 1 ? '' : 's'} changed on both devices need${conflicts.length === 1 ? 's' : ''} your review.`
+    : 'Merged your changes with newer cloud changes.');
+  return true;
+}
+
+function keepRecoveryCopy(revision) {
+  localStorage.setItem(ERP_RECOVERY_KEY, JSON.stringify({ savedAt: new Date().toISOString(), revision: Number.isInteger(revision) ? revision : null, state: db }));
+  updateSyncReviewBanner();
+}
+
+let erpMergeAttempts = 0;
 async function pushWorkspace() {
   if (erpConflict) return false;
+  // Snapshot what is sent: edits made while the request is in flight must stay unsynced.
+  const sent = JSON.stringify(db);
   try {
-    const result = await api(`/workspaces/${ERP_WORKSPACE}`, { method: 'PUT', body: JSON.stringify({ state: db, revision: Number.isInteger(erpRevision) ? erpRevision : 0 }) });
+    const result = await api(`/workspaces/${ERP_WORKSPACE}`, { method: 'PUT', body: JSON.stringify({ state: JSON.parse(sent), revision: Number.isInteger(erpRevision) ? erpRevision : 0 }) });
     erpRevision = result.revision;
+    erpMergeAttempts = 0;
+    saveSyncBase(sent);
+    if (JSON.stringify(db) !== sent) { rememberRevision(); scheduleWorkspaceSync(); return true; }
     markSynced();
     setErpStatus(`MongoDB sync active · auto-refresh every ${ERP_AUTO_REFRESH_SECONDS} seconds`, true);
     return true;
   } catch (error) {
     if (error.status === 409 && error.data?.state) {
-      erpConflict = true;
-      setErpStatus('Cloud changes need review. Your browser data is protected.', false);
-      toast('Cloud changes were found. Your local work was kept safely and was not overwritten.');
+      // Another device saved first. Merge record by record and try again.
+      if (erpMergeAttempts < 3 && mergeIntoCloud(error.data.state, error.data.revision)) {
+        erpMergeAttempts += 1;
+        return pushWorkspace();
+      }
+      erpMergeAttempts = 0;
+      // No merge possible: keep a full copy of this device's data, then load the cloud.
+      keepRecoveryCopy(erpRevision);
+      db = migrate(error.data.state);
+      erpRevision = error.data.revision;
+      saveSyncBase(db);
+      markSynced();
+      localStorage.setItem(KEY, JSON.stringify(db));
+      lastSnapshot = localStorage.getItem(KEY);
+      if (typeof render === 'function') render();
+      setErpStatus('Cloud workspace loaded · your unsynced copy is kept for review', true);
+      toast('Cloud changes were found. A copy of this device\'s unsynced work is kept under "Sync review".');
     } else { setErpStatus('Saving retry queued · your changes are safe on this device', false); scheduleSyncRetry(); }
     return false;
   }
@@ -187,16 +255,21 @@ async function loadWorkspace() {
       if (Number.isInteger(localRevision) && localRevision === remote.revision) {
         if (!await pushWorkspace()) return;
         remote = await api(`/workspaces/${ERP_WORKSPACE}`);
+      } else if (mergeIntoCloud(remote.state, remote.revision)) {
+        // Unsynced edits from an earlier session were merged onto the newer cloud copy.
+        if (await pushWorkspace()) remote = await api(`/workspaces/${ERP_WORKSPACE}`);
+        else return;
       } else {
-        localStorage.setItem(ERP_RECOVERY_KEY, JSON.stringify({ savedAt: new Date().toISOString(), revision: Number.isInteger(localRevision) ? localRevision : null, state: db }));
+        keepRecoveryCopy(localRevision);
         erpDirty = false;
         erpConflict = false;
         localStorage.removeItem(ERP_DIRTY_KEY);
-        toast('Loaded the shared cloud workspace. A local recovery copy was kept on this device.');
+        toast('Loaded the shared cloud workspace. A copy of this device\'s unsynced work is kept under "Sync review".');
       }
     }
     db = migrate(remote.state);
     erpRevision = remote.revision;
+    saveSyncBase(db);
     markSynced();
     localStorage.setItem(KEY, JSON.stringify(db));
     lastSnapshot = localStorage.getItem(KEY);
@@ -235,6 +308,8 @@ async function refreshWorkspaceIfChanged(force = false) {
     if (remote.revision !== erpRevision) {
       db = migrate(remote.state);
       erpRevision = remote.revision;
+      saveSyncBase(db);
+      rememberRevision();
       localStorage.setItem(KEY, JSON.stringify(db));
       lastSnapshot = localStorage.getItem(KEY);
       render();
@@ -338,6 +413,109 @@ window.addEventListener('focus', () => {
 });
 
 
+
+// Sync review: items this device changed that were also changed in the cloud,
+// plus any full recovery copy kept when a merge was not possible.
+const SYNC_COLLECTION_LABELS = { documents: 'Document', clients: 'Client', projects: 'Project', tasks: 'Follow-up', accounts: 'Account entry', vendorBills: 'Vendor bill', recurringExpenses: 'Recurring expense', contracts: 'Contract', employees: 'Team member', services: 'Service', settings: 'Setting', activity: 'Activity', milestones: 'Milestone', followUps: 'Follow-up' };
+const SYNC_REASONS = {
+  'edited-both': 'Changed on this device and in the cloud',
+  'deleted-in-cloud': 'Deleted in the cloud, edited on this device',
+  'deleted-here': 'Deleted on this device, edited in the cloud',
+  'number-taken': 'Created on this device, but another device used the same number'
+};
+const syncEscape = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+function readRecoveryCopy() {
+  try { return JSON.parse(localStorage.getItem(ERP_RECOVERY_KEY) || 'null'); } catch (_) { return null; }
+}
+
+function updateSyncReviewBanner() {
+  if (!document.body) return;
+  const count = pendingSyncReview().length + (readRecoveryCopy() ? 1 : 0);
+  let button = document.getElementById('syncReviewButton');
+  if (!count) { button?.remove(); return; }
+  if (!button) {
+    button = document.createElement('button');
+    button.id = 'syncReviewButton';
+    button.type = 'button';
+    button.className = 'sync-review-button';
+    button.onclick = openSyncReview;
+    document.body.append(button);
+  }
+  button.textContent = `Sync review · ${count}`;
+  button.setAttribute('aria-label', `${count} sync item${count === 1 ? '' : 's'} need review`);
+}
+
+function nextSyncDocumentNumber(type) {
+  const prefix = type === 'Quotation' ? 'ED-Q-' : type === 'Proforma' ? 'ED-P-' : 'ED-';
+  const used = (db.documents || []).filter(doc => doc.type === type).map(doc => Number(String(doc.number || '').slice(prefix.length)) || 0);
+  return prefix + String(Math.max(0, ...used) + 1).padStart(4, '0');
+}
+
+function applyLocalSyncVersion(item) {
+  const local = item.local === null ? null : JSON.parse(JSON.stringify(item.local));
+  if (item.whole) db[item.collection] = local;
+  else if (item.field) {
+    db[item.collection] = db[item.collection] || {};
+    if (local === null) delete db[item.collection][item.id]; else db[item.collection][item.id] = local;
+  } else {
+    const list = Array.isArray(db[item.collection]) ? db[item.collection] : (db[item.collection] = []);
+    const at = list.findIndex(record => record.id === item.id);
+    if (local === null) { if (at >= 0) list.splice(at, 1); }
+    else {
+      if (item.collection === 'documents' && local.number && list.some(doc => doc.id !== local.id && doc.number === local.number)) {
+        const fresh = nextSyncDocumentNumber(local.type);
+        if (!confirm(`${local.number} is already used by another document. Restore this one as ${fresh}?`)) return false;
+        local.number = fresh;
+      }
+      if (at >= 0) list.splice(at, 1, local);
+      else if (item.collection === 'documents') list.push(local);
+      else list.unshift(local);
+    }
+  }
+  if (typeof persist === 'function' && !persist()) return false;
+  if (typeof render === 'function') render();
+  return true;
+}
+
+window.resolveSyncReview = function (index, choice) {
+  const list = pendingSyncReview();
+  const item = list[index];
+  if (!item) return;
+  if (choice === 'mine' && !applyLocalSyncVersion(item)) return;
+  list.splice(index, 1);
+  savePendingSyncReview(list);
+  if (typeof toast === 'function') toast(choice === 'mine' ? 'This device\'s version was applied and will sync.' : 'Kept the cloud version.');
+  if (pendingSyncReview().length || readRecoveryCopy()) openSyncReview(); else document.getElementById('syncReview')?.close();
+};
+
+window.downloadSyncReview = function () {
+  const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), review: pendingSyncReview(), recoveryCopy: readRecoveryCopy() }, null, 2)], { type: 'application/json' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `crm-sync-review-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.append(link); link.click(); link.remove();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+};
+
+window.discardRecoveryCopy = function () {
+  if (!confirm('Delete the saved copy of unsynced work from this device? Download it first if you might need it. This cannot be undone.')) return;
+  localStorage.removeItem(ERP_RECOVERY_KEY);
+  updateSyncReviewBanner();
+  if (pendingSyncReview().length) openSyncReview(); else document.getElementById('syncReview')?.close();
+};
+
+function openSyncReview() {
+  const list = pendingSyncReview();
+  const recovery = readRecoveryCopy();
+  let dialog = document.getElementById('syncReview');
+  if (!dialog) { dialog = document.createElement('dialog'); dialog.id = 'syncReview'; dialog.className = 'client-form sync-review'; document.body.append(dialog); }
+  const rows = list.map((item, index) => `<div class="sync-review-row"><div><b>${syncEscape(item.label)}</b><small>${syncEscape(SYNC_COLLECTION_LABELS[item.collection] || item.collection)} · ${syncEscape(SYNC_REASONS[item.reason] || item.reason)}${item.savedAt ? ' · ' + syncEscape(new Date(item.savedAt).toLocaleString()) : ''}</small></div><div class="actions"><button type="button" class="smallbtn" onclick="resolveSyncReview(${index},'mine')">${item.local === null ? 'Delete it (this device)' : 'Use this device\'s version'}</button><button type="button" class="smallbtn" onclick="resolveSyncReview(${index},'cloud')">Keep cloud version</button></div></div>`).join('');
+  const recoveryRow = recovery ? `<div class="sync-review-row"><div><b>Full copy of unsynced work</b><small>Saved ${syncEscape(recovery.savedAt ? new Date(recovery.savedAt).toLocaleString() : 'earlier')} when this device could not merge with the cloud. Download it before discarding.</small></div><div class="actions"><button type="button" class="smallbtn" onclick="downloadSyncReview()">Download</button><button type="button" class="smallbtn" onclick="discardRecoveryCopy()">Discard</button></div></div>` : '';
+  dialog.innerHTML = `<div class="dialog-title"><div><div class="eyebrow">Cloud sync</div><h2>Sync review</h2><p class="sub">These items changed on this device and also in the cloud. The CRM is showing the cloud version. Choose which version to keep for each one.</p></div><button type="button" aria-label="Close" onclick="document.getElementById('syncReview').close()">×</button></div><div class="sync-review-list">${rows}${recoveryRow || ''}${!rows && !recoveryRow ? '<p class="sub">Nothing needs review.</p>' : ''}</div><div class="actions"><button type="button" onclick="downloadSyncReview()">Download all as a file</button></div>`;
+  if (!dialog.open) dialog.showModal();
+}
+window.openSyncReview = openSyncReview;
+updateSyncReviewBanner();
 
 // Notify CRM extensions after a cloud workspace has loaded.
 const erpWorkspaceLoaded = loadWorkspace;
