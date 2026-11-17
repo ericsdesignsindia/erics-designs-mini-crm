@@ -1762,3 +1762,38 @@ dialog.sync-review { max-width: 640px; }
 }
 .sync-review-row small { display: block; margin-top: 4px; color: var(--muted, #9aa4b8); }
 .sync-review-row .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Additional services billing dialog (2026-11-17). */
+dialog.additional-services { max-width: 720px; }
+.additional-services .addl-heading { margin: 18px 0 8px; font-size: 15px; }
+.additional-services .addl-services,
+.additional-services .addl-custom-list { display: grid; gap: 8px; }
+.additional-services .addl-custom-list:not(:empty) { margin-top: 8px; }
+.additional-services .addl-service-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 84px 120px;
+  gap: 10px;
+  align-items: end;
+  padding: 10px 12px;
+  border: 1px solid var(--line, rgba(255, 255, 255, .12));
+  border-radius: 10px;
+}
+.additional-services .addl-service-pick { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.additional-services .addl-service-pick input { margin-top: 3px; width: 18px; height: 18px; min-height: 0; flex: none; }
+.additional-services .addl-service-pick small { display: block; color: var(--muted, #9aa4b8); font-size: 12px; margin-top: 2px; }
+.additional-services .addl-num span,
+.additional-services .addl-custom-name span,
+.additional-services .addl-custom-desc span { display: block; font-size: 12px; color: var(--muted, #9aa4b8); margin-bottom: 4px; }
+.additional-services .addl-custom-desc { grid-column: 1 / -1; }
+.additional-services .addl-type { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.additional-services .addl-type legend { font-size: 13px; margin-bottom: 6px; padding: 0; }
+.additional-services .addl-type label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.additional-services .addl-type input { width: 18px; height: 18px; min-height: 0; }
+.additional-services [data-add-custom] { margin-top: 10px; min-height: 44px; }
+.additional-services .addl-note-wrap { margin-top: 14px; }
+.additional-services .addl-total { margin: 14px 0 0; font-weight: 700; }
+@media (max-width: 560px) {
+  .additional-services .addl-service-row { grid-template-columns: 1fr 1fr; }
+  .additional-services .addl-service-pick,
+  .additional-services .addl-custom-name { grid-column: 1 / -1; }
+}
