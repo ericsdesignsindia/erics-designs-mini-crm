@@ -65,4 +65,26 @@ test('report rows, partial payment, bill status, exclusions and per-currency tot
 test('paid-only bill status', () => {
   const { rows } = build([inv('a', { payments: [{ amount: 10000 }] })], [{ autoOutsourced: true, sourceInvoiceId: 'a', amount: 6000, currency: 'INR', status: 'Paid' }]);
   assert.equal(rows[0].billStatus, 'Paid ₹6,000.00');
+  assert.equal(rows[0].note, '');
+});
+
+test('bill status formats each bill in its own currency and flags a Paid bill in another currency', () => {
+  const { rows } = build(
+    [inv('a', { currency: 'AED', items: [{ name: 'Site', qty: 1, rate: 1000, outsourced: { provider: 'Pixel Co', cost: 600 } }], payments: [{ amount: 1000 }] })],
+    [
+      { autoOutsourced: true, sourceInvoiceId: 'a', providerKey: 'pixel-co', amount: 3000, currency: 'INR', status: 'Paid' },
+      { autoOutsourced: true, sourceInvoiceId: 'a', providerKey: 'pixel-co', amount: 600, currency: 'AED', status: 'Pending' }
+    ]
+  );
+  assert.equal(rows[0].billStatus, 'Paid ₹3,000.00 · Pending AED 600.00');
+  assert.equal(rows[0].note, 'Provider bill paid in another currency — check');
+});
+
+test('detached bills show in bill status; a provider change after payment is flagged', () => {
+  const { rows } = build(
+    [inv('a', { payments: [{ amount: 10000 }] })],
+    [{ sourceInvoiceId: 'a', providerKey: 'pixel-studo', amount: 6000, currency: 'INR', status: 'Paid' }]
+  );
+  assert.equal(rows[0].billStatus, 'Paid ₹6,000.00');
+  assert.equal(rows[0].note, 'Provider changed after payment — check bills');
 });

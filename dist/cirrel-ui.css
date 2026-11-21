@@ -1825,3 +1825,6 @@ html body.ea360-interface #app#app .outsourcing-report-table td.num { text-align
 html body.ea360-interface #app#app .outsourcing-report-table td.is-loss { color: #d64545; }
 html body.ea360-interface #app#app .outsourcing-report-table button.linklike { min-height: 44px; background: none; border: 0; padding: 0 4px; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
 .outsourcing-report-total { margin: 12px 0 0; font-weight: 700; overflow-wrap: anywhere; }
+.outsourcing-review { margin: 8px 0 0; color: #b7791f; font-weight: 600; overflow-wrap: anywhere; }
+.outsourcing-review:empty { display: none; }
+.outsourcing-note { display: block; margin-top: 4px; font-size: 12px; color: #b7791f; font-weight: 600; }

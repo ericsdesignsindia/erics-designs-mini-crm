@@ -61,7 +61,24 @@
     return `<div class="panel-head"><h3>Outsourced services</h3></div>
       <p class="sub outsourcing-hint">Provider names and costs are internal. They never appear on the client's PDF.</p>
       <div class="outsourcing-rows">${rows}</div>
-      <p class="outsourcing-summary" data-os-summary aria-live="polite"></p>`;
+      <p class="outsourcing-summary" data-os-summary aria-live="polite"></p>
+      <p class="outsourcing-review" data-os-review aria-live="polite"></p>`;
+  }
+
+  // Notes that ask the owner to check an invoice's provider bills (shared by the report and the editor).
+  function reviewNote(state, doc) {
+    const review = engine.reviewInvoiceBills(state, doc);
+    const notes = [];
+    if (review.otherCurrency) notes.push('Provider bill paid in another currency — check');
+    if (review.providerChanged) notes.push('Provider changed after payment — check bills');
+    return notes.join(' · ');
+  }
+
+  // The saved copy of the open draft, when it is an invoice.
+  function savedInvoice(doc) {
+    const docs = typeof db !== 'undefined' && db && Array.isArray(db.documents) ? db.documents : [];
+    const saved = docs.find(d => d && d.id === doc.id);
+    return saved && saved.type === 'Invoice' ? saved : null;
   }
 
   // Update names, commission figures and summary without touching any input.
@@ -86,7 +103,8 @@
         text = `Commission ${commissionText(line.commission, result.currency)}`;
         negative = line.commission < 0;
       } else if (item.outsourced) {
-        text = 'Add a provider name to count this line';
+        const o = item.outsourced;
+        text = typeof o.provider !== 'string' || !o.provider.trim() ? 'Add a provider name to count this line' : 'Enter the provider cost';
       }
       if (out.textContent !== text) out.textContent = text;
       out.classList.toggle('is-loss', negative);
@@ -97,6 +115,12 @@
       ? `Client price ${money(result.revenue, cur)} · Provider cost ${money(result.cost, cur)} · Commission ${commissionText(result.commission, cur)}`
       : 'No outsourced lines yet.';
     summary.classList.toggle('is-loss', result.commission < 0);
+    const review = panel.querySelector('[data-os-review]');
+    if (review) {
+      const saved = savedInvoice(doc);
+      const note = saved ? reviewNote(db, saved) : '';
+      if (review.textContent !== note) review.textContent = note;
+    }
   }
 
   function renderEditorPanel() {
@@ -143,9 +167,10 @@
     providerInput.disabled = !on;
     costInput.disabled = !on;
     if (on) {
-      const raw = costInput.value;
-      const cost = raw === '' ? 0 : Number(raw);
-      item.outsourced = { provider: providerInput.value.trim(), cost: Number.isFinite(cost) && cost >= 0 ? cost : 0 };
+      // Blank or invalid cost (type=number gives '' for "1,500") is stored as null: not counted until entered.
+      const raw = String(costInput.value ?? '').trim();
+      const cost = raw === '' ? NaN : Number(raw);
+      item.outsourced = { provider: providerInput.value.trim(), cost: Number.isFinite(cost) && cost >= 0 ? cost : null };
     } else {
       delete item.outsourced;
     }
@@ -169,40 +194,65 @@
   }));
 
   // Provider bills follow the invoices: sync them inside every save so they land in the same write.
+  // Returns the toast messages for the bills it created or changed.
   function syncProviderBillsOnSave() {
+    const messages = [];
     try {
       const result = engine.syncProviderBills(db, { today: today(), totalsFn: totals });
-      const messages = [];
       result.created.forEach(bill => messages.push(`Provider bill created: ${bill.vendor} ${money(bill.amount, bill.currency)} (${bill.sourceInvoiceNumber})`));
-      result.updated.forEach(change => messages.push(`Provider bill updated: ${change.bill.vendor} ${money(change.from, change.bill.currency)} → ${money(change.to, change.bill.currency)}`));
-      if (messages.length && typeof toast === 'function') toast(messages.join(' · '));
+      result.updated.forEach(change => messages.push(`Provider bill updated: ${change.bill.vendor} ${money(change.from, change.fromCurrency || change.bill.currency)} → ${money(change.to, change.bill.currency)}`));
     } catch (error) {
       console.error('Provider bill sync failed; saving without it', error);
+      messages.length = 0;
     }
+    return messages;
   }
 
   if (typeof persist === 'function') {
     const persistBeforeOutsourcing = persist;
     persist = function () {
-      syncProviderBillsOnSave();
-      return persistBeforeOutsourcing.apply(this, arguments);
+      const messages = syncProviderBillsOnSave();
+      const saved = persistBeforeOutsourcing.apply(this, arguments);
+      // Callers toast their own message right after persist; show ours later so it is not overwritten,
+      // and only once the save is known to have succeeded.
+      if (saved && messages.length && typeof toast === 'function') {
+        setTimeout(guarded(() => toast(messages.join(' · '))), 1500);
+      }
+      return saved;
+    };
+  }
+
+  // Editing an automatic provider bill by hand detaches it from its invoice (no more automatic updates).
+  if (typeof editVendorBill === 'function') {
+    const editVendorBillBeforeOutsourcing = editVendorBill;
+    editVendorBill = function (id) {
+      const bills = typeof db !== 'undefined' && db && Array.isArray(db.vendorBills) ? db.vendorBills : [];
+      const bill = bills.find(item => item && item.id === id);
+      if (bill && bill.autoOutsourced === true && bill.status !== 'Paid') {
+        if (!confirm(`This bill follows invoice ${bill.sourceInvoiceNumber || ''}. Editing it here stops automatic updates for this bill. Continue?`)) return;
+        delete bill.autoOutsourced; // keeps sourceInvoiceId, sourceInvoiceNumber and providerKey
+      }
+      return editVendorBillBeforeOutsourcing.apply(this, arguments);
     };
   }
 
   // ---- Accounts report panel ----
   const round2 = n => Math.round((Number(n) + Number.EPSILON) * 100) / 100;
 
-  function billStatus(state, invoiceId, currency) {
-    let pending = 0;
-    let paid = 0;
+  // Auto and detached provider bills for one invoice, each summed and shown in its own currency.
+  function billStatus(state, invoiceId) {
+    const sums = { Paid: new Map(), Pending: new Map() };
     (Array.isArray(state.vendorBills) ? state.vendorBills : []).forEach(bill => {
-      if (!bill || bill.autoOutsourced !== true || bill.sourceInvoiceId !== invoiceId) return;
-      if (bill.status === 'Paid') paid += Number(bill.amount) || 0;
-      else pending += Number(bill.amount) || 0;
+      if (!bill || bill.sourceInvoiceId !== invoiceId) return;
+      if (bill.autoOutsourced !== true && !bill.providerKey) return;
+      const bucket = bill.status === 'Paid' ? sums.Paid : sums.Pending;
+      const currency = bill.currency || 'INR';
+      bucket.set(currency, (bucket.get(currency) || 0) + (Number(bill.amount) || 0));
     });
     const parts = [];
-    if (paid > 0) parts.push(`Paid ${money(round2(paid), currency)}`);
-    if (pending > 0) parts.push(`Pending ${money(round2(pending), currency)}`);
+    ['Paid', 'Pending'].forEach(label => sums[label].forEach((amount, currency) => {
+      if (amount > 0) parts.push(`${label} ${money(round2(amount), currency)}`);
+    }));
     return parts.length ? parts.join(' · ') : 'Not due';
   }
 
@@ -226,7 +276,8 @@
         commission: result.commission,
         paidPercent: Math.round(ratio * 100),
         earned,
-        billStatus: billStatus(state, doc.id, currency)
+        billStatus: billStatus(state, doc.id),
+        note: reviewNote(state, doc)
       });
       const t = totalsByCurrency[currency] || (totalsByCurrency[currency] = { price: 0, cost: 0, commission: 0, earned: 0 });
       t.price = round2(t.price + result.revenue);
@@ -250,7 +301,7 @@
         <td data-label="Provider cost" class="num">${esc(money(r.cost, r.currency))}</td>
         <td data-label="Commission" class="num${r.commission < 0 ? ' is-loss' : ''}">${esc(commissionText(r.commission, r.currency))}</td>
         <td data-label="Client paid">${esc(`Client paid ${r.paidPercent}%`)}</td>
-        <td data-label="Provider bill">${esc(r.billStatus)}</td>
+        <td data-label="Provider bill">${esc(r.billStatus)}${r.note ? `<span class="outsourcing-note">${esc(r.note)}</span>` : ''}</td>
       </tr>`).join('');
     const totalLines = Object.keys(report.totals).map(cur => {
       const t = report.totals[cur];
