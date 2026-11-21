@@ -11,9 +11,15 @@
  */
 (function () {
   if (window.__outsourcingInstalled) return;
-  window.__outsourcingInstalled = true;
-
   const engine = window.crmOutsourcing;
+  if (!engine || typeof engine.documentCommission !== 'function') {
+    console.error('Outsourced services panel disabled: crmOutsourcing engine is missing.');
+    return;
+  }
+  window.__outsourcingInstalled = true;
+  const guarded = fn => function () {
+    try { return fn.apply(this, arguments); } catch (error) { console.error('Outsourced services panel error', error); }
+  };
   const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 
   if (typeof financeCategories !== 'undefined' && Array.isArray(financeCategories) && !financeCategories.includes('Outsourced services')) {
@@ -153,19 +159,19 @@
     else syncPanel();
   }
 
-  document.addEventListener('input', onAppEdit);
-  document.addEventListener('change', onAppEdit);
+  document.addEventListener('input', guarded(onAppEdit));
+  document.addEventListener('change', guarded(onAppEdit));
   // Add/remove line buttons may redraw the items without render() or an input event.
-  document.addEventListener('click', event => {
+  document.addEventListener('click', guarded(event => {
     const app = document.getElementById('app');
     if (!app || !app.contains(event.target) || event.target.closest('#outsourcingPanel')) return;
-    setTimeout(syncPanel, 0);
-  });
+    setTimeout(guarded(syncPanel), 0);
+  }));
 
   // One place for everything that runs after each render (Task 4 adds the Accounts panel here).
-  function afterRender() {
+  const afterRender = guarded(function () {
     renderEditorPanel();
-  }
+  });
 
   if (typeof window.render === 'function') {
     const renderBeforeOutsourcing = window.render;
