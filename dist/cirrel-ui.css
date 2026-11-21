@@ -1797,3 +1797,22 @@ dialog.additional-services { max-width: 720px; }
   .additional-services .addl-service-pick,
   .additional-services .addl-custom-name { grid-column: 1 / -1; }
 }
+
+/* Outsourced services (2026-11-21) */
+.outsourcing-panel { margin-top: 16px; }
+.outsourcing-panel .outsourcing-hint { margin: 4px 0 12px; }
+.outsourcing-row { display: grid; grid-template-columns: minmax(0, 1.4fr) auto minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.1fr); gap: 10px 12px; align-items: end; padding: 12px 0; border-top: 1px solid var(--line, rgba(128, 140, 165, .25)); }
+.outsourcing-row:first-child { border-top: 0; }
+.outsourcing-name { min-width: 0; overflow-wrap: anywhere; align-self: center; }
+.outsourcing-check { display: flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; }
+.outsourcing-check input { width: 20px; height: 20px; min-height: 0; flex: none; }
+.outsourcing-field span { display: block; font-size: 12px; color: var(--muted, #9aa4b8); margin-bottom: 4px; }
+html body.ea360-interface #app#app .outsourcing-panel input[type="text"],
+html body.ea360-interface #app#app .outsourcing-panel input[type="number"] { min-height: 44px; width: 100%; box-sizing: border-box; }
+.outsourcing-commission { align-self: center; font-weight: 600; overflow-wrap: anywhere; }
+.outsourcing-commission.is-loss, .outsourcing-summary.is-loss { color: #d64545; }
+.outsourcing-summary { margin: 14px 0 0; font-weight: 700; overflow-wrap: anywhere; }
+@media (max-width: 560px) {
+  .outsourcing-row { grid-template-columns: 1fr 1fr; }
+  .outsourcing-name, .outsourcing-check, .outsourcing-commission { grid-column: 1 / -1; }
+}
