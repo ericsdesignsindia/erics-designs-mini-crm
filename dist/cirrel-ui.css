@@ -1816,3 +1816,12 @@ html body.ea360-interface #app#app .outsourcing-panel input[type="number"] { min
   .outsourcing-row { grid-template-columns: 1fr 1fr; }
   .outsourcing-name, .outsourcing-check, .outsourcing-commission { grid-column: 1 / -1; }
 }
+.outsourcing-report { margin-top: 16px; }
+.outsourcing-report-scroll { overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+html body.ea360-interface #app#app .outsourcing-report-table { width: 100%; min-width: 720px; border-collapse: collapse; }
+html body.ea360-interface #app#app .outsourcing-report-table th,
+html body.ea360-interface #app#app .outsourcing-report-table td { padding: 8px 10px; text-align: left; border-top: 1px solid var(--line, rgba(128, 140, 165, .25)); vertical-align: top; }
+html body.ea360-interface #app#app .outsourcing-report-table td.num { text-align: right; white-space: nowrap; }
+html body.ea360-interface #app#app .outsourcing-report-table td.is-loss { color: #d64545; }
+html body.ea360-interface #app#app .outsourcing-report-table button.linklike { min-height: 44px; background: none; border: 0; padding: 0 4px; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
+.outsourcing-report-total { margin: 12px 0 0; font-weight: 700; overflow-wrap: anywhere; }
