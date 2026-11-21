@@ -168,6 +168,27 @@
     setTimeout(guarded(syncPanel), 0);
   }));
 
+  // Provider bills follow the invoices: sync them inside every save so they land in the same write.
+  function syncProviderBillsOnSave() {
+    try {
+      const result = engine.syncProviderBills(db, { today: today(), totalsFn: totals });
+      const messages = [];
+      result.created.forEach(bill => messages.push(`Provider bill created: ${bill.vendor} ${money(bill.amount, bill.currency)} (${bill.sourceInvoiceNumber})`));
+      result.updated.forEach(change => messages.push(`Provider bill updated: ${change.bill.vendor} ${money(change.from, change.bill.currency)} → ${money(change.to, change.bill.currency)}`));
+      if (messages.length && typeof toast === 'function') toast(messages.join(' · '));
+    } catch (error) {
+      console.error('Provider bill sync failed; saving without it', error);
+    }
+  }
+
+  if (typeof persist === 'function') {
+    const persistBeforeOutsourcing = persist;
+    persist = function () {
+      syncProviderBillsOnSave();
+      return persistBeforeOutsourcing.apply(this, arguments);
+    };
+  }
+
   // One place for everything that runs after each render (Task 4 adds the Accounts panel here).
   const afterRender = guarded(function () {
     renderEditorPanel();
